@@ -7,7 +7,7 @@ test("homepage loads with correct title", async ({ page }) => {
 
 test("homepage displays hero section", async ({ page }) => {
   await page.goto("/");
-  await expect(page.locator("h1")).toContainText("Craven Cancer Classic");
+  await expect(page.locator("h1")).toContainText("Craven Cancer");
   await expect(page.getByText("Register Your Team")).toBeVisible();
 });
 

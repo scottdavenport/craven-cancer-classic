@@ -1,14 +1,11 @@
 -- Craven Cancer Classic - Initial Database Schema
 -- All core tables, RLS policies, and storage buckets
 
--- Enable UUID generation
-create extension if not exists "uuid-ossp";
-
 -- ============================================
 -- PROFILES
 -- ============================================
 create table public.profiles (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   auth_user_id uuid unique not null references auth.users(id) on delete cascade,
   full_name text not null,
   email text not null,
@@ -57,7 +54,7 @@ create trigger on_auth_user_created
 -- EVENT SETTINGS
 -- ============================================
 create table public.event_settings (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   name text not null default 'Craven Cancer Classic',
   date date,
   location text not null default 'New Bern Golf & Country Club',
@@ -89,7 +86,7 @@ create policy "Admins can manage event settings"
 -- SPONSOR TIERS
 -- ============================================
 create table public.sponsor_tiers (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   name text not null,
   price numeric(10,2) not null,
   sort_order int not null default 0,
@@ -116,7 +113,7 @@ create policy "Admins can manage sponsor tiers"
 -- SPONSORS
 -- ============================================
 create table public.sponsors (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   tier_id uuid not null references public.sponsor_tiers(id) on delete restrict,
   name text not null,
   logo_url text,
@@ -149,7 +146,7 @@ create policy "Admins can manage sponsors"
 -- TEAMS
 -- ============================================
 create table public.teams (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   team_name text not null,
   captain_name text not null,
   captain_email text not null,
@@ -188,7 +185,7 @@ create policy "Teams are viewable by admins"
 -- PLAYERS
 -- ============================================
 create table public.players (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   team_id uuid not null references public.teams(id) on delete cascade,
   full_name text not null,
   email text,
@@ -214,7 +211,7 @@ create policy "Anyone can add players during registration"
 -- SPONSORSHIP ITEMS
 -- ============================================
 create table public.sponsorship_items (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   tier_id uuid references public.sponsor_tiers(id) on delete set null,
   name text not null,
   description text,
@@ -243,7 +240,7 @@ create policy "Admins can manage sponsorship items"
 -- SPONSORSHIP PURCHASES
 -- ============================================
 create table public.sponsorship_purchases (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   item_id uuid not null references public.sponsorship_items(id) on delete restrict,
   purchaser_name text not null,
   purchaser_email text not null,
@@ -273,7 +270,7 @@ create policy "Anyone can make a sponsorship purchase"
 -- PHOTOS
 -- ============================================
 create table public.photos (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   uploaded_by_name text not null,
   uploaded_by_email text,
   image_url text not null,
@@ -311,7 +308,7 @@ create policy "Anyone can upload photos"
 -- SCORES
 -- ============================================
 create table public.scores (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   team_id uuid references public.teams(id) on delete set null,
   team_name text not null,
   session text check (session in ('morning', 'afternoon')),
@@ -339,7 +336,7 @@ create policy "Admins can manage scores"
 -- CONTACTS
 -- ============================================
 create table public.contacts (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   full_name text not null,
   email text not null,
   phone text,
@@ -363,7 +360,7 @@ create policy "Admins can manage contacts"
 -- EMAIL LOG
 -- ============================================
 create table public.email_log (
-  id uuid primary key default uuid_generate_v4(),
+  id uuid primary key default gen_random_uuid(),
   subject text not null,
   body text not null,
   recipient_count int not null default 0,

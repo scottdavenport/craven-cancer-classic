@@ -34,6 +34,7 @@ export type Database = {
           role?: "admin" | "user";
           created_at?: string;
         };
+        Relationships: [];
       };
       event_settings: {
         Row: {
@@ -81,6 +82,7 @@ export type Database = {
           hero_image_url?: string | null;
           updated_at?: string;
         };
+        Relationships: [];
       };
       sponsor_tiers: {
         Row: {
@@ -113,6 +115,7 @@ export type Database = {
           active?: boolean;
           created_at?: string;
         };
+        Relationships: [];
       };
       sponsors: {
         Row: {
@@ -163,6 +166,7 @@ export type Database = {
           year?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       teams: {
         Row: {
@@ -207,6 +211,7 @@ export type Database = {
           year?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       players: {
         Row: {
@@ -236,6 +241,7 @@ export type Database = {
           handicap?: number | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       sponsorship_items: {
         Row: {
@@ -274,6 +280,7 @@ export type Database = {
           year?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       sponsorship_purchases: {
         Row: {
@@ -315,6 +322,7 @@ export type Database = {
           year?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       photos: {
         Row: {
@@ -347,6 +355,7 @@ export type Database = {
           year?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       scores: {
         Row: {
@@ -382,6 +391,7 @@ export type Database = {
           year?: number;
           created_at?: string;
         };
+        Relationships: [];
       };
       contacts: {
         Row: {
@@ -414,6 +424,7 @@ export type Database = {
           notes?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       email_log: {
         Row: {
@@ -443,7 +454,23 @@ export type Database = {
           sent_at?: string;
           status?: "sent" | "failed";
         };
+        Relationships: [];
       };
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      is_admin: {
+        Args: Record<PropertyKey, never>;
+        Returns: boolean;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 };

@@ -18,6 +18,22 @@ export async function getSponsors() {
   return data;
 }
 
+export async function getSponsorshipItems() {
+  const supabase = await createClient();
+  const currentYear = new Date().getFullYear();
+
+  const { data, error } = await supabase
+    .from("sponsorship_items")
+    .select("id, name, price_cents, year")
+    .eq("year", currentYear)
+    .eq("active", true)
+    .order("sort_order")
+    .order("price_cents", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function createSponsor(formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();

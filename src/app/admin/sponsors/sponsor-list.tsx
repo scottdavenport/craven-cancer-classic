@@ -23,11 +23,19 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { createSponsor, updateSponsor, deleteSponsor } from "./actions";
 import type { Sponsor } from "@/types/database";
 
-interface SponsorListProps {
-  sponsors: Sponsor[];
+interface SponsorshipItemOption {
+  id: string;
+  name: string;
+  price_cents: number;
+  year: number;
 }
 
-export function SponsorList({ sponsors }: SponsorListProps) {
+interface SponsorListProps {
+  sponsors: Sponsor[];
+  sponsorshipItems: SponsorshipItemOption[];
+}
+
+export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -124,6 +132,7 @@ export function SponsorList({ sponsors }: SponsorListProps) {
                 onSubmit={handleCreate}
                 loading={loading}
                 onCancel={() => setShowForm(false)}
+                sponsorshipItems={sponsorshipItems}
               />
             </div>
           )}
@@ -132,6 +141,7 @@ export function SponsorList({ sponsors }: SponsorListProps) {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Tier</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
@@ -141,7 +151,7 @@ export function SponsorList({ sponsors }: SponsorListProps) {
             <TableBody>
               {sponsors.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
                     No sponsors yet. Click &quot;Add Sponsor&quot; to get started.
                   </TableCell>
                 </TableRow>
@@ -149,12 +159,13 @@ export function SponsorList({ sponsors }: SponsorListProps) {
                 sponsors.map((sponsor) =>
                   editingId === sponsor.id ? (
                     <TableRow key={sponsor.id}>
-                      <TableCell colSpan={5}>
+                      <TableCell colSpan={6}>
                         <SponsorForm
                           defaultValues={sponsor}
                           onSubmit={(fd) => handleUpdate(sponsor.id, fd)}
                           loading={loading}
                           onCancel={() => setEditingId(null)}
+                          sponsorshipItems={sponsorshipItems}
                         />
                       </TableCell>
                     </TableRow>
@@ -162,6 +173,11 @@ export function SponsorList({ sponsors }: SponsorListProps) {
                     <TableRow key={sponsor.id}>
                       <TableCell className="font-medium">
                         {sponsor.name}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {sponsorshipItems.find((item) => item.id === sponsor.tier_id)?.name ?? (
+                          <span className="text-muted-foreground/50">Unknown tier</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {sponsor.contact_name || "—"}
@@ -210,11 +226,13 @@ function SponsorForm({
   onSubmit,
   loading,
   onCancel,
+  sponsorshipItems,
 }: {
   defaultValues?: Partial<Sponsor>;
   onSubmit: (formData: FormData) => void;
   loading: boolean;
   onCancel: () => void;
+  sponsorshipItems: SponsorshipItemOption[];
 }) {
   return (
     <form action={onSubmit} className="space-y-4">
@@ -228,7 +246,23 @@ function SponsorForm({
             required
           />
         </div>
-        {/* TODO(sprint-6): restore tier selector using sponsorship_items lookup if admins need it. */}
+        <div className="space-y-2">
+          <Label htmlFor="tier_id">Sponsorship level</Label>
+          <select
+            id="tier_id"
+            name="tier_id"
+            required
+            defaultValue={defaultValues?.tier_id ?? ""}
+            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
+          >
+            <option value="" disabled>Select a level</option>
+            {sponsorshipItems.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} — ${(item.price_cents / 100).toLocaleString()}
+              </option>
+            ))}
+          </select>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="contact_name">Contact Name</Label>
           <Input

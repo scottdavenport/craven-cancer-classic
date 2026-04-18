@@ -18,7 +18,7 @@ async function getSponsorshipItems() {
     .select("*")
     .eq("year", currentYear)
     .eq("active", true)
-    .order("price", { ascending: false });
+    .order("price_cents", { ascending: false });
 
   return data ?? [];
 }

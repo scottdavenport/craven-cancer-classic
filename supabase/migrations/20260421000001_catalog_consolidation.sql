@@ -59,3 +59,13 @@ VALUES
   ('Thursday Night',      70000, true, 2026, NULL, 70, '[]'::jsonb),
   ('Wall Sponsor',        70000, true, 2026, NULL, 80, '[]'::jsonb)
 ON CONFLICT (name, year) DO NOTHING;
+
+-- Step 9: Harden sponsorship_items admin policy with WITH CHECK (Sentinel S5-0 review)
+-- Recreate the policy originally missing WITH CHECK from 20260415000001_fix_rls_recursion.sql line 73-74
+DROP POLICY IF EXISTS "Admins can manage sponsorship items" ON public.sponsorship_items;
+CREATE POLICY "Admins can manage sponsorship items"
+  ON public.sponsorship_items
+  FOR ALL
+  TO authenticated
+  USING (public.is_admin())
+  WITH CHECK (public.is_admin());

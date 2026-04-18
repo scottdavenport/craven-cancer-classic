@@ -6,9 +6,11 @@ import { requireAdmin } from "@/lib/supabase/admin";
 
 export async function getSponsorTiers() {
   const supabase = await createClient();
+  const currentYear = new Date().getFullYear();
   const { data, error } = await supabase
-    .from("sponsor_tiers")
-    .select("*")
+    .from("sponsorship_items")
+    .select("id, name, price_cents, sort_order, active, year")
+    .eq("year", currentYear)
     .order("sort_order");
 
   if (error) throw new Error(error.message);

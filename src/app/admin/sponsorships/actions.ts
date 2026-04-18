@@ -12,7 +12,7 @@ export async function getSponsorshipItems() {
     .from("sponsorship_items")
     .select("*")
     .eq("year", currentYear)
-    .order("price", { ascending: false });
+    .order("price_cents", { ascending: false });
 
   if (error) throw new Error(error.message);
   return data;
@@ -39,7 +39,7 @@ export async function createSponsorshipItem(formData: FormData) {
   const { error } = await supabase.from("sponsorship_items").insert({
     name: formData.get("name") as string,
     description: (formData.get("description") as string) || null,
-    price: parseFloat(formData.get("price") as string),
+    price_cents: Math.round(parseFloat(formData.get("price") as string) * 100),
     max_quantity: parseInt(formData.get("max_quantity") as string) || null,
     active: formData.get("active") !== "false",
   });
@@ -60,7 +60,7 @@ export async function updateSponsorshipItem(id: string, formData: FormData) {
     .update({
       name: formData.get("name") as string,
       description: (formData.get("description") as string) || null,
-      price: parseFloat(formData.get("price") as string),
+      price_cents: Math.round(parseFloat(formData.get("price") as string) * 100),
       max_quantity: parseInt(formData.get("max_quantity") as string) || null,
       active: formData.get("active") !== "false",
     })

@@ -21,12 +21,20 @@ import {
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { createSponsor, updateSponsor, deleteSponsor } from "./actions";
-import type { SponsorTier } from "@/types/database";
-
 import type { Sponsor } from "@/types/database";
 
+// Tiers are now sponsorship_items rows (subset of columns returned by getSponsorTiers)
+interface TierRow {
+  id: string;
+  name: string;
+  price_cents: number;
+  sort_order: number;
+  active: boolean;
+  year: number;
+}
+
 interface SponsorListProps {
-  tiers: SponsorTier[];
+  tiers: TierRow[];
   sponsors: Sponsor[];
 }
 
@@ -125,7 +133,7 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
                 >
                   <p className="text-sm font-medium">{tier.name}</p>
                   <p className="text-2xl font-bold text-primary">
-                    ${tier.price.toLocaleString()}
+                    ${(tier.price_cents / 100).toLocaleString()}
                   </p>
                   <p className="text-xs text-muted-foreground">
                     {count} sponsor{count !== 1 ? "s" : ""}
@@ -251,7 +259,7 @@ function SponsorForm({
   loading,
   onCancel,
 }: {
-  tiers: SponsorTier[];
+  tiers: TierRow[];
   defaultValues?: Partial<Sponsor>;
   onSubmit: (formData: FormData) => void;
   loading: boolean;
@@ -281,7 +289,7 @@ function SponsorForm({
             <option value="">Select tier...</option>
             {tiers.map((tier) => (
               <option key={tier.id} value={tier.id}>
-                {tier.name} (${tier.price.toLocaleString()})
+                {tier.name} (${(tier.price_cents / 100).toLocaleString()})
               </option>
             ))}
           </select>

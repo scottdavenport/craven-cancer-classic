@@ -36,7 +36,7 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
               )}
               <CardContent className="pt-6">
                 <p className="font-display text-3xl font-bold text-foreground">
-                  ${item.price.toLocaleString()}
+                  ${(item.price_cents / 100).toLocaleString()}
                 </p>
                 <h3 className="mt-2 text-lg font-semibold text-foreground">
                   {item.name}
@@ -108,7 +108,7 @@ function PurchaseForm({
           type: "sponsorship",
           item_id: item.id,
           item_name: item.name,
-          price_cents: Math.round(item.price * 100),
+          price_cents: item.price_cents,
           purchaser_name: formData.get("purchaser_name"),
           purchaser_email: formData.get("purchaser_email"),
           purchaser_phone: formData.get("purchaser_phone"),
@@ -140,7 +140,7 @@ function PurchaseForm({
             {item.name}
           </h3>
           <p className="text-2xl font-bold text-primary">
-            ${item.price.toLocaleString()}
+            ${(item.price_cents / 100).toLocaleString()}
           </p>
         </div>
         <Button variant="ghost" size="sm" onClick={onCancel}>

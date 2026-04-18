@@ -190,3 +190,144 @@ describe("POST /api/upload-photo — MIME validation (S2-6)", () => {
     expect(body.error).toBe("Name is required");
   });
 });
+
+// ---------------------------------------------------------------------------
+// S2-7 gap coverage — upload: size limit, SVG rejection, storage/DB errors
+// ---------------------------------------------------------------------------
+
+/**
+ * jsdom serializes FormData into a multipart body string when passed to the
+ * Request constructor, which truncates large binary file content to just the
+ * boundary bytes (~9 bytes). To test file.size-based guards we need to bypass
+ * the FormData round-trip and inject a File with the desired size directly via
+ * a custom request.formData() mock.
+ */
+function buildRequestWithFileSizeMock(options: {
+  fileType: string;
+  fileName: string;
+  fileSize: number;
+  uploaderName?: string;
+}): Request {
+  const { fileType, fileName, fileSize, uploaderName = "Test User" } = options;
+
+  // Create a real File object with the specified size using a Blob-backed approach
+  const file = Object.create(File.prototype) as File;
+  Object.defineProperty(file, "size", { get: () => fileSize });
+  Object.defineProperty(file, "type", { get: () => fileType });
+  Object.defineProperty(file, "name", { get: () => fileName });
+
+  const mockFormData = new FormData();
+  // Override get() so the route receives our synthetic file
+  const originalGet = mockFormData.get.bind(mockFormData);
+  vi.spyOn(mockFormData, "get").mockImplementation((key: string) => {
+    if (key === "photo") return file;
+    if (key === "uploader_name") return uploaderName;
+    return originalGet(key);
+  });
+
+  const req = new Request("http://localhost/api/upload-photo", {
+    method: "POST",
+    body: new Uint8Array(1), // minimal non-empty body so Request is valid
+    headers: { "Content-Type": "multipart/form-data; boundary=xxx" },
+  });
+  vi.spyOn(req, "formData").mockResolvedValue(mockFormData);
+  return req;
+}
+
+describe("POST /api/upload-photo — S2-7 gap coverage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUpload.mockResolvedValue({ error: null });
+    mockGetPublicUrl.mockReturnValue({
+      data: { publicUrl: "https://example.com/photos/test.jpg" },
+    });
+    mockInsert.mockResolvedValue({ error: null });
+  });
+
+  describe("file size limits", () => {
+    it("returns 400 when file exceeds 10MB (10MB + 1 byte)", async () => {
+      const tenMbPlusOne = 10 * 1024 * 1024 + 1;
+      const req = buildRequestWithFileSizeMock({
+        fileType: "image/jpeg",
+        fileName: "large.jpg",
+        fileSize: tenMbPlusOne,
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/10MB/i);
+    });
+
+    it("accepts a file exactly at 10MB boundary (not over limit)", async () => {
+      const exactly10Mb = 10 * 1024 * 1024;
+      const req = buildRequestWithFileSizeMock({
+        fileType: "image/jpeg",
+        fileName: "max.jpg",
+        fileSize: exactly10Mb,
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+    });
+
+    it("returns 400 for a zero-byte file (size === 0)", async () => {
+      // file.size === 0 hits the "No file provided" guard
+      const req = buildRequestWithFileSizeMock({
+        fileType: "image/jpeg",
+        fileName: "empty.jpg",
+        fileSize: 0,
+      });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("No file provided");
+    });
+  });
+
+  describe("SVG and other rejected types", () => {
+    it("returns 400 for image/svg+xml (explicit SVG rejection)", async () => {
+      const req = buildRequest({ fileType: "image/svg+xml", fileName: "icon.svg" });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid file type");
+    });
+
+    it("returns 400 for empty string file.type", async () => {
+      const req = buildRequest({ fileType: "", fileName: "unknown" });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid file type");
+    });
+
+    it("returns 400 for image/tiff (not in allowlist)", async () => {
+      const req = buildRequest({ fileType: "image/tiff", fileName: "photo.tiff" });
+      const res = await POST(req);
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toBe("Invalid file type");
+    });
+  });
+
+  describe("storage and DB error paths", () => {
+    it("returns 500 when Supabase storage upload fails", async () => {
+      mockUpload.mockResolvedValue({ error: { message: "storage quota exceeded" } });
+
+      const req = buildRequest({ fileType: "image/png", fileName: "photo.png" });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body.error).toMatch(/storage quota exceeded/i);
+    });
+
+    it("returns 500 when photos table insert fails", async () => {
+      mockInsert.mockResolvedValue({ error: { message: "row level security violation" } });
+
+      const req = buildRequest({ fileType: "image/webp", fileName: "photo.webp" });
+      const res = await POST(req);
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body.error).toMatch(/row level security/i);
+    });
+  });
+});

@@ -49,7 +49,7 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
 
   const { data: eventSettings } = await supabase
     .from("event_settings")
-    .select("*")
+    .select("registration_open, morning_cap, afternoon_cap, registration_fee_cents")
     .eq("year", currentYear)
     .single();
 
@@ -126,7 +126,7 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
             name: "Craven Cancer Classic - Team Registration",
             description: `Team: ${team_name} | ${sessionTime === "morning" ? "Morning" : "Afternoon"} Session`,
           },
-          unit_amount: REGISTRATION_PRICE_CENTS,
+          unit_amount: eventSettings.registration_fee_cents ?? REGISTRATION_PRICE_CENTS,
         },
         quantity: 1,
       },

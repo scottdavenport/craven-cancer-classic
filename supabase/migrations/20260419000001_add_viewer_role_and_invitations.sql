@@ -36,7 +36,7 @@ create table public.invitations (
   email       text        not null,
   role        text        not null default 'viewer' check (role in ('admin', 'viewer')),
   invited_by  uuid        references public.profiles(id) on delete set null,
-  token       text        not null unique default encode(gen_random_bytes(32), 'hex'),
+  token       text        not null unique default encode(extensions.gen_random_bytes(32), 'hex'),
   expires_at  timestamptz not null default now() + interval '7 days',
   accepted_at timestamptz,
   created_at  timestamptz not null default now()

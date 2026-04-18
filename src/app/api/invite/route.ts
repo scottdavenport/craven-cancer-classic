@@ -23,8 +23,9 @@ export async function POST(request: Request): Promise<NextResponse> {
   let body: { email?: string; role?: string };
   try {
     body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+  } catch (err) {
+    console.error('[Invite] failed to parse request body:', err);
+    return NextResponse.json({ error: 'Invalid body' }, { status: 400 });
   }
 
   const { email, role } = body;

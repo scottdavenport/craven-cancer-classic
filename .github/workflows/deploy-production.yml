@@ -1,0 +1,81 @@
+name: Deploy to Production
+
+permissions:
+  actions: read
+  contents: read
+
+# Manual trigger only — no staging environment (Option C)
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_migrations:
+        description: 'Deploy migrations'
+        type: boolean
+        default: true
+      deploy_functions:
+        description: 'Deploy edge functions'
+        type: boolean
+        default: true
+      functions:
+        description: 'Space-separated function names (leave empty to deploy all)'
+        type: string
+        default: ''
+
+jobs:
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Link production project
+        run: supabase link --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Push migrations to production
+        if: inputs.deploy_migrations
+        run: supabase db push
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Deploy functions to production
+        if: inputs.deploy_functions
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          # Gracefully skip if supabase/functions/ doesn't exist or is empty
+          if [ ! -d "supabase/functions" ]; then
+            echo "No supabase/functions/ directory — nothing to deploy."
+            exit 0
+          fi
+
+          FUNCS="${{ inputs.functions }}"
+          if [ -z "$FUNCS" ]; then
+            FUNCS=$(ls -d supabase/functions/*/ 2>/dev/null | xargs -I{} basename {} | grep -v '^_shared$' | grep -v '^__tests__$' | tr '\n' ' ')
+          fi
+
+          if [ -z "$FUNCS" ]; then
+            echo "No functions found in supabase/functions/ — nothing to deploy."
+            exit 0
+          fi
+
+          DEPLOYED=0
+          FAILED=0
+          for FUNC in $FUNCS; do
+            echo "Deploying to production: $FUNC"
+            if supabase functions deploy "$FUNC" --use-api; then
+              DEPLOYED=$((DEPLOYED + 1))
+            else
+              echo "FAILED: $FUNC"
+              FAILED=$((FAILED + 1))
+            fi
+          done
+          echo "Production: $DEPLOYED deployed, $FAILED failed"
+          [ "$FAILED" -gt 0 ] && exit 1 || true

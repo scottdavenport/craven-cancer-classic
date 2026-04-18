@@ -51,7 +51,8 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
         setSuccess("Score added");
         setTimeout(() => setSuccess(null), 3000);
       }
-    } catch {
+    } catch (err) {
+      console.error('[ScoreManager] addScore failed:', err);
       setError("Failed to add score");
     } finally {
       setLoading(false);
@@ -72,7 +73,8 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
         setSuccess(`Imported ${result.count} scores`);
         setTimeout(() => setSuccess(null), 3000);
       }
-    } catch {
+    } catch (err) {
+      console.error('[ScoreManager] importScoresFromCSV failed:', err);
       setError("Failed to import CSV");
     } finally {
       setLoading(false);

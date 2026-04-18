@@ -124,7 +124,8 @@ function PurchaseForm({
       if (data.url) {
         window.location.href = data.url;
       }
-    } catch {
+    } catch (err) {
+      console.error('[SponsorshipGrid] checkout fetch failed:', err);
       setError("Failed to process. Please try again.");
     } finally {
       setLoading(false);

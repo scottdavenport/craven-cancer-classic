@@ -49,7 +49,8 @@ export function RegistrationList({ teams }: RegistrationListProps) {
       } else {
         setShowForm(false);
       }
-    } catch {
+    } catch (err) {
+      console.error('[RegistrationList] createTeamManually failed:', err);
       setError("Failed to create team");
     } finally {
       setLoading(false);
@@ -64,7 +65,8 @@ export function RegistrationList({ teams }: RegistrationListProps) {
       if (result && "error" in result && typeof result.error === "string") {
         setError(result.error);
       }
-    } catch {
+    } catch (err) {
+      console.error('[RegistrationList] deleteTeam failed:', err);
       setError("Failed to delete team");
     } finally {
       setLoading(false);

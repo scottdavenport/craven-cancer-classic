@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SponsorshipGrid } from "./sponsorship-grid";
+import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
 
 export const metadata: Metadata = {
   title: "Sponsorship Opportunities",
@@ -46,16 +47,40 @@ export default async function SponsorshipsPage() {
 
       <section className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-5xl">
+          {/* Mission context */}
+          <div className="mx-auto mb-12 max-w-2xl text-center">
+            <p className="text-[15px] leading-[1.8] text-muted-foreground">
+              Since 2010, the Craven Cancer Classic has raised over{" "}
+              <strong className="font-semibold text-foreground">$450,000</strong>{" "}
+              for cancer patients in Craven County. Your sponsorship funds
+              transportation to treatment, lodging during extended care, and
+              medical equipment for patients who need it most — people in our
+              own community facing the hardest days of their lives. This
+              tournament is held in their honor and in loving memory of those
+              we have lost.
+            </p>
+          </div>
+
           {items.length > 0 ? (
             <SponsorshipGrid items={items} />
           ) : (
-            <div className="py-12 text-center">
-              <p className="font-display text-xl font-semibold text-foreground">
-                Sponsorship packages coming soon
+            <div className="mx-auto max-w-lg rounded-lg border border-border bg-muted/40 px-8 py-12">
+              <h2 className="font-display text-xl font-semibold text-foreground">
+                Sponsorship Packages Coming Soon
+              </h2>
+              <p className="mt-3 text-[15px] leading-[1.8] text-muted-foreground">
+                This year&apos;s sponsorship tiers are being finalized. Leave
+                your name and email and we will reach out as soon as packages
+                are available.
               </p>
-              <p className="mt-2 text-muted-foreground">
-                Check back for available sponsorship opportunities.
-              </p>
+              <div className="mt-8">
+                <ProspectCaptureForm
+                  contactType="sponsor"
+                  notesPrefix="sponsor prospect — notified when packages open"
+                  showCompany
+                  successMessage="Thank you. We will be in touch when sponsorship packages are available."
+                />
+              </div>
             </div>
           )}
         </div>

@@ -219,7 +219,7 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        ${sponsor.amount_paid.toLocaleString()}
+                        ${(sponsor.amount_paid_cents / 100).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-1">
@@ -348,7 +348,7 @@ function SponsorForm({
             name="amount_paid"
             type="number"
             step="0.01"
-            defaultValue={defaultValues?.amount_paid ?? 0}
+            defaultValue={defaultValues?.amount_paid_cents != null ? defaultValues.amount_paid_cents / 100 : 0}
           />
         </div>
       </div>

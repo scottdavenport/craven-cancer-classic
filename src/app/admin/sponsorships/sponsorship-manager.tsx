@@ -39,7 +39,7 @@ export function SponsorshipManager({
 
   const totalRevenue = purchases
     .filter((p) => p.payment_status === "paid")
-    .reduce((sum, p) => sum + p.amount_paid, 0);
+    .reduce((sum, p) => sum + p.amount_paid_cents, 0);
 
   async function handleCreate(formData: FormData) {
     setError(null);
@@ -118,7 +118,7 @@ export function SponsorshipManager({
         <Card>
           <CardContent className="pt-4">
             <p className="text-2xl font-bold">
-              ${totalRevenue.toLocaleString()}
+              ${(totalRevenue / 100).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground">Revenue</p>
           </CardContent>
@@ -268,7 +268,7 @@ export function SponsorshipManager({
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      ${p.amount_paid.toLocaleString()}
+                      ${(p.amount_paid_cents / 100).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(p.created_at).toLocaleDateString()}

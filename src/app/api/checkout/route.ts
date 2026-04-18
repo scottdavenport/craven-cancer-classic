@@ -192,7 +192,7 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
       purchaser_phone: purchaser_phone || null,
       company_name: company_name || null,
       payment_status: "pending" as const,
-      amount_paid: 0,
+      amount_paid_cents: 0,
     })
     .select()
     .single();

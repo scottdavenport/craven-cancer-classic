@@ -44,7 +44,7 @@ export async function createSponsor(formData: FormData) {
     contact_phone: (formData.get("contact_phone") as string) || null,
     logo_url: (formData.get("logo_url") as string) || null,
     payment_status: ((formData.get("payment_status") as string) || "pending") as "pending" | "paid" | "comped",
-    amount_paid: parseFloat(formData.get("amount_paid") as string) || 0,
+    amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
   });
 
   if (error) return { error: error.message };
@@ -69,7 +69,7 @@ export async function updateSponsor(id: string, formData: FormData) {
       contact_phone: (formData.get("contact_phone") as string) || null,
       logo_url: (formData.get("logo_url") as string) || null,
       payment_status: ((formData.get("payment_status") as string) || "pending") as "pending" | "paid" | "comped",
-      amount_paid: parseFloat(formData.get("amount_paid") as string) || 0,
+      amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
     })
     .eq("id", id);
 

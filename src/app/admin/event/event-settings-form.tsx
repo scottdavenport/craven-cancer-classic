@@ -41,7 +41,8 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         setSuccess(true);
         setTimeout(() => setSuccess(false), 3000);
       }
-    } catch {
+    } catch (err) {
+      console.error('[EventSettingsForm] updateEventSettings failed:', err);
       setError("Failed to update settings");
     } finally {
       setLoading(false);

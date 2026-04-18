@@ -77,7 +77,8 @@ export function GalleryGrid({
       setShowUpload(false);
       form.reset();
       setTimeout(() => setSuccess(false), 5000);
-    } catch {
+    } catch (err) {
+      console.error('[GalleryGrid] photo upload failed:', err);
       setError("Upload failed. Please try again.");
     } finally {
       setUploading(false);

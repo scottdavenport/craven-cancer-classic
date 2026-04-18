@@ -42,7 +42,8 @@ export default function LoginPage() {
         setSuccess(result.success);
       }
     } catch {
-      // redirect throws, which is expected on success
+      // Intentionally silent: Next.js redirect() throws to abort the action.
+      // Logging this would be noise on every successful login.
     } finally {
       setLoading(false);
     }
@@ -57,7 +58,8 @@ export default function LoginPage() {
         setError(result.error);
       }
     } catch {
-      // redirect throws on success
+      // Intentionally silent: Next.js redirect() throws to abort the action.
+      // Logging this would be noise on every successful login.
     } finally {
       setLoading(false);
     }

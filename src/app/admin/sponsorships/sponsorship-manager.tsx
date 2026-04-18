@@ -51,7 +51,8 @@ export function SponsorshipManager({
       } else {
         setShowForm(false);
       }
-    } catch {
+    } catch (err) {
+      console.error('[SponsorshipManager] createSponsorshipItem failed:', err);
       setError("Failed to create item");
     } finally {
       setLoading(false);
@@ -68,7 +69,8 @@ export function SponsorshipManager({
       } else {
         setEditingId(null);
       }
-    } catch {
+    } catch (err) {
+      console.error('[SponsorshipManager] updateSponsorshipItem failed:', err);
       setError("Failed to update item");
     } finally {
       setLoading(false);
@@ -83,7 +85,8 @@ export function SponsorshipManager({
       if (result && "error" in result && typeof result.error === "string") {
         setError(result.error);
       }
-    } catch {
+    } catch (err) {
+      console.error('[SponsorshipManager] deleteSponsorshipItem failed:', err);
       setError("Failed to delete item");
     } finally {
       setLoading(false);

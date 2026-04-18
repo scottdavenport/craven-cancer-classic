@@ -44,6 +44,10 @@
   --color-brand-light: var(--brand-light);
   --color-brand-dark: var(--brand-dark);
   --color-brand-muted: var(--brand-muted);
+  --color-purple: var(--purple);
+  --color-purple-hover: var(--purple-hover);
+  --color-purple-muted: var(--purple-muted);
+  --color-purple-foreground: var(--purple-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -92,7 +96,13 @@
   --destructive: #C53030;
   --border: #DAE3E8;
   --input: #DAE3E8;
-  --ring: #5B8FA8;
+  --ring: #6B5DB8;
+
+  /* Purple accent scale (Sprint 3) */
+  --purple: #6B5DB8;
+  --purple-hover: #5A4DA0;
+  --purple-muted: #EEEAF8;
+  --purple-foreground: #FFFFFF;
 
   /* Charts */
   --chart-1: #5B8FA8;
@@ -132,7 +142,11 @@
   --destructive: #FC8181;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
-  --ring: #5B8FA8;
+  --ring: #8B7DCC;
+  --purple: #8B7DCC;
+  --purple-hover: #7B6DC0;
+  --purple-muted: #2A2450;
+  --purple-foreground: #FFFFFF;
   --chart-1: #8BB5C9;
   --chart-2: #5B8FA8;
   --chart-3: #3A6B83;

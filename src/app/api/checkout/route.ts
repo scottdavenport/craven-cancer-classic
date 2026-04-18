@@ -146,23 +146,19 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
 async function handleSponsorshipCheckout(body: Record<string, unknown>) {
   const {
     item_id,
-    item_name,
-    price_cents,
     purchaser_name,
     purchaser_email,
     purchaser_phone,
     company_name,
   } = body as {
     item_id: string;
-    item_name: string;
-    price_cents: number;
     purchaser_name: string;
     purchaser_email: string;
     purchaser_phone?: string;
     company_name?: string;
   };
 
-  if (!item_id || !purchaser_name || !purchaser_email || !price_cents) {
+  if (!item_id || !purchaser_name || !purchaser_email) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 }
@@ -170,6 +166,30 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
   }
 
   const supabase = await createClient();
+
+  // Fetch the sponsorship item server-side — never trust client-supplied price
+  const { data: sponsorshipItem, error: itemError } = await supabase
+    .from("sponsorship_items")
+    .select("id, name, price, active")
+    .eq("id", item_id)
+    .single();
+
+  if (itemError || !sponsorshipItem) {
+    return NextResponse.json(
+      { error: "Sponsorship item not found" },
+      { status: 400 }
+    );
+  }
+
+  if (!sponsorshipItem.active) {
+    return NextResponse.json(
+      { error: "Sponsorship item is no longer available" },
+      { status: 400 }
+    );
+  }
+
+  // price column is numeric(10,2) dollars — convert to cents
+  const unit_amount = Math.round(sponsorshipItem.price * 100);
 
   // Create purchase record
   const { data: purchase, error: purchaseError } = await supabase
@@ -201,12 +221,12 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `Craven Cancer Classic - ${item_name}`,
+            name: `Craven Cancer Classic - ${sponsorshipItem.name}`,
             description: company_name
               ? `Sponsored by ${company_name}`
               : `Purchased by ${purchaser_name}`,
           },
-          unit_amount: price_cents,
+          unit_amount,
         },
         quantity: 1,
       },

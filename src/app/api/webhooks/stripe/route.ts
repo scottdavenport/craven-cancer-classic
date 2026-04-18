@@ -49,6 +49,22 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient();
 
+    // Idempotency check: insert event id into stripe_events.
+    // Duplicate key (23505) → already processed, short-circuit with 200.
+    // Any other insert error → 500 so Stripe retries.
+    const { error: eventInsertError } = await supabase
+      .from("stripe_events")
+      .insert({ id: event.id });
+
+    if (eventInsertError) {
+      if (eventInsertError.code === "23505") {
+        // Duplicate delivery — already processed, acknowledge without re-processing
+        return NextResponse.json({ received: true });
+      }
+      console.error("stripe_events.insert failed for event", event.id, eventInsertError);
+      return NextResponse.json({ error: "db_insert_failed" }, { status: 500 });
+    }
+
     if (metadata.type === "registration" && metadata.team_id) {
       // Update team payment status
       const { error: teamUpdateError } = await supabase

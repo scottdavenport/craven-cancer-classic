@@ -598,6 +598,16 @@ export type Database = {
     Functions: {
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_viewer: { Args: never; Returns: boolean }
+      register_team: {
+        Args: {
+          p_session: string
+          p_team_name: string
+          p_captain_name: string
+          p_captain_email: string
+          p_captain_phone?: string | null
+        }
+        Returns: Json
+      }
     }
     Enums: {
       [_ in never]: never

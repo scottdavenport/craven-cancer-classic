@@ -16,7 +16,6 @@ describe("S3-2 leaderboard revalidate export", () => {
   it("exports revalidate = 300", async () => {
     // Dynamically import so we can inspect named exports without rendering.
     const mod = await import("@/app/(public)/leaderboard/page");
-    // @ts-expect-error — revalidate is not yet typed on the module
     expect(mod.revalidate).toBe(300);
   });
 });

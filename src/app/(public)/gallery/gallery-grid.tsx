@@ -10,11 +10,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Camera, Upload } from "lucide-react";
 import type { Photo } from "@/types/database";
 
-interface GalleryGridProps {
+interface YearGroup {
+  year: number;
   photos: Photo[];
 }
 
-export function GalleryGrid({ photos }: GalleryGridProps) {
+interface GalleryGridProps {
+  photos: Photo[];
+  yearGroups: YearGroup[];
+}
+
+export function GalleryGrid({ photos, yearGroups }: GalleryGridProps) {
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -153,9 +159,9 @@ export function GalleryGrid({ photos }: GalleryGridProps) {
         </Card>
       )}
 
-      {/* Photo grid */}
-      {photos.length === 0 ? (
-        <div className="py-16 text-center">
+      {/* Year-grouped photo grid */}
+      {yearGroups.length === 0 ? (
+        <div className="py-16 text-center" data-testid="empty-state">
           <Camera className="mx-auto h-12 w-12 text-muted-foreground/30" />
           <p className="mt-4 font-display text-xl font-semibold text-foreground">
             No Photos Yet
@@ -165,28 +171,40 @@ export function GalleryGrid({ photos }: GalleryGridProps) {
           </p>
         </div>
       ) : (
-        <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
-          {photos.map((photo) => (
-            <div key={photo.id} className="mb-4 break-inside-avoid">
-              <div className="group relative overflow-hidden rounded-lg">
-                <Image
-                  src={photo.image_url}
-                  alt={photo.caption || "Tournament photo"}
-                  width={600}
-                  height={400}
-                  className="w-full object-cover"
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                />
-                {photo.caption && (
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 transition-opacity group-hover:opacity-100">
-                    <p className="text-sm text-white">{photo.caption}</p>
-                    <p className="mt-1 text-xs text-white/60">
-                      {photo.uploaded_by_name}
-                    </p>
+        <div className="space-y-16">
+          {yearGroups.map(({ year, photos: yearPhotos }) => (
+            <section key={year} aria-label={`${year} Tournament photos`}>
+              <h2
+                className="mb-6 font-display text-2xl font-semibold text-foreground"
+                data-testid={`year-heading-${year}`}
+              >
+                {year} Tournament
+              </h2>
+              <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
+                {yearPhotos.map((photo) => (
+                  <div key={photo.id} className="mb-4 break-inside-avoid">
+                    <div className="group relative overflow-hidden rounded-lg">
+                      <Image
+                        src={photo.image_url}
+                        alt={photo.caption || "Tournament photo"}
+                        width={600}
+                        height={400}
+                        className="w-full object-cover"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                      {photo.caption && (
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 transition-opacity group-hover:opacity-100">
+                          <p className="text-sm text-white">{photo.caption}</p>
+                          <p className="mt-1 text-xs text-white/60">
+                            {photo.uploaded_by_name}
+                          </p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
+                ))}
               </div>
-            </div>
+            </section>
           ))}
         </div>
       )}

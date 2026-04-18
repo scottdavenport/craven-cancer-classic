@@ -1,15 +1,38 @@
 import Image from "next/image";
 import { LinkButton } from "@/components/ui/link-button";
 
+// Placeholder hero photo from Unsplash (royalty-free, no attribution required).
+// Wide fairway framed by pines — greens/neutrals match the teal brand palette.
+// Scott: swap this URL for a real tournament photo after running seed-photos.ts.
+// https://unsplash.com/license
+const HERO_PHOTO_URL =
+  "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=1920&q=80&fm=jpg";
+
 export default function HomePage() {
   return (
     <div>
       {/* Hero */}
       <section className="relative overflow-hidden bg-[#1A2E3A] px-4 py-28 sm:py-36">
+        {/* Past-event background photo with dark overlay for legibility */}
+        <Image
+          src={HERO_PHOTO_URL}
+          alt="Golf course at the Craven Cancer Classic"
+          fill
+          priority
+          className="object-cover object-center"
+          sizes="100vw"
+          data-testid="hero-photo"
+        />
+        {/* Dark overlay: enough opacity to keep copy readable */}
+        <div className="absolute inset-0 bg-[#1A2E3A]/80" />
+
         {/* Subtle texture overlay */}
-        <div className="absolute inset-0 opacity-[0.03]" style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
-        }} />
+        <div
+          className="absolute inset-0 opacity-[0.03]"
+          style={{
+            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E")`,
+          }}
+        />
 
         <div className="relative mx-auto max-w-4xl text-center">
           <Image
@@ -128,10 +151,7 @@ export default function HomePage() {
                 "Upload photos during the tournament and relive the best moments.",
             },
           ].map((item) => (
-            <div
-              key={item.title}
-              className="bg-white p-10 group"
-            >
+            <div key={item.title} className="bg-white p-10 group">
               <h3 className="font-display text-lg font-semibold text-foreground">
                 {item.title}
               </h3>

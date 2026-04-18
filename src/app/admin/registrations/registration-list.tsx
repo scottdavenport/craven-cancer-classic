@@ -37,7 +37,7 @@ export function RegistrationList({ teams }: RegistrationListProps) {
 
   const morningTeams = teams.filter((t) => t.session === "morning");
   const afternoonTeams = teams.filter((t) => t.session === "afternoon");
-  const totalRevenue = teams.reduce((sum, t) => sum + t.amount_paid, 0);
+  const totalRevenue = teams.reduce((sum, t) => sum + t.amount_paid_cents, 0);
 
   async function handleCreate(formData: FormData) {
     setError(null);
@@ -91,7 +91,7 @@ export function RegistrationList({ teams }: RegistrationListProps) {
       t.captain_phone || "",
       t.session,
       t.payment_status,
-      t.amount_paid.toString(),
+      (t.amount_paid_cents / 100).toString(),
       new Date(t.created_at).toLocaleDateString(),
     ]);
 
@@ -136,7 +136,7 @@ export function RegistrationList({ teams }: RegistrationListProps) {
         <Card>
           <CardContent className="pt-4">
             <p className="text-2xl font-bold">
-              ${totalRevenue.toLocaleString()}
+              ${(totalRevenue / 100).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground">Revenue</p>
           </CardContent>
@@ -326,7 +326,7 @@ export function RegistrationList({ teams }: RegistrationListProps) {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      ${team.amount_paid.toLocaleString()}
+                      ${(team.amount_paid_cents / 100).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(team.created_at).toLocaleDateString()}

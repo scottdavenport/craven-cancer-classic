@@ -58,7 +58,7 @@ describe("database types", () => {
       session: "morning",
       payment_status: "pending",
       stripe_payment_id: null,
-      amount_paid: 0,
+      amount_paid_cents: 0,
       notes: null,
       year: 2026,
       created_at: "2026-01-01T00:00:00Z",

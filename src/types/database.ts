@@ -341,7 +341,7 @@ export type Database = {
       }
       sponsors: {
         Row: {
-          amount_paid: number
+          amount_paid_cents: number
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
@@ -357,7 +357,7 @@ export type Database = {
           year: number
         }
         Insert: {
-          amount_paid?: number
+          amount_paid_cents?: number
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -373,7 +373,7 @@ export type Database = {
           year?: number
         }
         Update: {
-          amount_paid?: number
+          amount_paid_cents?: number
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -442,7 +442,7 @@ export type Database = {
       }
       sponsorship_purchases: {
         Row: {
-          amount_paid: number
+          amount_paid_cents: number
           company_name: string | null
           created_at: string
           id: string
@@ -455,7 +455,7 @@ export type Database = {
           year: number
         }
         Insert: {
-          amount_paid?: number
+          amount_paid_cents?: number
           company_name?: string | null
           created_at?: string
           id?: string
@@ -468,7 +468,7 @@ export type Database = {
           year?: number
         }
         Update: {
-          amount_paid?: number
+          amount_paid_cents?: number
           company_name?: string | null
           created_at?: string
           id?: string
@@ -510,7 +510,7 @@ export type Database = {
       }
       teams: {
         Row: {
-          amount_paid: number
+          amount_paid_cents: number
           captain_email: string
           captain_name: string
           captain_phone: string | null
@@ -524,7 +524,7 @@ export type Database = {
           year: number
         }
         Insert: {
-          amount_paid?: number
+          amount_paid_cents?: number
           captain_email: string
           captain_name: string
           captain_phone?: string | null
@@ -538,7 +538,7 @@ export type Database = {
           year?: number
         }
         Update: {
-          amount_paid?: number
+          amount_paid_cents?: number
           captain_email?: string
           captain_name?: string
           captain_phone?: string | null

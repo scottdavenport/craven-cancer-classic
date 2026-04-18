@@ -133,7 +133,7 @@ async function processDownstream(
       .update({
         payment_status: "paid" as const,
         stripe_payment_id: session.id,
-        amount_paid: (session.amount_total ?? 0) / 100,
+        amount_paid_cents: session.amount_total ?? 0,
       })
       .eq("id", metadata.team_id);
 
@@ -174,7 +174,7 @@ async function processDownstream(
       .update({
         payment_status: "paid" as const,
         stripe_payment_id: session.id,
-        amount_paid: (session.amount_total ?? 0) / 100,
+        amount_paid_cents: session.amount_total ?? 0,
       })
       .eq("id", metadata.purchase_id);
 

@@ -43,7 +43,7 @@ export async function createTeamManually(formData: FormData) {
       captain_phone: (formData.get("captain_phone") as string) || null,
       session: formData.get("session") as "morning" | "afternoon",
       payment_status: (formData.get("payment_status") as "pending" | "paid" | "comped") || "pending",
-      amount_paid: parseFloat(formData.get("amount_paid") as string) || 0,
+      amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
       notes: (formData.get("notes") as string) || null,
     })
     .select()

@@ -4,19 +4,6 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 
-export async function getSponsorTiers() {
-  const supabase = await createClient();
-  const currentYear = new Date().getFullYear();
-  const { data, error } = await supabase
-    .from("sponsorship_items")
-    .select("id, name, price_cents, sort_order, active, year")
-    .eq("year", currentYear)
-    .order("sort_order");
-
-  if (error) throw new Error(error.message);
-  return data;
-}
-
 export async function getSponsors() {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();

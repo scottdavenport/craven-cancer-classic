@@ -201,3 +201,142 @@ describe("POST /api/checkout — sponsorship path (S2-1)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// S2-4 — registration checkout: unit_amount wired to event_settings.registration_fee_cents
+// ---------------------------------------------------------------------------
+
+/** Build a chainable mock for event_settings .select().eq().single() */
+function makeEventSettingsChain(result: { data: unknown; error: unknown }) {
+  const single = vi.fn().mockResolvedValue(result);
+  const eq = vi.fn(() => ({ eq, single }));
+  const select = vi.fn(() => ({ eq, single }));
+  return { select };
+}
+
+/** Build a chainable mock for teams .select(..., {count}).eq().eq() — returns count */
+function makeTeamsCountChain(count: number) {
+  const eqInner = vi.fn().mockResolvedValue({ count, error: null });
+  const eqOuter = vi.fn(() => ({ eq: eqInner }));
+  const select = vi.fn(() => ({ eq: eqOuter }));
+  return { select };
+}
+
+/** Build a chainable mock for teams .insert().select().single() */
+function makeTeamsInsertChain(result: { data: unknown; error: unknown }) {
+  const single = vi.fn().mockResolvedValue(result);
+  const selectAfterInsert = vi.fn(() => ({ single }));
+  const insert = vi.fn(() => ({ select: selectAfterInsert }));
+  return { insert };
+}
+
+const OPEN_SETTINGS_DEFAULT_FEE = {
+  registration_open: true,
+  morning_cap: 18,
+  afternoon_cap: 18,
+  registration_fee_cents: 70000,
+};
+
+const OPEN_SETTINGS_CUSTOM_FEE = {
+  registration_open: true,
+  morning_cap: 18,
+  afternoon_cap: 18,
+  registration_fee_cents: 80000,
+};
+
+const OPEN_SETTINGS_NULL_FEE = {
+  registration_open: true,
+  morning_cap: 18,
+  afternoon_cap: 18,
+  registration_fee_cents: null,
+};
+
+const validRegistrationBody = {
+  team_name: "Team Alpha",
+  captain_name: "John Smith",
+  captain_email: "john@example.com",
+  session: "morning",
+};
+
+describe("POST /api/checkout — registration path (S2-4)", () => {
+  function setupRegistrationMocks(
+    eventSettings: Record<string, unknown> | null,
+    teamInsertResult = { data: { id: "team-uuid-1" }, error: null }
+  ) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "event_settings") {
+        return makeEventSettingsChain({
+          data: eventSettings,
+          error: eventSettings === null ? { message: "no rows" } : null,
+        });
+      }
+      if (table === "teams") {
+        // Both the count query and insert query hit "teams".
+        // The count query calls .select("*", {count, head}).eq().eq()
+        // The insert query calls .insert().select().single()
+        // Return an object that supports both shapes.
+        const countChain = makeTeamsCountChain(0);
+        const insertChain = makeTeamsInsertChain(teamInsertResult);
+        return { ...countChain, ...insertChain };
+      }
+      if (table === "players") {
+        return { insert: vi.fn().mockResolvedValue({ error: null }) };
+      }
+      return {};
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSessionCreate.mockResolvedValue({ url: "https://checkout.stripe.com/pay/test" });
+  });
+
+  it("uses event_settings.registration_fee_cents (80000) when present", async () => {
+    setupRegistrationMocks(OPEN_SETTINGS_CUSTOM_FEE);
+
+    const res = await POST(makeRequest(validRegistrationBody));
+    expect(res.status).toBe(200);
+
+    expect(mockSessionCreate).toHaveBeenCalledTimes(1);
+    const call = mockSessionCreate.mock.calls[0][0] as {
+      line_items: { price_data: { unit_amount: number } }[];
+    };
+    expect(call.line_items[0].price_data.unit_amount).toBe(80000);
+  });
+
+  it("falls back to REGISTRATION_PRICE_CENTS (70000) when registration_fee_cents is null", async () => {
+    setupRegistrationMocks(OPEN_SETTINGS_NULL_FEE);
+
+    const res = await POST(makeRequest(validRegistrationBody));
+    expect(res.status).toBe(200);
+
+    expect(mockSessionCreate).toHaveBeenCalledTimes(1);
+    const call = mockSessionCreate.mock.calls[0][0] as {
+      line_items: { price_data: { unit_amount: number } }[];
+    };
+    expect(call.line_items[0].price_data.unit_amount).toBe(70000);
+  });
+
+  it("returns 400 when event_settings row is missing (registration closed guard unchanged)", async () => {
+    setupRegistrationMocks(null);
+
+    const res = await POST(makeRequest(validRegistrationBody));
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/closed/i);
+
+    expect(mockSessionCreate).not.toHaveBeenCalled();
+  });
+
+  it("uses default fee (70000) when registration_fee_cents equals the default", async () => {
+    setupRegistrationMocks(OPEN_SETTINGS_DEFAULT_FEE);
+
+    const res = await POST(makeRequest(validRegistrationBody));
+    expect(res.status).toBe(200);
+
+    const call = mockSessionCreate.mock.calls[0][0] as {
+      line_items: { price_data: { unit_amount: number } }[];
+    };
+    expect(call.line_items[0].price_data.unit_amount).toBe(70000);
+  });
+});

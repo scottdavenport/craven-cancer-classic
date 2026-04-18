@@ -23,22 +23,19 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { createSponsor, updateSponsor, deleteSponsor } from "./actions";
 import type { Sponsor } from "@/types/database";
 
-// Tiers are now sponsorship_items rows (subset of columns returned by getSponsorTiers)
-interface TierRow {
+interface SponsorshipItemOption {
   id: string;
   name: string;
   price_cents: number;
-  sort_order: number;
-  active: boolean;
   year: number;
 }
 
 interface SponsorListProps {
-  tiers: TierRow[];
   sponsors: Sponsor[];
+  sponsorshipItems: SponsorshipItemOption[];
 }
 
-export function SponsorList({ tiers, sponsors }: SponsorListProps) {
+export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -115,36 +112,6 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
         </div>
       )}
 
-      {/* Sponsor tiers overview */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>Sponsor Tiers</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            {tiers.map((tier) => {
-              const count = sponsors.filter(
-                (s) => s.tier_id === tier.id
-              ).length;
-              return (
-                <div
-                  key={tier.id}
-                  className="rounded-lg border border-border p-3"
-                >
-                  <p className="text-sm font-medium">{tier.name}</p>
-                  <p className="text-2xl font-bold text-primary">
-                    ${(tier.price_cents / 100).toLocaleString()}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {count} sponsor{count !== 1 ? "s" : ""}
-                  </p>
-                </div>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Sponsors table */}
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
@@ -162,10 +129,10 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
             <div className="mb-6 rounded-lg border border-border p-4">
               <h3 className="mb-4 font-medium">New Sponsor</h3>
               <SponsorForm
-                tiers={tiers}
                 onSubmit={handleCreate}
                 loading={loading}
                 onCancel={() => setShowForm(false)}
+                sponsorshipItems={sponsorshipItems}
               />
             </div>
           )}
@@ -194,11 +161,11 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
                     <TableRow key={sponsor.id}>
                       <TableCell colSpan={6}>
                         <SponsorForm
-                          tiers={tiers}
                           defaultValues={sponsor}
                           onSubmit={(fd) => handleUpdate(sponsor.id, fd)}
                           loading={loading}
                           onCancel={() => setEditingId(null)}
+                          sponsorshipItems={sponsorshipItems}
                         />
                       </TableCell>
                     </TableRow>
@@ -207,8 +174,10 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
                       <TableCell className="font-medium">
                         {sponsor.name}
                       </TableCell>
-                      <TableCell>
-                        {tiers.find((t) => t.id === sponsor.tier_id)?.name ?? "—"}
+                      <TableCell className="text-sm text-muted-foreground">
+                        {sponsorshipItems.find((item) => item.id === sponsor.tier_id)?.name ?? (
+                          <span className="text-muted-foreground/50">Unknown tier</span>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {sponsor.contact_name || "—"}
@@ -253,17 +222,17 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
 }
 
 function SponsorForm({
-  tiers,
   defaultValues,
   onSubmit,
   loading,
   onCancel,
+  sponsorshipItems,
 }: {
-  tiers: TierRow[];
   defaultValues?: Partial<Sponsor>;
   onSubmit: (formData: FormData) => void;
   loading: boolean;
   onCancel: () => void;
+  sponsorshipItems: SponsorshipItemOption[];
 }) {
   return (
     <form action={onSubmit} className="space-y-4">
@@ -278,18 +247,18 @@ function SponsorForm({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="tier_id">Tier</Label>
+          <Label htmlFor="tier_id">Sponsorship level</Label>
           <select
             id="tier_id"
             name="tier_id"
-            defaultValue={defaultValues?.tier_id}
             required
+            defaultValue={defaultValues?.tier_id ?? ""}
             className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
           >
-            <option value="">Select tier...</option>
-            {tiers.map((tier) => (
-              <option key={tier.id} value={tier.id}>
-                {tier.name} (${(tier.price_cents / 100).toLocaleString()})
+            <option value="" disabled>Select a level</option>
+            {sponsorshipItems.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.name} — ${(item.price_cents / 100).toLocaleString()}
               </option>
             ))}
           </select>

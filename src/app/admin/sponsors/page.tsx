@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getSponsorTiers, getSponsors } from "./actions";
+import { getSponsors, getSponsorshipItems } from "./actions";
 import { SponsorList } from "./sponsor-list";
 
 export const metadata: Metadata = {
@@ -7,9 +7,9 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminSponsorsPage() {
-  const [tiers, sponsors] = await Promise.all([
-    getSponsorTiers(),
+  const [sponsors, sponsorshipItems] = await Promise.all([
     getSponsors(),
+    getSponsorshipItems(),
   ]);
 
   return (
@@ -19,7 +19,7 @@ export default async function AdminSponsorsPage() {
         Manage sponsor tiers and individual sponsors
       </p>
       <div className="mt-8">
-        <SponsorList tiers={tiers} sponsors={sponsors} />
+        <SponsorList sponsors={sponsors} sponsorshipItems={sponsorshipItems} />
       </div>
     </div>
   );

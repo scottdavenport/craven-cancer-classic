@@ -72,7 +72,7 @@ function makeInsertChain(result: { data: unknown; error: unknown }) {
 const ACTIVE_GOLD_ITEM = {
   id: "item-uuid-gold",
   name: "Gold Hole Sponsor",
-  price: 1000.0,
+  price_cents: 100000,
   active: true,
 };
 
@@ -109,7 +109,7 @@ beforeEach(() => {
 
 describe("POST /api/checkout — sponsorship path (S2-1)", () => {
   describe("price integrity: tampered price_cents is ignored", () => {
-    it("creates Stripe session with DB price (100000 cents = $1000), not tampered price_cents=1", async () => {
+    it("creates Stripe session with DB price_cents (100000 = $1000), not tampered price_cents=1", async () => {
       const res = await POST(makeRequest(validSponsorshipBody));
       expect(res.status).toBe(200);
 
@@ -117,12 +117,12 @@ describe("POST /api/checkout — sponsorship path (S2-1)", () => {
       const call = mockSessionCreate.mock.calls[0][0] as {
         line_items: { price_data: { unit_amount: number } }[];
       };
-      // DB price = $1000.00 → 100000 cents — NOT the tampered 1
+      // DB price_cents = 100000 ($1000.00) — NOT the tampered 1
       expect(call.line_items[0].price_data.unit_amount).toBe(100000);
     });
 
-    it("uses Math.round for cent conversion (e.g. $99.99 → 9999)", async () => {
-      const silverItem = { id: "item-uuid-silver", name: "Silver Sponsor", price: 99.99, active: true };
+    it("uses price_cents directly from DB (e.g. price_cents=9999 → unit_amount=9999)", async () => {
+      const silverItem = { id: "item-uuid-silver", name: "Silver Sponsor", price_cents: 9999, active: true };
       mockFrom.mockImplementation((table: string) => {
         if (table === "sponsorship_items") {
           return makeItemSelectChain({ data: silverItem, error: null });

@@ -339,39 +339,6 @@ export type Database = {
           },
         ]
       }
-      sponsor_tiers: {
-        Row: {
-          active: boolean
-          benefits: Json
-          created_at: string
-          id: string
-          max_available: number | null
-          name: string
-          price: number
-          sort_order: number
-        }
-        Insert: {
-          active?: boolean
-          benefits?: Json
-          created_at?: string
-          id?: string
-          max_available?: number | null
-          name: string
-          price: number
-          sort_order?: number
-        }
-        Update: {
-          active?: boolean
-          benefits?: Json
-          created_at?: string
-          id?: string
-          max_available?: number | null
-          name?: string
-          price?: number
-          sort_order?: number
-        }
-        Relationships: []
-      }
       sponsors: {
         Row: {
           amount_paid: number
@@ -426,7 +393,7 @@ export type Database = {
             foreignKeyName: "sponsors_tier_id_fkey"
             columns: ["tier_id"]
             isOneToOne: false
-            referencedRelation: "sponsor_tiers"
+            referencedRelation: "sponsorship_items"
             referencedColumns: ["id"]
           },
         ]
@@ -434,49 +401,44 @@ export type Database = {
       sponsorship_items: {
         Row: {
           active: boolean
+          benefits: Json
           created_at: string
           description: string | null
           id: string
           max_quantity: number | null
           name: string
-          price: number
+          price_cents: number
           sold_count: number
-          tier_id: string | null
+          sort_order: number
           year: number
         }
         Insert: {
           active?: boolean
+          benefits?: Json
           created_at?: string
           description?: string | null
           id?: string
           max_quantity?: number | null
           name: string
-          price: number
+          price_cents: number
           sold_count?: number
-          tier_id?: string | null
+          sort_order?: number
           year?: number
         }
         Update: {
           active?: boolean
+          benefits?: Json
           created_at?: string
           description?: string | null
           id?: string
           max_quantity?: number | null
           name?: string
-          price?: number
+          price_cents?: number
           sold_count?: number
-          tier_id?: string | null
+          sort_order?: number
           year?: number
         }
-        Relationships: [
-          {
-            foreignKeyName: "sponsorship_items_tier_id_fkey"
-            columns: ["tier_id"]
-            isOneToOne: false
-            referencedRelation: "sponsor_tiers"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       sponsorship_purchases: {
         Row: {
@@ -756,7 +718,6 @@ export const Constants = {
 // Convenience type aliases
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type EventSettings = Database["public"]["Tables"]["event_settings"]["Row"];
-export type SponsorTier = Database["public"]["Tables"]["sponsor_tiers"]["Row"];
 export type Sponsor = Database["public"]["Tables"]["sponsors"]["Row"];
 export type Team = Database["public"]["Tables"]["teams"]["Row"];
 export type Player = Database["public"]["Tables"]["players"]["Row"];

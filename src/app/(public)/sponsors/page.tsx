@@ -14,9 +14,10 @@ async function getSponsorsWithTiers() {
   const currentYear = new Date().getFullYear();
 
   const { data: tiers } = await supabase
-    .from("sponsor_tiers")
-    .select("*")
+    .from("sponsorship_items")
+    .select("id, name, sort_order, active")
     .eq("active", true)
+    .eq("year", currentYear)
     .order("sort_order");
 
   const { data: sponsors } = await supabase

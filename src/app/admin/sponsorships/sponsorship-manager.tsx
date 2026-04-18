@@ -190,7 +190,7 @@ export function SponsorshipManager({
                         )}
                       </TableCell>
                       <TableCell className="text-right font-medium">
-                        ${item.price.toLocaleString()}
+                        ${(item.price_cents / 100).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-center">
                         {item.sold_count}
@@ -314,7 +314,7 @@ function ItemForm({
             name="price"
             type="number"
             step="0.01"
-            defaultValue={defaultValues?.price}
+            defaultValue={defaultValues?.price_cents !== undefined ? defaultValues.price_cents / 100 : undefined}
             required
           />
         </div>

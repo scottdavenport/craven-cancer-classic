@@ -161,7 +161,7 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
   // Fetch the sponsorship item server-side — never trust client-supplied price
   const { data: sponsorshipItem, error: itemError } = await supabase
     .from("sponsorship_items")
-    .select("id, name, price, active")
+    .select("id, name, price_cents, active")
     .eq("id", item_id)
     .single();
 
@@ -179,8 +179,8 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
     );
   }
 
-  // price column is numeric(10,2) dollars — convert to cents
-  const unit_amount = Math.round(sponsorshipItem.price * 100);
+  // price_cents is already in cents (bigint) — use directly
+  const unit_amount = sponsorshipItem.price_cents;
 
   // Create purchase record
   const { data: purchase, error: purchaseError } = await supabase

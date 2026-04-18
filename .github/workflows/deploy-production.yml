@@ -4,8 +4,12 @@ permissions:
   actions: read
   contents: read
 
-# Manual trigger only — no staging environment (Option C)
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'supabase/migrations/**'
+      - 'supabase/functions/**'
   workflow_dispatch:
     inputs:
       deploy_migrations:
@@ -40,13 +44,13 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Push migrations to production
-        if: inputs.deploy_migrations
+        if: inputs.deploy_migrations != false
         run: supabase db push
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Deploy functions to production
-        if: inputs.deploy_functions
+        if: inputs.deploy_functions != false
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |

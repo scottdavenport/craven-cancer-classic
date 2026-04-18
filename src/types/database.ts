@@ -596,6 +596,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      acquire_stripe_event_lock: {
+        Args: { event_id: string }
+        Returns: void
+      }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_viewer: { Args: never; Returns: boolean }
       register_team: {
@@ -607,6 +611,10 @@ export type Database = {
           p_captain_phone?: string | null
         }
         Returns: Json
+      }
+      release_stripe_event_lock: {
+        Args: { event_id: string }
+        Returns: void
       }
     }
     Enums: {

@@ -49,111 +49,151 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient();
 
-    // S3-7 idempotency: insert event row without processed_at.
-    // Three cases on duplicate key (23505):
-    //   a) processed_at IS NOT NULL → fully processed, short-circuit 200.
-    //   b) processed_at IS NULL     → prior attempt failed midway, re-run downstream.
-    // Any other insert error → 500 so Stripe retries.
-    const { error: eventInsertError } = await supabase
-      .from("stripe_events")
-      .insert({ id: event.id });
+    // S4-2: Acquire session-scoped advisory lock BEFORE any idempotency work.
+    // pg_advisory_lock serializes concurrent deliveries of the same event_id.
+    // Session-scoped (not xact-scoped) because PostgREST does not guarantee a
+    // single transaction spans the full request over its connection pool.
+    // Lock is released in the finally block regardless of outcome.
+    const { error: lockError } = await supabase.rpc("acquire_stripe_event_lock", {
+      event_id: event.id,
+    });
 
-    if (eventInsertError) {
-      if (eventInsertError.code === "23505") {
-        // Duplicate delivery — check whether prior attempt fully succeeded.
-        const { data: existingRow, error: selectError } = await supabase
-          .from("stripe_events")
-          .select("processed_at")
-          .eq("id", event.id)
-          .single();
+    if (lockError) {
+      console.error("acquire_stripe_event_lock failed for event", event.id, lockError);
+      return NextResponse.json({ error: "lock_failed" }, { status: 500 });
+    }
 
-        if (selectError || !existingRow) {
-          // Unexpected: row must exist after 23505. Acknowledge safely.
-          console.error("stripe_events.select failed after 23505 for event", event.id, selectError);
-          return NextResponse.json({ received: true });
+    let result: NextResponse = NextResponse.json({ received: true });
+    try {
+      // S3-7 idempotency: insert event row without processed_at.
+      // Three cases on duplicate key (23505):
+      //   a) processed_at IS NOT NULL → fully processed, short-circuit 200.
+      //   b) processed_at IS NULL     → prior attempt failed midway, re-run downstream.
+      // Any other insert error → 500 so Stripe retries.
+      const { error: eventInsertError } = await supabase
+        .from("stripe_events")
+        .insert({ id: event.id });
+
+      if (eventInsertError) {
+        if (eventInsertError.code === "23505") {
+          // Duplicate delivery — check whether prior attempt fully succeeded.
+          const { data: existingRow, error: selectError } = await supabase
+            .from("stripe_events")
+            .select("processed_at")
+            .eq("id", event.id)
+            .single();
+
+          if (selectError || !existingRow) {
+            // Unexpected: row must exist after 23505. Acknowledge safely.
+            console.error("stripe_events.select failed after 23505 for event", event.id, selectError);
+            result = NextResponse.json({ received: true });
+          } else if (existingRow.processed_at !== null) {
+            // Fully processed duplicate — short-circuit.
+            result = NextResponse.json({ received: true });
+          } else {
+            // processed_at IS NULL — prior attempt failed downstream. Fall through to re-run.
+            result = await processDownstream(supabase, event.id, session, metadata);
+          }
+        } else {
+          console.error("stripe_events.insert failed for event", event.id, eventInsertError);
+          result = NextResponse.json({ error: "db_insert_failed" }, { status: 500 });
         }
-
-        if (existingRow.processed_at !== null) {
-          // Fully processed duplicate — short-circuit.
-          return NextResponse.json({ received: true });
-        }
-
-        // processed_at IS NULL — prior attempt failed downstream. Fall through to re-run.
       } else {
-        console.error("stripe_events.insert failed for event", event.id, eventInsertError);
-        return NextResponse.json({ error: "db_insert_failed" }, { status: 500 });
+        result = await processDownstream(supabase, event.id, session, metadata);
+      }
+    } finally {
+      // S4-2: Always release the session-scoped advisory lock.
+      const { error: unlockError } = await supabase.rpc("release_stripe_event_lock", {
+        event_id: event.id,
+      });
+      if (unlockError) {
+        // Non-fatal: connection close will reclaim the lock. Log for observability.
+        console.error("release_stripe_event_lock failed for event", event.id, unlockError);
       }
     }
 
-    if (metadata.type === "registration" && metadata.team_id) {
-      // Update team payment status
-      const { error: teamUpdateError } = await supabase
-        .from("teams")
-        .update({
-          payment_status: "paid" as const,
-          stripe_payment_id: session.id,
-          amount_paid: (session.amount_total ?? 0) / 100,
-        })
-        .eq("id", metadata.team_id);
+    return result!;
+  }
 
-      if (teamUpdateError) {
-        console.error("teams.update failed for event", event.id, teamUpdateError);
-        return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
-      }
+  return NextResponse.json({ received: true });
+}
 
-      // Auto-create contact from captain
-      const { data: team } = await supabase
-        .from("teams")
-        .select("captain_name, captain_email, captain_phone")
-        .eq("id", metadata.team_id)
-        .single();
+type SupabaseClient = ReturnType<typeof createServiceClient>;
 
-      if (team) {
-        const { error: contactUpsertError } = await supabase.from("contacts").upsert(
-          {
-            full_name: team.captain_name,
-            email: team.captain_email,
-            phone: team.captain_phone,
-            type: "player" as const,
-          },
-          { onConflict: "email" }
-        );
+async function processDownstream(
+  supabase: SupabaseClient,
+  eventId: string,
+  session: Stripe.Checkout.Session,
+  metadata: Record<string, string>
+): Promise<NextResponse> {
+  if (metadata.type === "registration" && metadata.team_id) {
+    // Update team payment status
+    const { error: teamUpdateError } = await supabase
+      .from("teams")
+      .update({
+        payment_status: "paid" as const,
+        stripe_payment_id: session.id,
+        amount_paid: (session.amount_total ?? 0) / 100,
+      })
+      .eq("id", metadata.team_id);
 
-        if (contactUpsertError) {
-          // Non-critical: log and continue — do NOT return 500 or Stripe will retry and double-charge
-          console.error("contacts.upsert failed for event", event.id, contactUpsertError);
-        }
-      }
+    if (teamUpdateError) {
+      console.error("teams.update failed for event", eventId, teamUpdateError);
+      return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
     }
 
-    if (metadata.type === "sponsorship" && metadata.purchase_id) {
-      // Update sponsorship purchase payment status
-      const { error: purchaseUpdateError } = await supabase
-        .from("sponsorship_purchases")
-        .update({
-          payment_status: "paid" as const,
-          stripe_payment_id: session.id,
-          amount_paid: (session.amount_total ?? 0) / 100,
-        })
-        .eq("id", metadata.purchase_id);
+    // Auto-create contact from captain
+    const { data: team } = await supabase
+      .from("teams")
+      .select("captain_name, captain_email, captain_phone")
+      .eq("id", metadata.team_id)
+      .single();
 
-      if (purchaseUpdateError) {
-        console.error("sponsorship_purchases.update failed for event", event.id, purchaseUpdateError);
-        return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
+    if (team) {
+      const { error: contactUpsertError } = await supabase.from("contacts").upsert(
+        {
+          full_name: team.captain_name,
+          email: team.captain_email,
+          phone: team.captain_phone,
+          type: "player" as const,
+        },
+        { onConflict: "email" }
+      );
+
+      if (contactUpsertError) {
+        // Non-critical: log and continue — do NOT return 500 or Stripe will retry and double-charge
+        console.error("contacts.upsert failed for event", eventId, contactUpsertError);
       }
     }
+  }
 
-    // S3-7: All downstream writes succeeded — stamp processed_at so retries short-circuit.
-    const { error: stampError } = await supabase
-      .from("stripe_events")
-      .update({ processed_at: new Date().toISOString() })
-      .eq("id", event.id);
+  if (metadata.type === "sponsorship" && metadata.purchase_id) {
+    // Update sponsorship purchase payment status
+    const { error: purchaseUpdateError } = await supabase
+      .from("sponsorship_purchases")
+      .update({
+        payment_status: "paid" as const,
+        stripe_payment_id: session.id,
+        amount_paid: (session.amount_total ?? 0) / 100,
+      })
+      .eq("id", metadata.purchase_id);
 
-    if (stampError) {
-      // Non-fatal: downstream work is done. Log and acknowledge.
-      // Next Stripe retry will re-run downstream (idempotent) and attempt stamp again.
-      console.error("stripe_events processed_at stamp failed for event", event.id, stampError);
+    if (purchaseUpdateError) {
+      console.error("sponsorship_purchases.update failed for event", eventId, purchaseUpdateError);
+      return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
     }
+  }
+
+  // S3-7: All downstream writes succeeded — stamp processed_at so retries short-circuit.
+  const { error: stampError } = await supabase
+    .from("stripe_events")
+    .update({ processed_at: new Date().toISOString() })
+    .eq("id", eventId);
+
+  if (stampError) {
+    // Non-fatal: downstream work is done. Log and acknowledge.
+    // Next Stripe retry will re-run downstream (idempotent) and attempt stamp again.
+    console.error("stripe_events processed_at stamp failed for event", eventId, stampError);
   }
 
   return NextResponse.json({ received: true });

@@ -215,21 +215,6 @@ function makeEventSettingsChain(result: { data: unknown; error: unknown }) {
   return { select };
 }
 
-/** Build a chainable mock for teams .select(..., {count}).eq().eq() — returns count */
-function makeTeamsCountChain(count: number) {
-  const eqInner = vi.fn().mockResolvedValue({ count, error: null });
-  const eqOuter = vi.fn(() => ({ eq: eqInner }));
-  const select = vi.fn(() => ({ eq: eqOuter }));
-  return { select };
-}
-
-/** Build a chainable mock for teams .insert().select().single() */
-function makeTeamsInsertChain(result: { data: unknown; error: unknown }) {
-  const single = vi.fn().mockResolvedValue(result);
-  const selectAfterInsert = vi.fn(() => ({ single }));
-  const insert = vi.fn(() => ({ select: selectAfterInsert }));
-  return { insert };
-}
 
 const OPEN_SETTINGS_DEFAULT_FEE = {
   registration_open: true,

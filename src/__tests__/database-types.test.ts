@@ -83,21 +83,49 @@ describe("database types", () => {
 
   it("Database type has all expected tables", () => {
     type TableNames = keyof Database["public"]["Tables"];
-    const tables: TableNames[] = [
-      "profiles",
-      "event_settings",
-      "sponsor_tiers",
-      "sponsors",
-      "teams",
-      "players",
-      "sponsorship_items",
-      "sponsorship_purchases",
-      "photos",
-      "scores",
+    // S4-3: exhaustive compile-time check — if a new table is added to database.ts
+    // without being listed here, tsc will error because Exclude<TableNames, KnownTables>
+    // will no longer be `never`.
+    type KnownTables =
+      | "contacts"
+      | "email_log"
+      | "event_settings"
+      | "invitations"
+      | "photos"
+      | "players"
+      | "profiles"
+      | "scores"
+      | "sponsor_tiers"
+      | "sponsors"
+      | "sponsorship_items"
+      | "sponsorship_purchases"
+      | "stripe_events"
+      | "teams";
+    // This assignment errors at compile time if any TableName is not in KnownTables
+    type _ExhaustiveCheck = Exclude<TableNames, KnownTables> extends never
+      ? true
+      : never;
+    const _check: _ExhaustiveCheck = true;
+    void _check;
+
+    // Runtime check: array must list all 14 tables
+    const tables: KnownTables[] = [
       "contacts",
       "email_log",
+      "event_settings",
+      "invitations",
+      "photos",
+      "players",
+      "profiles",
+      "scores",
+      "sponsor_tiers",
+      "sponsors",
+      "sponsorship_items",
+      "sponsorship_purchases",
+      "stripe_events",
+      "teams",
     ];
-    expect(tables).toHaveLength(12);
+    expect(tables).toHaveLength(14);
   });
 
   it("Insert types make required fields mandatory and optional fields optional", () => {

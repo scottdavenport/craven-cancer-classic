@@ -48,6 +48,8 @@ export type Database = {
           morning_cap: number;
           afternoon_cap: number;
           registration_open: boolean;
+          // Added by migration 20260416000002 — regenerate via `supabase gen types typescript` when local stack is linked
+          registration_fee_cents: number;
           year: number;
           hero_image_url: string | null;
           updated_at: string;
@@ -63,6 +65,7 @@ export type Database = {
           morning_cap?: number;
           afternoon_cap?: number;
           registration_open?: boolean;
+          registration_fee_cents?: number;
           year?: number;
           hero_image_url?: string | null;
           updated_at?: string;
@@ -78,6 +81,7 @@ export type Database = {
           morning_cap?: number;
           afternoon_cap?: number;
           registration_open?: boolean;
+          registration_fee_cents?: number;
           year?: number;
           hero_image_url?: string | null;
           updated_at?: string;

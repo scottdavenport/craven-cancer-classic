@@ -11,6 +11,8 @@ interface RegistrationFormProps {
   afternoonCap: number;
   morningCount: number;
   afternoonCount: number;
+  /** Registration fee in cents (e.g. 70000 = $700). Displayed as formatted dollars. */
+  registrationFeeCents: number;
 }
 
 interface PlayerInfo {
@@ -27,12 +29,21 @@ const emptyPlayer = (): PlayerInfo => ({
   handicap: "",
 });
 
+function formatFee(cents: number): string {
+  const dollars = cents / 100;
+  return dollars % 1 === 0
+    ? `$${dollars.toFixed(0)}`
+    : `$${dollars.toFixed(2)}`;
+}
+
 export function RegistrationForm({
   morningCap,
   afternoonCap,
   morningCount,
   afternoonCount,
+  registrationFeeCents,
 }: RegistrationFormProps) {
+  const formattedFee = formatFee(registrationFeeCents);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<"morning" | "afternoon">("morning");
@@ -255,7 +266,7 @@ export function RegistrationForm({
               4 players
             </p>
           </div>
-          <p className="text-2xl font-bold text-foreground">$700</p>
+          <p className="text-2xl font-bold text-foreground">{formattedFee}</p>
         </div>
         <Button
           type="submit"

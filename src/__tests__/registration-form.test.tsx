@@ -9,6 +9,7 @@ describe("RegistrationForm", () => {
     afternoonCap: 36,
     morningCount: 10,
     afternoonCount: 5,
+    registrationFeeCents: 70000,
   };
 
   it("renders session picker with availability", () => {
@@ -31,9 +32,14 @@ describe("RegistrationForm", () => {
     expect(screen.getAllByText(/Player \d/i).length).toBeGreaterThanOrEqual(4);
   });
 
-  it("shows $700 price", () => {
-    render(<RegistrationForm {...defaultProps} />);
+  it("renders the registration fee from props", () => {
+    render(<RegistrationForm {...defaultProps} registrationFeeCents={70000} />);
     expect(screen.getAllByText("$700").length).toBeGreaterThan(0);
+  });
+
+  it("renders a non-standard fee correctly", () => {
+    render(<RegistrationForm {...defaultProps} registrationFeeCents={75050} />);
+    expect(screen.getAllByText("$750.50").length).toBeGreaterThan(0);
   });
 
   it("shows session as full when cap is reached", () => {
@@ -43,6 +49,7 @@ describe("RegistrationForm", () => {
         afternoonCap={36}
         morningCount={36}
         afternoonCount={5}
+        registrationFeeCents={70000}
       />
     );
     expect(screen.getAllByText("Full").length).toBeGreaterThan(0);

@@ -17,6 +17,7 @@ const mockSettings = {
   morning_cap: 36,
   afternoon_cap: 36,
   registration_open: false,
+  registration_fee_cents: 70000,
   year: 2026,
   hero_image_url: null,
   updated_at: "2026-01-01T00:00:00Z",
@@ -54,5 +55,18 @@ describe("EventSettingsForm", () => {
   it("renders registration toggle", () => {
     render(<EventSettingsForm settings={mockSettings} />);
     expect(screen.getAllByText(/registration open/i).length).toBeGreaterThan(0);
+  });
+
+  it("renders the registration fee input populated with dollars from cents", () => {
+    render(<EventSettingsForm settings={mockSettings} />);
+    const feeInput = screen.getByLabelText(/registration fee/i) as HTMLInputElement;
+    expect(feeInput).toBeInTheDocument();
+    expect(feeInput.value).toBe("700.00");
+  });
+
+  it("renders registration fee input with default 700.00 when settings is null", () => {
+    render(<EventSettingsForm settings={null} />);
+    const feeInput = screen.getByLabelText(/registration fee/i) as HTMLInputElement;
+    expect(feeInput.value).toBe("700.00");
   });
 });

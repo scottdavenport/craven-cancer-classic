@@ -1,19 +1,21 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { GalleryGrid } from "./gallery-grid";
+import type { Photo } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "Photo Gallery",
   description: "Photos from the Craven Cancer Classic tournament.",
 };
 
-async function getApprovedPhotos() {
+async function getApprovedPhotos(): Promise<Photo[]> {
   const supabase = await createClient();
 
   const { data } = await supabase
     .from("photos")
     .select("*")
     .eq("status", "approved")
+    .order("year", { ascending: false })
     .order("created_at", { ascending: false });
 
   return data ?? [];
@@ -21,6 +23,17 @@ async function getApprovedPhotos() {
 
 export default async function GalleryPage() {
   const photos = await getApprovedPhotos();
+
+  // Build year groups: [{year, photos}], most recent first
+  const yearGroups: { year: number; photos: Photo[] }[] = [];
+  for (const photo of photos) {
+    const last = yearGroups[yearGroups.length - 1];
+    if (last && last.year === photo.year) {
+      last.photos.push(photo);
+    } else {
+      yearGroups.push({ year: photo.year, photos: [photo] });
+    }
+  }
 
   return (
     <div>
@@ -41,7 +54,7 @@ export default async function GalleryPage() {
 
       <section className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-6xl">
-          <GalleryGrid photos={photos} />
+          <GalleryGrid photos={photos} yearGroups={yearGroups} />
         </div>
       </section>
     </div>

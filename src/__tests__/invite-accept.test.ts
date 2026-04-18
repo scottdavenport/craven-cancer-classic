@@ -39,9 +39,7 @@ vi.mock("@supabase/supabase-js", () => ({
               single: mockInvitationSelect,
             }),
           }),
-          update: () => ({
-            eq: mockInvitationUpdate,
-          }),
+          update: mockInvitationUpdate,
         };
       }
       if (table === "profiles") {
@@ -90,7 +88,9 @@ beforeEach(() => {
     data: makeInvitation(),
     error: null,
   });
-  mockInvitationUpdate.mockResolvedValue({ data: {}, error: null });
+  mockInvitationUpdate.mockReturnValue({
+    eq: vi.fn().mockResolvedValue({ data: {}, error: null }),
+  });
   mockProfileUpsert.mockResolvedValue({ data: {}, error: null });
 });
 
@@ -103,8 +103,7 @@ describe("S3-4 GET /api/invite/accept", () => {
       await GET(makeRequest("valid-token-abc"));
 
       expect(mockInvitationUpdate).toHaveBeenCalledWith(
-        expect.objectContaining({ accepted_at: expect.any(String) }),
-        expect.anything()
+        expect.objectContaining({ accepted_at: expect.any(String) })
       );
     });
 

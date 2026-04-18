@@ -464,14 +464,17 @@ export type Database = {
       stripe_events: {
         Row: {
           id: string;
+          processed_at: string | null;
           received_at: string;
         };
         Insert: {
           id: string;
+          processed_at?: string | null;
           received_at?: string;
         };
         Update: {
           id?: string;
+          processed_at?: string | null;
           received_at?: string;
         };
         Relationships: [];

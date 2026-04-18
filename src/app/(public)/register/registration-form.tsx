@@ -97,7 +97,8 @@ export function RegistrationForm({
       if (data.url) {
         window.location.href = data.url;
       }
-    } catch {
+    } catch (err) {
+      console.error('[RegistrationForm] checkout fetch failed:', err);
       setError("Failed to start registration. Please try again.");
     } finally {
       setLoading(false);

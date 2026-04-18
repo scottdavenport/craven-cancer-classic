@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getStripe, REGISTRATION_PRICE_CENTS } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
@@ -60,50 +60,41 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
     );
   }
 
-  const { count } = await supabase
-    .from("teams")
-    .select("*", { count: "exact", head: true })
-    .eq("year", currentYear)
-    .eq("session", sessionTime as "morning" | "afternoon");
+  // Atomic cap-check + insert via RPC — prevents race condition where two
+  // concurrent requests both see count < cap and both insert.
+  const { data: rpcData, error: rpcError } = await supabase.rpc("register_team", {
+    p_session: sessionTime,
+    p_team_name: team_name,
+    p_captain_name: captain_name,
+    p_captain_email: captain_email,
+    p_captain_phone: captain_phone || null,
+  });
 
-  const cap =
-    sessionTime === "morning"
-      ? eventSettings.morning_cap
-      : eventSettings.afternoon_cap;
-
-  if (count !== null && count >= cap) {
+  if (rpcError) {
+    if (rpcError.code === "SESSION_FULL") {
+      return NextResponse.json(
+        { error: `The ${sessionTime} session is full` },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
-      { error: `The ${sessionTime} session is full` },
-      { status: 400 }
-    );
-  }
-
-  const { data: team, error: teamError } = await supabase
-    .from("teams")
-    .insert({
-      team_name,
-      captain_name,
-      captain_email,
-      captain_phone: captain_phone || null,
-      session: sessionTime as "morning" | "afternoon",
-      payment_status: "pending" as const,
-      amount_paid: 0,
-    })
-    .select()
-    .single();
-
-  if (teamError || !team) {
-    return NextResponse.json(
-      { error: teamError?.message || "Failed to create team" },
+      { error: rpcError.message || "Failed to register team" },
       { status: 500 }
     );
   }
+
+  const rpcResult = rpcData as unknown as { team_id: string; registration_fee_cents: number };
+  const teamId: string = rpcResult.team_id;
+  const registrationFeeCents: number =
+    rpcResult.registration_fee_cents ??
+    eventSettings.registration_fee_cents ??
+    70000;
 
   if (players && Array.isArray(players)) {
     const playerInserts = players
       .filter((p) => p.full_name)
       .map((p) => ({
-        team_id: team.id,
+        team_id: teamId,
         full_name: p.full_name,
         email: p.email || null,
         phone: p.phone || null,
@@ -126,13 +117,13 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
             name: "Craven Cancer Classic - Team Registration",
             description: `Team: ${team_name} | ${sessionTime === "morning" ? "Morning" : "Afternoon"} Session`,
           },
-          unit_amount: eventSettings.registration_fee_cents ?? REGISTRATION_PRICE_CENTS,
+          unit_amount: registrationFeeCents,
         },
         quantity: 1,
       },
     ],
     metadata: {
-      team_id: team.id,
+      team_id: teamId,
       type: "registration",
     },
     customer_email: captain_email,

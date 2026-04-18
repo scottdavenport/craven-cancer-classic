@@ -49,8 +49,10 @@ export async function POST(request: Request) {
 
     const supabase = createServiceClient();
 
-    // Idempotency check: insert event id into stripe_events.
-    // Duplicate key (23505) → already processed, short-circuit with 200.
+    // S3-7 idempotency: insert event row without processed_at.
+    // Three cases on duplicate key (23505):
+    //   a) processed_at IS NOT NULL → fully processed, short-circuit 200.
+    //   b) processed_at IS NULL     → prior attempt failed midway, re-run downstream.
     // Any other insert error → 500 so Stripe retries.
     const { error: eventInsertError } = await supabase
       .from("stripe_events")
@@ -58,11 +60,29 @@ export async function POST(request: Request) {
 
     if (eventInsertError) {
       if (eventInsertError.code === "23505") {
-        // Duplicate delivery — already processed, acknowledge without re-processing
-        return NextResponse.json({ received: true });
+        // Duplicate delivery — check whether prior attempt fully succeeded.
+        const { data: existingRow, error: selectError } = await supabase
+          .from("stripe_events")
+          .select("processed_at")
+          .eq("id", event.id)
+          .single();
+
+        if (selectError || !existingRow) {
+          // Unexpected: row must exist after 23505. Acknowledge safely.
+          console.error("stripe_events.select failed after 23505 for event", event.id, selectError);
+          return NextResponse.json({ received: true });
+        }
+
+        if (existingRow.processed_at !== null) {
+          // Fully processed duplicate — short-circuit.
+          return NextResponse.json({ received: true });
+        }
+
+        // processed_at IS NULL — prior attempt failed downstream. Fall through to re-run.
+      } else {
+        console.error("stripe_events.insert failed for event", event.id, eventInsertError);
+        return NextResponse.json({ error: "db_insert_failed" }, { status: 500 });
       }
-      console.error("stripe_events.insert failed for event", event.id, eventInsertError);
-      return NextResponse.json({ error: "db_insert_failed" }, { status: 500 });
     }
 
     if (metadata.type === "registration" && metadata.team_id) {
@@ -121,6 +141,18 @@ export async function POST(request: Request) {
         console.error("sponsorship_purchases.update failed for event", event.id, purchaseUpdateError);
         return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
       }
+    }
+
+    // S3-7: All downstream writes succeeded — stamp processed_at so retries short-circuit.
+    const { error: stampError } = await supabase
+      .from("stripe_events")
+      .update({ processed_at: new Date().toISOString() })
+      .eq("id", event.id);
+
+    if (stampError) {
+      // Non-fatal: downstream work is done. Log and acknowledge.
+      // Next Stripe retry will re-run downstream (idempotent) and attempt stamp again.
+      console.error("stripe_events processed_at stamp failed for event", event.id, stampError);
     }
   }
 

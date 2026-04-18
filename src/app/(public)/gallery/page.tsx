@@ -8,21 +8,38 @@ export const metadata: Metadata = {
   description: "Photos from the Craven Cancer Classic tournament.",
 };
 
-async function getApprovedPhotos(): Promise<Photo[]> {
+const PAGE_SIZE = 24;
+
+async function getApprovedPhotos(
+  offset: number
+): Promise<{ photos: Photo[]; totalCount: number }> {
   const supabase = await createClient();
 
-  const { data } = await supabase
+  const { data, count } = await supabase
     .from("photos")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("status", "approved")
     .order("year", { ascending: false })
-    .order("created_at", { ascending: false });
+    .order("created_at", { ascending: false })
+    .range(offset, offset + PAGE_SIZE - 1);
 
-  return data ?? [];
+  return { photos: data ?? [], totalCount: count ?? 0 };
 }
 
-export default async function GalleryPage() {
-  const photos = await getApprovedPhotos();
+interface GalleryPageProps {
+  searchParams?: Promise<Record<string, string>> | Record<string, string>;
+}
+
+export default async function GalleryPage({ searchParams }: GalleryPageProps = {}) {
+  const resolvedParams =
+    searchParams instanceof Promise
+      ? await searchParams
+      : (searchParams ?? {});
+
+  const pageNum = Math.max(1, parseInt(resolvedParams.page ?? "1", 10) || 1);
+  const offset = (pageNum - 1) * PAGE_SIZE;
+
+  const { photos, totalCount } = await getApprovedPhotos(offset);
 
   // Build year groups: [{year, photos}], most recent first
   const yearGroups: { year: number; photos: Photo[] }[] = [];
@@ -54,7 +71,13 @@ export default async function GalleryPage() {
 
       <section className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-6xl">
-          <GalleryGrid photos={photos} yearGroups={yearGroups} />
+          <GalleryGrid
+            photos={photos}
+            yearGroups={yearGroups}
+            totalCount={totalCount}
+            currentPage={pageNum}
+            pageSize={PAGE_SIZE}
+          />
         </div>
       </section>
     </div>

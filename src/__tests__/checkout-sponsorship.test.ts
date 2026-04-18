@@ -27,10 +27,11 @@ vi.mock("next/headers", () => ({
 
 // --- Supabase mock ---
 // Use vi.hoisted so vars are available inside the hoisted vi.mock factory
-const { mockFrom, mockCreateClient } = vi.hoisted(() => {
+const { mockFrom, mockRpc, mockCreateClient } = vi.hoisted(() => {
   const mockFrom = vi.fn();
-  const mockCreateClient = vi.fn().mockResolvedValue({ from: mockFrom });
-  return { mockFrom, mockCreateClient };
+  const mockRpc = vi.fn();
+  const mockCreateClient = vi.fn().mockResolvedValue({ from: mockFrom, rpc: mockRpc });
+  return { mockFrom, mockRpc, mockCreateClient };
 });
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -98,7 +99,7 @@ beforeEach(() => {
     return {};
   });
 
-  mockCreateClient.mockResolvedValue({ from: mockFrom });
+  mockCreateClient.mockResolvedValue({ from: mockFrom, rpc: mockRpc });
   mockSessionCreate.mockResolvedValue({ url: "https://checkout.stripe.com/pay/test" });
 });
 
@@ -261,7 +262,10 @@ const validRegistrationBody = {
 describe("POST /api/checkout — registration path (S2-4)", () => {
   function setupRegistrationMocks(
     eventSettings: Record<string, unknown> | null,
-    teamInsertResult = { data: { id: "team-uuid-1" }, error: null }
+    rpcResult: { data: unknown; error: unknown } = {
+      data: { team_id: "team-uuid-1", registration_fee_cents: 70000 },
+      error: null,
+    }
   ) {
     mockFrom.mockImplementation((table: string) => {
       if (table === "event_settings") {
@@ -270,20 +274,14 @@ describe("POST /api/checkout — registration path (S2-4)", () => {
           error: eventSettings === null ? { message: "no rows" } : null,
         });
       }
-      if (table === "teams") {
-        // Both the count query and insert query hit "teams".
-        // The count query calls .select("*", {count, head}).eq().eq()
-        // The insert query calls .insert().select().single()
-        // Return an object that supports both shapes.
-        const countChain = makeTeamsCountChain(0);
-        const insertChain = makeTeamsInsertChain(teamInsertResult);
-        return { ...countChain, ...insertChain };
-      }
       if (table === "players") {
         return { insert: vi.fn().mockResolvedValue({ error: null }) };
       }
       return {};
     });
+    // Registration now uses the atomic RPC — no direct teams count/insert
+    mockRpc.mockResolvedValue(rpcResult);
+    mockCreateClient.mockResolvedValue({ from: mockFrom, rpc: mockRpc });
   }
 
   beforeEach(() => {
@@ -292,7 +290,11 @@ describe("POST /api/checkout — registration path (S2-4)", () => {
   });
 
   it("uses event_settings.registration_fee_cents (80000) when present", async () => {
-    setupRegistrationMocks(OPEN_SETTINGS_CUSTOM_FEE);
+    // The RPC handles the fee internally and returns it; route passes it through to Stripe
+    setupRegistrationMocks(OPEN_SETTINGS_CUSTOM_FEE, {
+      data: { team_id: "team-uuid-1", registration_fee_cents: 80000 },
+      error: null,
+    });
 
     const res = await POST(makeRequest(validRegistrationBody));
     expect(res.status).toBe(200);
@@ -305,7 +307,11 @@ describe("POST /api/checkout — registration path (S2-4)", () => {
   });
 
   it("falls back to REGISTRATION_PRICE_CENTS (70000) when registration_fee_cents is null", async () => {
-    setupRegistrationMocks(OPEN_SETTINGS_NULL_FEE);
+    // RPC returns null fee → route falls back to event_settings value → event_settings also null → default 70000
+    setupRegistrationMocks(OPEN_SETTINGS_NULL_FEE, {
+      data: { team_id: "team-uuid-1", registration_fee_cents: null },
+      error: null,
+    });
 
     const res = await POST(makeRequest(validRegistrationBody));
     expect(res.status).toBe(200);
@@ -346,29 +352,26 @@ describe("POST /api/checkout — registration path (S2-4)", () => {
 // ---------------------------------------------------------------------------
 
 describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
+  // The route now uses atomic register_team RPC — cap check and insert are handled
+  // by the RPC. The mock simulates RPC success/failure rather than teams count/insert chains.
   function setupCapMocks(
     eventSettings: Record<string, unknown>,
-    sessionCount: number,
-    teamInsertResult: { data: unknown; error: unknown } = { data: { id: "team-uuid-cap" }, error: null }
+    rpcResult: { data: unknown; error: unknown } = {
+      data: { team_id: "team-uuid-cap", registration_fee_cents: 70000 },
+      error: null,
+    }
   ) {
     mockFrom.mockImplementation((table: string) => {
       if (table === "event_settings") {
         return makeEventSettingsChain({ data: eventSettings, error: null });
-      }
-      if (table === "teams") {
-        // count query: .select("*", {count, head}).eq().eq()
-        const eqInner = vi.fn().mockResolvedValue({ count: sessionCount, error: null });
-        const eqOuter = vi.fn(() => ({ eq: eqInner }));
-        const select = vi.fn(() => ({ eq: eqOuter }));
-        // insert query: .insert().select().single()
-        const insertChain = makeTeamsInsertChain(teamInsertResult);
-        return { select, ...insertChain };
       }
       if (table === "players") {
         return { insert: vi.fn().mockResolvedValue({ error: null }) };
       }
       return {};
     });
+    mockRpc.mockResolvedValue(rpcResult);
+    mockCreateClient.mockResolvedValue({ from: mockFrom, rpc: mockRpc });
   }
 
   beforeEach(() => {
@@ -378,7 +381,11 @@ describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
 
   describe("session cap enforcement", () => {
     it("returns 400 when morning count equals morning_cap (session full)", async () => {
-      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 18); // count === cap (18)
+      // RPC raises SESSION_FULL exception when cap is reached
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, {
+        data: null,
+        error: { code: "SESSION_FULL", message: "session is at capacity" },
+      });
       const res = await POST(makeRequest({ ...validRegistrationBody, session: "morning" }));
       expect(res.status).toBe(400);
       const body = await res.json();
@@ -387,7 +394,10 @@ describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
     });
 
     it("returns 400 when afternoon count equals afternoon_cap (session full)", async () => {
-      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 18);
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, {
+        data: null,
+        error: { code: "SESSION_FULL", message: "session is at capacity" },
+      });
       const res = await POST(makeRequest({ ...validRegistrationBody, session: "afternoon" }));
       expect(res.status).toBe(400);
       const body = await res.json();
@@ -396,14 +406,15 @@ describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
     });
 
     it("allows registration when count is one below cap (count < cap)", async () => {
-      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 17); // count === cap - 1
+      // RPC succeeds — cap not reached
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE);
       const res = await POST(makeRequest({ ...validRegistrationBody, session: "morning" }));
       expect(res.status).toBe(200);
       expect(mockSessionCreate).toHaveBeenCalledTimes(1);
     });
 
     it("allows registration when session count is 0 (empty session)", async () => {
-      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 0);
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE);
       const res = await POST(makeRequest({ ...validRegistrationBody, session: "afternoon" }));
       expect(res.status).toBe(200);
       expect(mockSessionCreate).toHaveBeenCalledTimes(1);
@@ -413,8 +424,7 @@ describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
   describe("registration is closed", () => {
     it("returns 400 when registration_open is false", async () => {
       setupCapMocks(
-        { registration_open: false, morning_cap: 18, afternoon_cap: 18, registration_fee_cents: 70000 },
-        0
+        { registration_open: false, morning_cap: 18, afternoon_cap: 18, registration_fee_cents: 70000 }
       );
       const res = await POST(makeRequest(validRegistrationBody));
       expect(res.status).toBe(400);
@@ -455,12 +465,11 @@ describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
   });
 
   describe("teams.insert DB error", () => {
-    it("returns 500 when teams.insert fails", async () => {
-      setupCapMocks(
-        OPEN_SETTINGS_DEFAULT_FEE,
-        0,
-        { data: null, error: { message: "db write error" } }
-      );
+    it("returns 500 when register_team RPC fails with a non-cap error", async () => {
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, {
+        data: null,
+        error: { code: "P0001", message: "db write error" },
+      });
       const res = await POST(makeRequest(validRegistrationBody));
       expect(res.status).toBe(500);
       const body = await res.json();
@@ -490,7 +499,7 @@ describe("POST /api/checkout — sponsorship path (S2-7 gaps)", () => {
       }
       return {};
     });
-    mockCreateClient.mockResolvedValue({ from: mockFrom });
+    mockCreateClient.mockResolvedValue({ from: mockFrom, rpc: mockRpc });
 
     const res = await POST(makeRequest(validSponsorshipBody));
     expect(res.status).toBe(500);
@@ -509,7 +518,7 @@ describe("POST /api/checkout — sponsorship path (S2-7 gaps)", () => {
       }
       return {};
     });
-    mockCreateClient.mockResolvedValue({ from: mockFrom });
+    mockCreateClient.mockResolvedValue({ from: mockFrom, rpc: mockRpc });
 
     const res = await POST(
       makeRequest({ ...validSponsorshipBody, company_name: "Acme Corp" })

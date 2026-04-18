@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
-import { Camera, Upload } from "lucide-react";
+import { Camera, Upload, ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils";
 import type { Photo } from "@/types/database";
 
 interface YearGroup {
@@ -18,9 +20,21 @@ interface YearGroup {
 interface GalleryGridProps {
   photos: Photo[];
   yearGroups: YearGroup[];
+  totalCount?: number;
+  currentPage?: number;
+  pageSize?: number;
 }
 
-export function GalleryGrid({ photos, yearGroups }: GalleryGridProps) {
+export function GalleryGrid({
+  photos,
+  yearGroups,
+  totalCount = photos.length,
+  currentPage = 1,
+  pageSize = 24,
+}: GalleryGridProps) {
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const hasPrev = currentPage > 1;
+  const hasNext = currentPage < totalPages;
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [success, setSuccess] = useState(false);
@@ -63,7 +77,8 @@ export function GalleryGrid({ photos, yearGroups }: GalleryGridProps) {
       setShowUpload(false);
       form.reset();
       setTimeout(() => setSuccess(false), 5000);
-    } catch {
+    } catch (err) {
+      console.error('[GalleryGrid] photo upload failed:', err);
       setError("Upload failed. Please try again.");
     } finally {
       setUploading(false);
@@ -206,6 +221,64 @@ export function GalleryGrid({ photos, yearGroups }: GalleryGridProps) {
               </div>
             </section>
           ))}
+        </div>
+      )}
+
+      {/* Pagination controls — only when totalCount > pageSize */}
+      {totalCount > pageSize && (
+        <div
+          className="flex items-center justify-between border-t border-border pt-8"
+          data-testid="pagination-controls"
+        >
+          {hasPrev ? (
+            <Link
+              href={`/gallery?page=${currentPage - 1}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Previous
+            </Link>
+          ) : (
+            <span
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "pointer-events-none opacity-50"
+              )}
+              aria-disabled="true"
+              aria-label="Previous page"
+            >
+              <ChevronLeft className="mr-1 h-4 w-4" />
+              Previous
+            </span>
+          )}
+
+          <p className="text-sm text-muted-foreground">
+            Page {currentPage} of {totalPages}
+          </p>
+
+          {hasNext ? (
+            <Link
+              href={`/gallery?page=${currentPage + 1}`}
+              className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
+              aria-label="Next page"
+            >
+              Next
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </Link>
+          ) : (
+            <span
+              className={cn(
+                buttonVariants({ variant: "outline", size: "sm" }),
+                "pointer-events-none opacity-50"
+              )}
+              aria-disabled="true"
+              aria-label="Next page"
+            >
+              Next
+              <ChevronRight className="ml-1 h-4 w-4" />
+            </span>
+          )}
         </div>
       )}
     </div>

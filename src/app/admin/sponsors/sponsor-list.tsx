@@ -46,7 +46,8 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
       } else {
         setShowForm(false);
       }
-    } catch {
+    } catch (err) {
+      console.error('[SponsorList] createSponsor failed:', err);
       setError("Failed to create sponsor");
     } finally {
       setLoading(false);
@@ -63,7 +64,8 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
       } else {
         setEditingId(null);
       }
-    } catch {
+    } catch (err) {
+      console.error('[SponsorList] updateSponsor failed:', err);
       setError("Failed to update sponsor");
     } finally {
       setLoading(false);
@@ -78,7 +80,8 @@ export function SponsorList({ tiers, sponsors }: SponsorListProps) {
       if (result && "error" in result && typeof result.error === "string") {
         setError(result.error);
       }
-    } catch {
+    } catch (err) {
+      console.error('[SponsorList] deleteSponsor failed:', err);
       setError("Failed to delete sponsor");
     } finally {
       setLoading(false);

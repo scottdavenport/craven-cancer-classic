@@ -134,6 +134,23 @@ describe("S3-4 POST /api/invite", () => {
     });
   });
 
+  describe("400 on invalid email format (Advisory 2)", () => {
+    it("returns 400 before any DB call when email is malformed", async () => {
+      mockGetAdminCaller.mockResolvedValue({ data: { user: ADMIN_USER }, error: null });
+      mockProfileSelect.mockResolvedValue({ data: { role: "admin" }, error: null });
+
+      // @ts-ignore — module does not exist yet (red phase)
+      const { POST } = await import("@/app/api/invite/route" as string);
+      const response = await POST(makeRequest({ email: "not-an-email", role: "viewer" }));
+
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json.error).toBe("Invalid email");
+      // Must not have touched the DB
+      expect(mockInvitationsInsert).not.toHaveBeenCalled();
+    });
+  });
+
   describe("409 on duplicate pending invite", () => {
     it("returns 409 with correct message when unexpired invite already exists for email", async () => {
       mockGetAdminCaller.mockResolvedValue({ data: { user: ADMIN_USER }, error: null });

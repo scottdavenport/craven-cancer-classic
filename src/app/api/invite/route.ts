@@ -41,6 +41,11 @@ export async function POST(request: Request): Promise<NextResponse> {
     );
   }
 
+  // Validate email format before touching the DB (Advisory 2)
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return NextResponse.json({ error: "Invalid email" }, { status: 400 });
+  }
+
   const supabase = createServiceClient();
 
   // Step 3: Insert invitation row — DB unique index on email+unaccepted enforces dedup.
@@ -65,12 +70,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   }
 
   // Step 4: Trigger Supabase built-in invite email
+  // Only pass `role` in metadata — invitation_id is not consumed by the accept route (Advisory 1)
   const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(
     email,
     {
       data: {
         role,
-        invitation_id: (invitation as unknown as { id: string } | null)?.id ?? null,
       },
     }
   );

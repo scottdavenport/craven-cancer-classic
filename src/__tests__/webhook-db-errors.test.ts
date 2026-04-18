@@ -44,9 +44,13 @@ vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     from: (table: string) => {
       if (table === "stripe_events") {
-        // S2-2 tests focus on update/upsert errors; stripe_events insert always succeeds here
+        // S2-2 tests focus on update/upsert errors; stripe_events insert always succeeds here.
+        // S3-7: route also calls stripe_events.update to stamp processed_at — succeeds by default.
         return {
           insert: () => ({ data: {}, error: null }),
+          update: () => ({
+            eq: () => ({ data: {}, error: null }),
+          }),
         };
       }
       if (table === "contacts") {

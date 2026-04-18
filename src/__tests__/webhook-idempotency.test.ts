@@ -45,6 +45,7 @@ let mockProcessedAtSelectResult: MockResult = { data: null, error: null };
 // S4-2: advisory lock RPC
 let mockLockResult: MockResult = { data: true, error: null };
 let advisoryLockCallCount = 0;
+let releaseLockCallCount = 0;
 
 // Spy counters — reset in beforeEach
 let stripeEventsInsertCallCount = 0;
@@ -58,6 +59,10 @@ vi.mock("@supabase/supabase-js", () => ({
       if (fn === "acquire_stripe_event_lock") {
         advisoryLockCallCount++;
         return Promise.resolve(mockLockResult);
+      }
+      if (fn === "release_stripe_event_lock") {
+        releaseLockCallCount++;
+        return Promise.resolve({ data: null, error: null });
       }
       return Promise.resolve({ data: null, error: { message: "unknown rpc" } });
     },
@@ -172,6 +177,7 @@ beforeEach(() => {
   teamsUpdateCallCount = 0;
   sponsorshipPurchasesUpdateCallCount = 0;
   advisoryLockCallCount = 0;
+  releaseLockCallCount = 0;
 
   // Defaults: all DB calls succeed
   mockInsertResult = { data: {}, error: null };
@@ -362,6 +368,8 @@ describe("S4-2 advisory lock", () => {
       expect(advisoryLockCallCount).toBe(1);
       // Insert must also have been called
       expect(stripeEventsInsertCallCount).toBe(1);
+      // Release must be called exactly once (finally block)
+      expect(releaseLockCallCount).toBe(1);
       void callOrder; // suppress unused warning
     });
 
@@ -378,6 +386,23 @@ describe("S4-2 advisory lock", () => {
       expect(response.status).toBe(200);
       // Lock must be attempted even on duplicate paths
       expect(advisoryLockCallCount).toBe(1);
+      // Release must be called exactly once (finally block runs even on 23505 short-circuit)
+      expect(releaseLockCallCount).toBe(1);
+    });
+
+    it("releases lock exactly once when downstream write fails (500 path)", async () => {
+      mockConstructEvent.mockReturnValue(makeRegistrationEvent("evt_lock_ds500"));
+      mockInsertResult = { data: {}, error: null };
+      // Simulate downstream teams.update failure → route returns 500
+      mockUpdateResult = { data: null, error: { code: "PGRST001", message: "update failed" } };
+
+      const response = await callWebhook();
+
+      expect(response.status).toBe(500);
+      // Lock acquired once
+      expect(advisoryLockCallCount).toBe(1);
+      // Release must still be called once — finally block must run even on error paths
+      expect(releaseLockCallCount).toBe(1);
     });
   });
 

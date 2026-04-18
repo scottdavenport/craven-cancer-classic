@@ -40,11 +40,13 @@ describe("database types", () => {
       morning_cap: 36,
       afternoon_cap: 36,
       registration_open: false,
+      registration_fee_cents: 70000,
       year: 2026,
       hero_image_url: null,
       updated_at: "2026-01-01T00:00:00Z",
     };
     expect(event.name).toBe("Craven Cancer Classic");
+    expect(event.registration_fee_cents).toBe(70000);
   });
 
   it("Team type enforces session values", () => {

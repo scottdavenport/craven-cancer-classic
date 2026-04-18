@@ -27,6 +27,14 @@ export async function updateEventSettings(formData: FormData) {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
+  const registrationFeeDollars = parseFloat(
+    formData.get("registration_fee") as string
+  );
+  const registrationFeeCents =
+    isNaN(registrationFeeDollars) || registrationFeeDollars < 0
+      ? 70000
+      : Math.round(registrationFeeDollars * 100);
+
   const updates: Database["public"]["Tables"]["event_settings"]["Update"] = {
     name: formData.get("name") as string,
     date: (formData.get("date") as string) || null,
@@ -35,6 +43,7 @@ export async function updateEventSettings(formData: FormData) {
     morning_cap: parseInt(formData.get("morning_cap") as string) || 36,
     afternoon_cap: parseInt(formData.get("afternoon_cap") as string) || 36,
     registration_open: formData.get("registration_open") === "on",
+    registration_fee_cents: registrationFeeCents,
   };
 
   // Check if settings exist for this year

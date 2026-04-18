@@ -129,6 +129,25 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="registration_fee">Registration Fee (USD)</Label>
+            <Input
+              id="registration_fee"
+              name="registration_fee"
+              type="number"
+              step="0.01"
+              min="0"
+              defaultValue={
+                settings?.registration_fee_cents != null
+                  ? (settings.registration_fee_cents / 100).toFixed(2)
+                  : "700.00"
+              }
+            />
+            <p className="text-xs text-muted-foreground">
+              Per-team fee shown on the public registration page.
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="morning_cap">Morning Slot Cap</Label>

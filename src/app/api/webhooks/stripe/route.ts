@@ -51,7 +51,7 @@ export async function POST(request: Request) {
 
     if (metadata.type === "registration" && metadata.team_id) {
       // Update team payment status
-      await supabase
+      const { error: teamUpdateError } = await supabase
         .from("teams")
         .update({
           payment_status: "paid" as const,
@@ -59,6 +59,11 @@ export async function POST(request: Request) {
           amount_paid: (session.amount_total ?? 0) / 100,
         })
         .eq("id", metadata.team_id);
+
+      if (teamUpdateError) {
+        console.error("teams.update failed for event", event.id, teamUpdateError);
+        return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
+      }
 
       // Auto-create contact from captain
       const { data: team } = await supabase
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
         .single();
 
       if (team) {
-        await supabase.from("contacts").upsert(
+        const { error: contactUpsertError } = await supabase.from("contacts").upsert(
           {
             full_name: team.captain_name,
             email: team.captain_email,
@@ -77,12 +82,17 @@ export async function POST(request: Request) {
           },
           { onConflict: "email" }
         );
+
+        if (contactUpsertError) {
+          // Non-critical: log and continue — do NOT return 500 or Stripe will retry and double-charge
+          console.error("contacts.upsert failed for event", event.id, contactUpsertError);
+        }
       }
     }
 
     if (metadata.type === "sponsorship" && metadata.purchase_id) {
       // Update sponsorship purchase payment status
-      await supabase
+      const { error: purchaseUpdateError } = await supabase
         .from("sponsorship_purchases")
         .update({
           payment_status: "paid" as const,
@@ -90,6 +100,11 @@ export async function POST(request: Request) {
           amount_paid: (session.amount_total ?? 0) / 100,
         })
         .eq("id", metadata.purchase_id);
+
+      if (purchaseUpdateError) {
+        console.error("sponsorship_purchases.update failed for event", event.id, purchaseUpdateError);
+        return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
+      }
     }
   }
 

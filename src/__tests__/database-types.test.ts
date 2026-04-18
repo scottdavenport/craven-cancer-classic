@@ -83,21 +83,24 @@ describe("database types", () => {
 
   it("Database type has all expected tables", () => {
     type TableNames = keyof Database["public"]["Tables"];
+    // S4-3: 14 tables — invitations and stripe_events added in Sprint 4
     const tables: TableNames[] = [
-      "profiles",
-      "event_settings",
-      "sponsor_tiers",
-      "sponsors",
-      "teams",
-      "players",
-      "sponsorship_items",
-      "sponsorship_purchases",
-      "photos",
-      "scores",
       "contacts",
       "email_log",
+      "event_settings",
+      "invitations",
+      "photos",
+      "players",
+      "profiles",
+      "scores",
+      "sponsor_tiers",
+      "sponsors",
+      "sponsorship_items",
+      "sponsorship_purchases",
+      "stripe_events",
+      "teams",
     ];
-    expect(tables).toHaveLength(12);
+    expect(tables).toHaveLength(14);
   });
 
   it("Insert types make required fields mandatory and optional fields optional", () => {

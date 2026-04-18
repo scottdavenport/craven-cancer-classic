@@ -1,0 +1,21 @@
+-- Fix: remove the "Users can update their own profile" RLS policy on public.profiles.
+--
+-- Vulnerability: the original UPDATE policy used only USING (auth.uid() = auth_user_id)
+-- with no WITH CHECK clause. PostgreSQL's default behavior when WITH CHECK is omitted
+-- is to reuse the USING expression as the check, but that expression only controls WHICH
+-- rows can be targeted — it does NOT constrain the new column values written. As a result
+-- any authenticated user could execute:
+--
+--   UPDATE profiles SET role = 'admin' WHERE auth_user_id = auth.uid();
+--
+-- and successfully escalate their own role to 'admin'.
+--
+-- Fix shape chosen: DROP the policy entirely.
+-- Rationale: there is no user-facing UI that allows users to edit their own profiles
+-- (name, email, or any other field). All profile mutations go through admin server
+-- actions that use the service role client, which bypasses RLS. Keeping an UPDATE
+-- policy for a code path that does not exist is unnecessary surface area.
+-- If a self-service profile edit feature is added in the future, the policy must be
+-- reinstated with an explicit WITH CHECK clause that excludes the role column.
+
+drop policy if exists "Users can update their own profile" on public.profiles;

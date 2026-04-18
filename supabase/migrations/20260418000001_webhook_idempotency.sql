@@ -4,6 +4,8 @@ create table public.stripe_events (
   received_at timestamptz not null default now()
 );
 
+alter table public.stripe_events enable row level security;
+
 -- Defense-in-depth: DB-level uniqueness on payment IDs.
 -- Partial indexes handle the nullable-until-paid state.
 create unique index if not exists teams_stripe_payment_id_unique

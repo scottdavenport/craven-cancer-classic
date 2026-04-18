@@ -72,8 +72,8 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   if (updateError || !updated) {
     return NextResponse.json(
-      { error: "Invite invalid or already accepted" },
-      { status: 400 }
+      { error: "Invite already accepted" },
+      { status: 409 }
     );
   }
 

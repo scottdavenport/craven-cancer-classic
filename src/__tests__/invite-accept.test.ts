@@ -171,7 +171,7 @@ describe("S3-4 GET /api/invite/accept", () => {
   // Block 2: Atomic update race guard (new)
   // -------------------------------------------------------------------------
   describe("atomic-update race path", () => {
-    it("returns 400 when atomic update finds no row (race: already accepted)", async () => {
+    it("returns 409 when atomic update finds no row (race: already accepted)", async () => {
       // Read sees unaccepted, but by the time the update fires the row is gone
       setupAtomicUpdateRace();
 
@@ -180,9 +180,9 @@ describe("S3-4 GET /api/invite/accept", () => {
       const { GET } = await import("@/app/api/invite/accept/route" as string);
       const response = await GET(makeRequest("valid-token-abc"));
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
       const json = await response.json();
-      expect(json.error).toBe("Invite invalid or already accepted");
+      expect(json.error).toBe("Invite already accepted");
     });
 
     it("does NOT upsert profile when atomic update loses race", async () => {

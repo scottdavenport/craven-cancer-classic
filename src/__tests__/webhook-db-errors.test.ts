@@ -42,6 +42,13 @@ let mockUpsertResult: MockResult = { data: null, error: null };
 
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
+    // S4-2: advisory lock RPCs — default to success so existing tests are unaffected
+    rpc: (fn: string) => {
+      if (fn === "acquire_stripe_event_lock" || fn === "release_stripe_event_lock") {
+        return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: { message: "unknown rpc" } });
+    },
     from: (table: string) => {
       if (table === "stripe_events") {
         // S2-2 tests focus on update/upsert errors; stripe_events insert always succeeds here.

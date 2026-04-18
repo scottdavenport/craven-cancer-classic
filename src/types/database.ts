@@ -460,6 +460,22 @@ export type Database = {
         };
         Relationships: [];
       };
+      // Added by migration 20260418000001_webhook_idempotency — regenerate via `supabase gen types typescript` when local stack is linked
+      stripe_events: {
+        Row: {
+          id: string;
+          received_at: string;
+        };
+        Insert: {
+          id: string;
+          received_at?: string;
+        };
+        Update: {
+          id?: string;
+          received_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

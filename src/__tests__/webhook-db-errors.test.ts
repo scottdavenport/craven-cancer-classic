@@ -43,6 +43,12 @@ let mockUpsertResult: MockResult = { data: null, error: null };
 vi.mock("@supabase/supabase-js", () => ({
   createClient: () => ({
     from: (table: string) => {
+      if (table === "stripe_events") {
+        // S2-2 tests focus on update/upsert errors; stripe_events insert always succeeds here
+        return {
+          insert: () => ({ data: {}, error: null }),
+        };
+      }
       if (table === "contacts") {
         return {
           upsert: () => mockUpsertResult,

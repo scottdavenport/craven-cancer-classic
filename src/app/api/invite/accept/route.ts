@@ -45,18 +45,18 @@ export async function GET(request: Request): Promise<NextResponse> {
     .single();
 
   if (selectError || !invitation) {
-    return NextResponse.json({ error: "Invalid token" }, { status: 400 });
+    return NextResponse.json({ error: "Invite not found" }, { status: 404 });
   }
 
   if (new Date(invitation.expires_at) <= new Date()) {
-    return NextResponse.json({ error: "Invite has expired" }, { status: 400 });
+    return NextResponse.json({ error: "Invite has expired" }, { status: 410 });
   }
 
   // Belt-and-suspenders: reject already-accepted invites before the atomic update.
   // The atomic update's `.is('accepted_at', null)` is the true race guard, but
   // this early return gives a distinct error message and avoids a spurious DB write.
   if (invitation.accepted_at !== null) {
-    return NextResponse.json({ error: "Invite already accepted" }, { status: 400 });
+    return NextResponse.json({ error: "Invite already accepted" }, { status: 409 });
   }
 
   // Block 2: Atomic accept — the `.is('accepted_at', null)` filter means only
@@ -72,8 +72,8 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   if (updateError || !updated) {
     return NextResponse.json(
-      { error: "Invite invalid or already accepted" },
-      { status: 400 }
+      { error: "Invite already accepted" },
+      { status: 409 }
     );
   }
 

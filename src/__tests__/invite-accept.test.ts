@@ -171,7 +171,7 @@ describe("S3-4 GET /api/invite/accept", () => {
   // Block 2: Atomic update race guard (new)
   // -------------------------------------------------------------------------
   describe("atomic-update race path", () => {
-    it("returns 400 when atomic update finds no row (race: already accepted)", async () => {
+    it("returns 409 when atomic update finds no row (race: already accepted)", async () => {
       // Read sees unaccepted, but by the time the update fires the row is gone
       setupAtomicUpdateRace();
 
@@ -180,9 +180,9 @@ describe("S3-4 GET /api/invite/accept", () => {
       const { GET } = await import("@/app/api/invite/accept/route" as string);
       const response = await GET(makeRequest("valid-token-abc"));
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(409);
       const json = await response.json();
-      expect(json.error).toBe("Invite invalid or already accepted");
+      expect(json.error).toBe("Invite already accepted");
     });
 
     it("does NOT upsert profile when atomic update loses race", async () => {
@@ -252,7 +252,7 @@ describe("S3-4 GET /api/invite/accept", () => {
   // Expiry
   // -------------------------------------------------------------------------
   describe("expired token", () => {
-    it("returns 400 with 'Invite has expired' when expires_at is in the past", async () => {
+    it("returns 410 with 'Invite has expired' when expires_at is in the past", async () => {
       mockInvitationSelect.mockResolvedValue({
         data: makeInvitation({
           expires_at: new Date(FROZEN_NOW.getTime() - 1000).toISOString(), // 1 second ago
@@ -265,7 +265,8 @@ describe("S3-4 GET /api/invite/accept", () => {
       const { GET } = await import("@/app/api/invite/accept/route" as string);
       const response = await GET(makeRequest("expired-token"));
 
-      expect(response.status).toBe(400);
+      // S4-4: expired → 410 Gone (was 400)
+      expect(response.status).toBe(410);
       const json = await response.json();
       expect(json.error).toBe("Invite has expired");
     });
@@ -291,7 +292,7 @@ describe("S3-4 GET /api/invite/accept", () => {
   // Already accepted (pre-atomic-update read guard)
   // -------------------------------------------------------------------------
   describe("already-accepted token", () => {
-    it("returns 400 with 'Invite already accepted' when accepted_at is set", async () => {
+    it("returns 409 with 'Invite already accepted' when accepted_at is set", async () => {
       mockInvitationSelect.mockResolvedValue({
         data: makeInvitation({
           accepted_at: new Date(FROZEN_NOW.getTime() - 86_400_000).toISOString(),
@@ -304,7 +305,8 @@ describe("S3-4 GET /api/invite/accept", () => {
       const { GET } = await import("@/app/api/invite/accept/route" as string);
       const response = await GET(makeRequest("used-token"));
 
-      expect(response.status).toBe(400);
+      // S4-4: already accepted → 409 Conflict (was 400)
+      expect(response.status).toBe(409);
       const json = await response.json();
       expect(json.error).toBe("Invite already accepted");
     });
@@ -314,7 +316,7 @@ describe("S3-4 GET /api/invite/accept", () => {
   // Missing / unknown token
   // -------------------------------------------------------------------------
   describe("missing / unknown token", () => {
-    it("returns 400 when token is not found in the DB", async () => {
+    it("returns 404 when token is not found in the DB", async () => {
       mockInvitationSelect.mockResolvedValue({
         data: null,
         error: { code: "PGRST116", message: "no rows" },
@@ -325,7 +327,8 @@ describe("S3-4 GET /api/invite/accept", () => {
       const { GET } = await import("@/app/api/invite/accept/route" as string);
       const response = await GET(makeRequest("unknown-token"));
 
-      expect(response.status).toBe(400);
+      // S4-4: token not found → 404 Not Found (was 400)
+      expect(response.status).toBe(404);
     });
   });
 });

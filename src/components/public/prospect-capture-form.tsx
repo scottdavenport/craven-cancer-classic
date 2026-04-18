@@ -58,7 +58,8 @@ export function ProspectCaptureForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch {
+    } catch (err) {
+      console.error("contacts form fetch error:", err);
       setLoading(false);
       setError("Something went wrong. Please try again.");
       return;

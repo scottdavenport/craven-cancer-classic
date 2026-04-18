@@ -340,3 +340,185 @@ describe("POST /api/checkout — registration path (S2-4)", () => {
     expect(call.line_items[0].price_data.unit_amount).toBe(70000);
   });
 });
+
+// ---------------------------------------------------------------------------
+// S2-7 gap coverage — registration: session cap, missing fields, DB errors
+// ---------------------------------------------------------------------------
+
+describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
+  function setupCapMocks(
+    eventSettings: Record<string, unknown>,
+    sessionCount: number,
+    teamInsertResult: { data: unknown; error: unknown } = { data: { id: "team-uuid-cap" }, error: null }
+  ) {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "event_settings") {
+        return makeEventSettingsChain({ data: eventSettings, error: null });
+      }
+      if (table === "teams") {
+        // count query: .select("*", {count, head}).eq().eq()
+        const eqInner = vi.fn().mockResolvedValue({ count: sessionCount, error: null });
+        const eqOuter = vi.fn(() => ({ eq: eqInner }));
+        const select = vi.fn(() => ({ eq: eqOuter }));
+        // insert query: .insert().select().single()
+        const insertChain = makeTeamsInsertChain(teamInsertResult);
+        return { select, ...insertChain };
+      }
+      if (table === "players") {
+        return { insert: vi.fn().mockResolvedValue({ error: null }) };
+      }
+      return {};
+    });
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSessionCreate.mockResolvedValue({ url: "https://checkout.stripe.com/pay/test" });
+  });
+
+  describe("session cap enforcement", () => {
+    it("returns 400 when morning count equals morning_cap (session full)", async () => {
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 18); // count === cap (18)
+      const res = await POST(makeRequest({ ...validRegistrationBody, session: "morning" }));
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/morning.*full|full.*morning/i);
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 when afternoon count equals afternoon_cap (session full)", async () => {
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 18);
+      const res = await POST(makeRequest({ ...validRegistrationBody, session: "afternoon" }));
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/afternoon.*full|full.*afternoon/i);
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+    });
+
+    it("allows registration when count is one below cap (count < cap)", async () => {
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 17); // count === cap - 1
+      const res = await POST(makeRequest({ ...validRegistrationBody, session: "morning" }));
+      expect(res.status).toBe(200);
+      expect(mockSessionCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it("allows registration when session count is 0 (empty session)", async () => {
+      setupCapMocks(OPEN_SETTINGS_DEFAULT_FEE, 0);
+      const res = await POST(makeRequest({ ...validRegistrationBody, session: "afternoon" }));
+      expect(res.status).toBe(200);
+      expect(mockSessionCreate).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("registration is closed", () => {
+    it("returns 400 when registration_open is false", async () => {
+      setupCapMocks(
+        { registration_open: false, morning_cap: 18, afternoon_cap: 18, registration_fee_cents: 70000 },
+        0
+      );
+      const res = await POST(makeRequest(validRegistrationBody));
+      expect(res.status).toBe(400);
+      const body = await res.json();
+      expect(body.error).toMatch(/closed/i);
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("missing required fields", () => {
+    it("returns 400 when team_name is missing", async () => {
+      const body = { ...validRegistrationBody } as Record<string, unknown>;
+      delete body.team_name;
+      const res = await POST(makeRequest(body));
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 when captain_name is missing", async () => {
+      const body = { ...validRegistrationBody } as Record<string, unknown>;
+      delete body.captain_name;
+      const res = await POST(makeRequest(body));
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 when captain_email is missing", async () => {
+      const body = { ...validRegistrationBody } as Record<string, unknown>;
+      delete body.captain_email;
+      const res = await POST(makeRequest(body));
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 when session is missing", async () => {
+      const body = { ...validRegistrationBody } as Record<string, unknown>;
+      delete body.session;
+      const res = await POST(makeRequest(body));
+      expect(res.status).toBe(400);
+    });
+  });
+
+  describe("teams.insert DB error", () => {
+    it("returns 500 when teams.insert fails", async () => {
+      setupCapMocks(
+        OPEN_SETTINGS_DEFAULT_FEE,
+        0,
+        { data: null, error: { message: "db write error" } }
+      );
+      const res = await POST(makeRequest(validRegistrationBody));
+      expect(res.status).toBe(500);
+      const body = await res.json();
+      expect(body.error).toMatch(/db write error/i);
+      expect(mockSessionCreate).not.toHaveBeenCalled();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S2-7 gap coverage — sponsorship: purchase insert DB error
+// ---------------------------------------------------------------------------
+
+describe("POST /api/checkout — sponsorship path (S2-7 gaps)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockSessionCreate.mockResolvedValue({ url: "https://checkout.stripe.com/pay/test" });
+  });
+
+  it("returns 500 when sponsorship_purchases.insert fails", async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "sponsorship_items") {
+        return makeItemSelectChain({ data: ACTIVE_GOLD_ITEM, error: null });
+      }
+      if (table === "sponsorship_purchases") {
+        return makeInsertChain({ data: null, error: { message: "constraint violation" } });
+      }
+      return {};
+    });
+    mockCreateClient.mockResolvedValue({ from: mockFrom });
+
+    const res = await POST(makeRequest(validSponsorshipBody));
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toMatch(/constraint violation/i);
+    expect(mockSessionCreate).not.toHaveBeenCalled();
+  });
+
+  it("includes company_name in description when provided", async () => {
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "sponsorship_items") {
+        return makeItemSelectChain({ data: ACTIVE_GOLD_ITEM, error: null });
+      }
+      if (table === "sponsorship_purchases") {
+        return makeInsertChain({ data: { id: "purchase-uuid-co" }, error: null });
+      }
+      return {};
+    });
+    mockCreateClient.mockResolvedValue({ from: mockFrom });
+
+    const res = await POST(
+      makeRequest({ ...validSponsorshipBody, company_name: "Acme Corp" })
+    );
+    expect(res.status).toBe(200);
+
+    const call = mockSessionCreate.mock.calls[0][0] as {
+      line_items: { price_data: { product_data: { description: string } } }[];
+    };
+    expect(call.line_items[0].price_data.product_data.description).toMatch(/Acme Corp/);
+  });
+});

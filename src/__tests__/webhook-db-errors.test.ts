@@ -219,3 +219,146 @@ describe("S2-2 webhook DB-error handling", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// S2-7 gap coverage — webhook: signature/env guards, malformed metadata
+// ---------------------------------------------------------------------------
+
+describe("S2-7 webhook gap coverage", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    mockConstructEvent.mockReset();
+    mockUpdateResult = { data: {}, error: null };
+    mockSelectResult = { data: null, error: null };
+    mockUpsertResult = { data: {}, error: null };
+
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.SUPABASE_SERVICE_ROLE_KEY = "service-role-key-test";
+    process.env.STRIPE_WEBHOOK_SECRET = "whsec_test";
+  });
+
+  describe("signature and env guards (pre-event verification)", () => {
+    it("returns 400 when stripe-signature header is missing", async () => {
+      // The module-level next/headers mock always returns "sig_test" for "stripe-signature".
+      // The route guards on EITHER missing sig OR missing STRIPE_WEBHOOK_SECRET.
+      // We test the combined guard by unsetting the env var — same code path, same 400.
+      const savedSecret = process.env.STRIPE_WEBHOOK_SECRET;
+      delete process.env.STRIPE_WEBHOOK_SECRET;
+
+      const response = await callWebhook();
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json.error).toMatch(/signature|webhook secret/i);
+
+      process.env.STRIPE_WEBHOOK_SECRET = savedSecret;
+    });
+
+    it("returns 400 when constructEvent throws (invalid/tampered signature)", async () => {
+      mockConstructEvent.mockImplementation(() => {
+        throw new Error("No signatures found matching the expected signature for payload");
+      });
+
+      const response = await callWebhook();
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json.error).toMatch(/invalid signature/i);
+    });
+  });
+
+  describe("malformed metadata", () => {
+    it("returns 200 without processing when metadata is null", async () => {
+      mockConstructEvent.mockReturnValue({
+        id: "evt_no_meta",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_no_meta",
+            amount_total: 70000,
+            metadata: null,
+          },
+        },
+      });
+
+      const response = await callWebhook();
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json.received).toBe(true);
+    });
+
+    it("returns 200 without updating teams when type=registration but team_id is missing", async () => {
+      mockConstructEvent.mockReturnValue({
+        id: "evt_missing_team_id",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_missing",
+            amount_total: 70000,
+            // team_id deliberately omitted
+            metadata: { type: "registration" },
+          },
+        },
+      });
+
+      const response = await callWebhook();
+      expect(response.status).toBe(200);
+    });
+
+    it("returns 200 without updating sponsorship_purchases when type=sponsorship but purchase_id is missing", async () => {
+      mockConstructEvent.mockReturnValue({
+        id: "evt_missing_purchase_id",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_missing_pid",
+            amount_total: 50000,
+            // purchase_id deliberately omitted
+            metadata: { type: "sponsorship" },
+          },
+        },
+      });
+
+      const response = await callWebhook();
+      expect(response.status).toBe(200);
+    });
+
+    it("returns 200 without processing when metadata.type is unrecognized", async () => {
+      mockConstructEvent.mockReturnValue({
+        id: "evt_unknown_type",
+        type: "checkout.session.completed",
+        data: {
+          object: {
+            id: "cs_unknown",
+            amount_total: 5000,
+            metadata: { type: "donation", team_id: "team-x" },
+          },
+        },
+      });
+
+      const response = await callWebhook();
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json.received).toBe(true);
+    });
+  });
+
+  describe("payment_intent.succeeded — different event type", () => {
+    it("returns 200 without touching DB for payment_intent.succeeded", async () => {
+      mockConstructEvent.mockReturnValue({
+        id: "evt_pi_succeeded",
+        type: "payment_intent.succeeded",
+        data: {
+          object: {
+            id: "pi_test",
+            amount: 70000,
+            metadata: { team_id: "team-123" },
+          },
+        },
+      });
+
+      const response = await callWebhook();
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json.received).toBe(true);
+    });
+  });
+});

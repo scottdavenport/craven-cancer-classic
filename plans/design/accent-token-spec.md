@@ -82,18 +82,19 @@ This makes `bg-purple`, `text-purple`, `bg-purple-hover`, `bg-purple-muted`, and
 
 ### CTA Buttons: Register, Donate, Become a Sponsor
 
-**Decision: swap the primary CTA button fill to purple. Teal becomes secondary.**
+**Decision (Option B, locked by Scott 2026-04-18): hierarchy-based — Register stays teal as the primary action. Donate and Become a Sponsor go purple as secondary/tertiary actions.**
 
-Rationale: The logo is teal. Teal navigation underlines, the footer accent strip, and section labels (`text-primary`) all reinforce the brand identity. If the CTA buttons are also teal, the visual hierarchy has no accent — everything is the same color at different brightness levels. Swapping CTAs to purple gives the buttons distinct energy while the teal structural elements remain calm and brand-consistent.
+Rationale: Registration is the action that produces tournament revenue and has the highest conversion value — it earns the primary brand color. Donation is emotionally distinct and deserves unique treatment so it stands apart visually (the rare-but-meaningful placement of purple). Sponsorship is a tertiary CTA on most pages; giving it the same purple palette as Donate unifies the "ways to give" group visually against the teal "play in the tournament" group.
 
 Concrete changes:
-- `Register Your Team` (hero, homepage): `bg-purple` / `hover:bg-purple-hover`, white text
+- `Register Your Team` (hero, homepage): **stays teal** — no change. `bg-primary` / `hover:bg-secondary`
+- `Register to Play` (Get Involved section, outline): **stays teal** — matches the primary Register treatment
 - `Donate` (navbar, hero): `bg-purple` / `hover:bg-purple-hover`, white text
-- `Donate Now` (Get Involved section): same
-- `Become a Sponsor` (hero outline variant): update border and text to purple: `border-purple/60 text-purple/80 hover:border-purple hover:text-purple hover:bg-purple-muted`
-- `Register to Play` (Get Involved section, outline): same purple outline treatment
+- `Donate Now` (Get Involved section): same purple fill
+- `Become a Sponsor` (hero outline variant): purple outline: `border-purple/60 text-purple/80 hover:border-purple hover:text-purple hover:bg-purple-muted`
+- `Become a Sponsor` anywhere else on the site: purple fill if solid, purple outline if ghost
 
-The current teal fills (`bg-[#5B8FA8]`, `bg-primary`, `hover:bg-secondary`) on CTA buttons are replaced. The teal `--primary` token is NOT renamed — structural elements that reference it (nav underline, footer gradient strip, dividers, section labels) keep their teal unmodified.
+The teal `--primary` token is NOT renamed. Structural elements that reference it (nav underline, footer gradient strip, dividers, section labels, and now the Register CTAs) keep their teal unmodified.
 
 ### Text Links
 
@@ -182,8 +183,10 @@ Bolt must NOT do any of the following in Sprint 3 based on this spec:
 - [ ] Corresponding `--color-purple-*` entries added to `@theme inline` block
 - [ ] Dark variants added to `.dark` block
 - [ ] `--ring` changed to `#6B5DB8` in `:root` and `#8B7DCC` in `.dark`
-- [ ] All primary CTA buttons (Register, Donate, Become a Sponsor) use `bg-purple` fill with white text
-- [ ] Outline/ghost CTA variants (Become a Sponsor, Register to Play) use purple border and text
+- [ ] Register CTAs (Register Your Team, Register to Play) stay teal — no change from current state
+- [ ] Donate CTAs (Donate, Donate Now) use `bg-purple` fill with white text
+- [ ] Become a Sponsor (outline variant) uses purple border and text — NOT teal
+- [ ] Any solid Become a Sponsor button uses `bg-purple` fill
 - [ ] FULL badge uses `bg-purple-muted text-purple`
 - [ ] No purple applied as text color on navy (`#1A2E3A`) backgrounds
 - [ ] Teal structural elements (footer strip, section dividers, nav underlines, section labels) unchanged

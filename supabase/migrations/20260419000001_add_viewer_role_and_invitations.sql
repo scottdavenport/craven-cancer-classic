@@ -56,7 +56,7 @@ create policy "admin_all_invitations"
 -- Anon/authenticated can SELECT by token (token is the secret — 32-byte hex, unguessable)
 -- Route: /invite/[token] reads the row to validate before accepting
 create policy "public_select_by_token"
-  on public.invitations for select using (true);
+  on public.invitations for select using (expires_at > now() AND accepted_at IS NULL);
 
 -- ============================================
 -- 5. INDEXES ON invitations

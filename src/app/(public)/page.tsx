@@ -78,7 +78,7 @@ export default function HomePage() {
               href="/sponsorships"
               size="lg"
               variant="outline"
-              className="rounded-none border-white/20 px-8 text-sm uppercase tracking-wider text-white/70 hover:border-white/40 hover:bg-white/5 hover:text-white"
+              className="rounded-none border-purple/60 px-8 text-sm uppercase tracking-wider text-purple/80 hover:border-purple hover:bg-purple-muted hover:text-purple"
             >
               Become a Sponsor
             </LinkButton>
@@ -182,7 +182,7 @@ export default function HomePage() {
             <LinkButton
               href="/donate"
               size="lg"
-              className="rounded-none bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
+              className="rounded-none bg-purple px-8 text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover"
             >
               Donate Now
             </LinkButton>

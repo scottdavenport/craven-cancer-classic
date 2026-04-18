@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Trophy } from "lucide-react";
 
+export const revalidate = 300;
+
 export const metadata: Metadata = {
   title: "Leaderboard",
   description: "Tournament scores and standings.",

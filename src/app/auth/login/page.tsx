@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { LoginForm } from "./login-form";
 
 type LoginPageProps = {
@@ -20,9 +21,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 px-4">
-      <p className="font-display text-lg font-semibold text-foreground text-center mb-6">
-        Craven Cancer Classic
-      </p>
+      <Image
+        src="/brand/ccc-logo-full.svg"
+        alt="Craven Cancer Classic"
+        width={220}
+        height={79}
+        priority
+        className="h-12 w-auto mb-6"
+      />
       <LoginForm initialError={initialError} />
     </div>
   );

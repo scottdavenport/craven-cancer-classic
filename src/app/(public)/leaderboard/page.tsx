@@ -45,10 +45,6 @@ export default async function LeaderboardPage() {
 
       <section className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-4xl">
-          <p className="text-center font-sans text-[0.75rem] text-muted-foreground/60 mb-12">
-            Scores update every 5 minutes.
-          </p>
-
           {scores.length === 0 ? (
             <div className="py-16 text-center">
               <Trophy className="mx-auto h-12 w-12 text-muted-foreground/30" />

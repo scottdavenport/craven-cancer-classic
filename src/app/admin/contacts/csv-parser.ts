@@ -44,6 +44,8 @@ export type ImportResult = {
   errors: string[];
 };
 
+import { deriveFullName } from "@/lib/contacts/contact-utils";
+
 // ---------------------------------------------------------------------------
 // CSV parser
 // ---------------------------------------------------------------------------
@@ -117,21 +119,6 @@ function parseCSVLine(line: string): string[] {
 function norm(value: string): string | null {
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;
-}
-
-/**
- * Derive full_name from first/last with company fallback.
- */
-function deriveFullName(
-  first: string | null,
-  last: string | null,
-  company: string | null
-): string {
-  const parts = [first, last].filter(Boolean);
-  if (parts.length > 0) {
-    return parts.join(" ");
-  }
-  return company ?? "";
 }
 
 /**

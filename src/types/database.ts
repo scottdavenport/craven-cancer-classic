@@ -36,34 +36,67 @@ export type Database = {
     Tables: {
       contacts: {
         Row: {
+          address1: string | null
+          address2: string | null
+          city: string | null
+          company: string | null
           created_at: string
-          email: string
+          email: string | null
+          first_name: string | null
           full_name: string
           id: string
+          last_name: string | null
+          marketing_consent: boolean
           notes: string | null
           phone: string | null
+          salutation: string | null
+          source: string | null
+          state: string | null
           type: string
           year_first_seen: number
+          zip: string | null
         }
         Insert: {
+          address1?: string | null
+          address2?: string | null
+          city?: string | null
+          company?: string | null
           created_at?: string
-          email: string
+          email?: string | null
+          first_name?: string | null
           full_name: string
           id?: string
+          last_name?: string | null
+          marketing_consent?: boolean
           notes?: string | null
           phone?: string | null
+          salutation?: string | null
+          source?: string | null
+          state?: string | null
           type?: string
           year_first_seen?: number
+          zip?: string | null
         }
         Update: {
+          address1?: string | null
+          address2?: string | null
+          city?: string | null
+          company?: string | null
           created_at?: string
-          email?: string
+          email?: string | null
+          first_name?: string | null
           full_name?: string
           id?: string
+          last_name?: string | null
+          marketing_consent?: boolean
           notes?: string | null
           phone?: string | null
+          salutation?: string | null
+          source?: string | null
+          state?: string | null
           type?: string
           year_first_seen?: number
+          zip?: string | null
         }
         Relationships: []
       }
@@ -517,9 +550,52 @@ export type Database = {
         }
         Relationships: []
       }
+      team_members: {
+        Row: {
+          contact_id: string
+          created_at: string
+          id: string
+          role: string
+          slot: number
+          team_id: string
+        }
+        Insert: {
+          contact_id: string
+          created_at?: string
+          id?: string
+          role: string
+          slot: number
+          team_id: string
+        }
+        Update: {
+          contact_id?: string
+          created_at?: string
+          id?: string
+          role?: string
+          slot?: number
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teams: {
         Row: {
           amount_paid_cents: number
+          captain_contact_id: string | null
           captain_email: string
           captain_name: string
           captain_phone: string | null
@@ -534,6 +610,7 @@ export type Database = {
         }
         Insert: {
           amount_paid_cents?: number
+          captain_contact_id?: string | null
           captain_email: string
           captain_name: string
           captain_phone?: string | null
@@ -548,6 +625,7 @@ export type Database = {
         }
         Update: {
           amount_paid_cents?: number
+          captain_contact_id?: string | null
           captain_email?: string
           captain_name?: string
           captain_phone?: string | null

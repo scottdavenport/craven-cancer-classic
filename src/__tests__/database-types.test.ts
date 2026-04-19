@@ -58,6 +58,7 @@ describe("database types", () => {
       captain_name: "John Doe",
       captain_email: "john@test.com",
       captain_phone: null,
+      captain_contact_id: null,
       session: "morning",
       payment_status: "pending",
       stripe_payment_id: null,
@@ -101,6 +102,7 @@ describe("database types", () => {
       | "sponsorship_items"
       | "sponsorship_purchases"
       | "stripe_events"
+      | "team_members"
       | "teams";
     // This assignment errors at compile time if any TableName is not in KnownTables
     type _ExhaustiveCheck = Exclude<TableNames, KnownTables> extends never
@@ -123,9 +125,10 @@ describe("database types", () => {
       "sponsorship_items",
       "sponsorship_purchases",
       "stripe_events",
+      "team_members",
       "teams",
     ];
-    expect(tables).toHaveLength(13);
+    expect(tables).toHaveLength(14);
   });
 
   it("Insert types make required fields mandatory and optional fields optional", () => {

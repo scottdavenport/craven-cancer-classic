@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { ContactForm } from "./contact-form";
-import { createContact, updateContact } from "./actions";
+import { createContact, updateContact, deleteContact } from "./actions";
 import type { ContactInput } from "./actions";
 import type { Contact } from "@/types/database";
 
@@ -35,6 +35,24 @@ export function ContactDrawer({
     mode === "create"
       ? "New Contact"
       : `Edit Contact: ${contact?.full_name ?? ""}`;
+
+  async function handleDelete() {
+    if (!contact) return;
+    if (
+      !confirm(
+        `Soft-delete ${contact.full_name}? They'll be moved to Trash and hidden from default views. You can restore from Admin → Trash later.`
+      )
+    )
+      return;
+    const result = await deleteContact(contact.id);
+    if ("error" in result) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success("Deleted — restore from Trash");
+    onOpenChange(false);
+    onSuccess();
+  }
 
   async function handleSubmit(input: ContactInput) {
     const result =
@@ -72,13 +90,13 @@ export function ContactDrawer({
           />
         </div>
 
-        {mode === "edit" && contact && onDelete && (
+        {mode === "edit" && contact && (
           <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
             <Button
               type="button"
               variant="outline"
               className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
-              onClick={() => onDelete(contact)}
+              onClick={handleDelete}
             >
               Delete contact
             </Button>

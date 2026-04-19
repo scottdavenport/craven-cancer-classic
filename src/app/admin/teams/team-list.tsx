@@ -152,7 +152,10 @@ function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: DeleteTeamDia
   const requiresTypeConfirm = isPaid;
   const deleteEnabled = !requiresTypeConfirm || confirmText === team.team_name;
 
-  const captainName = team.members.find((m) => m.role === "captain")?.full_name ?? "—";
+  const captainMember = team.members.find((m) => m.role === "captain");
+  const captainName = captainMember
+    ? captainMember.full_name?.trim() ? captainMember.full_name : "(deleted contact)"
+    : "—";
   const amountDollars = (team.amount_paid_cents / 100).toFixed(2);
 
   // Fetch score count when dialog opens
@@ -308,7 +311,12 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
 
   const captainName = (team: TeamWithMembers): string => {
     const captain = team.members.find((m) => m.role === "captain");
-    return captain?.full_name ?? "—";
+    if (!captain) return "—";
+    return captain.full_name?.trim() ? captain.full_name : "(deleted contact)";
+  };
+
+  const memberDisplayName = (member: TeamWithMembers["members"][number]): string => {
+    return member.full_name?.trim() ? member.full_name : "(deleted contact)";
   };
 
   return (
@@ -375,8 +383,22 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
                     </TableCell>
 
                     {/* Members */}
-                    <TableCell className="px-4 py-3 text-[0.8125rem] text-foreground tabular-nums">
-                      {team.member_count}/4
+                    <TableCell className="px-4 py-3">
+                      <div className="flex flex-col gap-0.5">
+                        <span className="text-[0.8125rem] text-foreground tabular-nums">
+                          {team.member_count}/4
+                        </span>
+                        {team.members
+                          .filter((m) => m.role !== "captain")
+                          .map((m) => (
+                            <span
+                              key={m.contact_id}
+                              className={`text-[0.75rem] ${!m.full_name?.trim() ? "text-muted-foreground italic" : "text-muted-foreground"}`}
+                            >
+                              {memberDisplayName(m)}
+                            </span>
+                          ))}
+                      </div>
                     </TableCell>
 
                     {/* Session */}

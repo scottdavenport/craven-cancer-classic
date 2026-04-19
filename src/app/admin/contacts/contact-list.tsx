@@ -12,10 +12,19 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { exportContactsCSV, getContacts } from "./actions";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { exportContactsCSV, getContacts, bulkUpdateContacts, bulkDeleteContacts } from "./actions";
 import { ContactDrawer } from "./contact-drawer";
 import type { Contact } from "@/types/database";
 import type { ContactFilter, TeamFilterOption } from "./actions";
+import { toast } from "sonner";
 
 type ContactType = "player" | "sponsor" | "donor" | "other";
 
@@ -87,7 +96,7 @@ function relativeTime(dateStr: string): string {
   return rtf.format(-Math.floor(months / 12), "year");
 }
 
-const TABLE_HEADERS = ["Name", "Email", "Type", "Company", "Year", "Consent", "Added"];
+const DATA_HEADERS = ["Name", "Email", "Type", "Company", "Year", "Consent", "Added"];
 
 type DrawerState = {
   open: boolean;
@@ -110,6 +119,12 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
     mode: "create",
     contact: null,
   });
+
+  // Multi-select state — persists across filter changes
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
+  const [isBulkPending, setIsBulkPending] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   function refetch() {
     startTransition(async () => {
@@ -210,6 +225,136 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
       console.error("[ContactList] exportContactsCSV failed:", err);
     } finally {
       setExporting(false);
+    }
+  }
+
+  // Selection helpers
+  const filteredIds = useMemo(() => filtered.map((c) => c.id), [filtered]);
+  const allVisibleSelected =
+    filteredIds.length > 0 && filteredIds.every((id) => selected.has(id));
+  const someVisibleSelected = filteredIds.some((id) => selected.has(id));
+  const notInViewCount = selected.size - filtered.filter((c) => selected.has(c.id)).length;
+
+  function handleHeaderCheckbox() {
+    if (allVisibleSelected) {
+      // Deselect all visible
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filteredIds.forEach((id) => next.delete(id));
+        return next;
+      });
+    } else {
+      // Select all visible
+      setSelected((prev) => {
+        const next = new Set(prev);
+        filteredIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+    setLastSelectedIndex(null);
+  }
+
+  function handleRowCheckbox(
+    e: React.MouseEvent<HTMLInputElement>,
+    contactId: string,
+    index: number
+  ) {
+    e.stopPropagation();
+
+    if (e.shiftKey && lastSelectedIndex !== null) {
+      // Range select
+      const start = Math.min(lastSelectedIndex, index);
+      const end = Math.max(lastSelectedIndex, index);
+      const rangeIds = filteredIds.slice(start, end + 1);
+      const isSelecting = !selected.has(contactId);
+      setSelected((prev) => {
+        const next = new Set(prev);
+        rangeIds.forEach((id) => {
+          if (isSelecting) next.add(id);
+          else next.delete(id);
+        });
+        return next;
+      });
+    } else {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        if (next.has(contactId)) next.delete(contactId);
+        else next.add(contactId);
+        return next;
+      });
+    }
+    setLastSelectedIndex(index);
+  }
+
+  // Bulk action handlers
+  async function handleBulkChangeType(type: ContactType) {
+    const ids = Array.from(selected);
+    setIsBulkPending(true);
+    try {
+      const result = await bulkUpdateContacts(ids, { type });
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Updated ${result.updated} contact${result.updated !== 1 ? "s" : ""}`);
+        setSelected(new Set());
+        refetch();
+      }
+    } finally {
+      setIsBulkPending(false);
+    }
+  }
+
+  async function handleBulkSubscribe() {
+    const ids = Array.from(selected);
+    setIsBulkPending(true);
+    try {
+      const result = await bulkUpdateContacts(ids, { marketing_consent: true });
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Subscribed ${result.updated} contact${result.updated !== 1 ? "s" : ""}`);
+        setSelected(new Set());
+        refetch();
+      }
+    } finally {
+      setIsBulkPending(false);
+    }
+  }
+
+  async function handleBulkUnsubscribe() {
+    const ids = Array.from(selected);
+    setIsBulkPending(true);
+    try {
+      const result = await bulkUpdateContacts(ids, { marketing_consent: false });
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(
+          `Unsubscribed ${result.updated} contact${result.updated !== 1 ? "s" : ""}`
+        );
+        setSelected(new Set());
+        refetch();
+      }
+    } finally {
+      setIsBulkPending(false);
+    }
+  }
+
+  async function handleBulkDelete() {
+    const ids = Array.from(selected);
+    setIsBulkPending(true);
+    setDeleteDialogOpen(false);
+    try {
+      const result = await bulkDeleteContacts(ids);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Deleted ${result.deleted} contact${result.deleted !== 1 ? "s" : ""}`);
+        setSelected(new Set());
+        refetch();
+      }
+    } finally {
+      setIsBulkPending(false);
     }
   }
 
@@ -321,6 +466,89 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         </label>
       </div>
 
+      {/* Selection counter */}
+      {selected.size > 0 && (
+        <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
+          <span className="font-medium text-foreground">{selected.size} selected</span>
+          {notInViewCount > 0 && (
+            <span className="text-neutral-400">({notInViewCount} not in current view)</span>
+          )}
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            className="text-brand underline underline-offset-2 hover:no-underline ml-1"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-neutral-50 px-4 py-2.5 shadow-sm">
+          <span className="text-[0.8125rem] font-semibold text-foreground mr-2">
+            {selected.size} selected
+          </span>
+
+          {/* Change Type dropdown */}
+          <Select
+            onValueChange={(v) => {
+              if (v) handleBulkChangeType(v as ContactType);
+            }}
+          >
+            <SelectTrigger className="h-8 w-[140px] text-xs">
+              <SelectValue placeholder="Change Type" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="player">Player</SelectItem>
+              <SelectItem value="sponsor">Sponsor</SelectItem>
+              <SelectItem value="donor">Donor</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={isBulkPending}
+            onClick={handleBulkSubscribe}
+          >
+            Subscribe
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs"
+            disabled={isBulkPending}
+            onClick={handleBulkUnsubscribe}
+          >
+            Unsubscribe
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-8 text-xs text-destructive hover:text-destructive border-destructive/30 hover:border-destructive/60"
+            disabled={isBulkPending}
+            onClick={() => setDeleteDialogOpen(true)}
+          >
+            Delete
+          </Button>
+
+          <Button
+            size="sm"
+            variant="ghost"
+            className="h-8 text-xs"
+            disabled={isBulkPending}
+            onClick={() => setSelected(new Set())}
+          >
+            Clear
+          </Button>
+        </div>
+      )}
+
       {/* Table */}
       <div
         className="overflow-hidden rounded-lg border border-border/60 shadow-sm transition-opacity duration-150"
@@ -334,7 +562,20 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         <table className="w-full caption-bottom text-sm">
           <thead className="bg-neutral-50">
             <tr>
-              {TABLE_HEADERS.map((h) => (
+              {/* Checkbox header */}
+              <th className="px-4 py-3 w-10">
+                <input
+                  type="checkbox"
+                  aria-label="Select all visible contacts"
+                  checked={allVisibleSelected}
+                  ref={(el) => {
+                    if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
+                  }}
+                  onChange={handleHeaderCheckbox}
+                  className="accent-brand h-4 w-4 rounded cursor-pointer"
+                />
+              </th>
+              {DATA_HEADERS.map((h) => (
                 <th
                   key={h}
                   className="px-4 py-3 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
@@ -347,7 +588,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={TABLE_HEADERS.length}>
+                <td colSpan={DATA_HEADERS.length + 1}>
                   <div className="py-16 flex flex-col items-center gap-3">
                     <h3 className="font-display text-xl font-semibold text-foreground">
                       No contacts found
@@ -374,7 +615,8 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                 </td>
               </tr>
             ) : (
-              filtered.map((contact) => {
+              filtered.map((contact, index) => {
+                const isSelected = selected.has(contact.id);
                 const displayName =
                   contact.first_name || contact.last_name
                     ? [contact.first_name, contact.last_name].filter(Boolean).join(" ")
@@ -383,9 +625,23 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                 return (
                   <tr
                     key={contact.id}
-                    className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer"
+                    className={`border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer ${
+                      isSelected ? "bg-brand-muted/30" : ""
+                    }`}
                     onClick={() => setDrawer({ open: true, mode: "edit", contact })}
                   >
+                    {/* Checkbox cell */}
+                    <td className="px-4 py-3 w-10" onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        aria-label={`Select ${contact.full_name}`}
+                        checked={isSelected}
+                        onClick={(e) => handleRowCheckbox(e, contact.id, index)}
+                        onChange={() => {/* controlled by onClick */}}
+                        className="accent-brand h-4 w-4 rounded cursor-pointer"
+                      />
+                    </td>
+
                     {/* Name — structured name + full_name fallback */}
                     <td className="px-4 py-3">
                       <span className="text-[0.8125rem] font-medium text-foreground block">
@@ -445,6 +701,35 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
         onSuccess={refetch}
       />
+
+      {/* Bulk delete confirm dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Soft-delete {selected.size} contact{selected.size !== 1 ? "s" : ""}?</DialogTitle>
+            <DialogDescription>
+              {selected.size} contact{selected.size !== 1 ? "s" : ""} will be moved to Trash and
+              hidden from default views. You can restore them from Admin &rarr; Trash.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setDeleteDialogOpen(false)}
+              disabled={isBulkPending}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleBulkDelete}
+              disabled={isBulkPending}
+            >
+              {isBulkPending ? "Deleting..." : `Delete ${selected.size} contact${selected.size !== 1 ? "s" : ""}`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

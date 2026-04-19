@@ -45,6 +45,8 @@ import {
   createContact,
   updateContact,
   deleteContact,
+  bulkUpdateContacts,
+  bulkDeleteContacts,
 } from "@/app/admin/contacts/actions";
 
 // ---------------------------------------------------------------------------
@@ -832,6 +834,281 @@ describe("deleteContact (S10-3)", () => {
       const result = await deleteContact("contact-uuid-1");
 
       expect(result).toMatchObject({ error: "db write failed" });
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S10-4 (RED): bulkUpdateContacts
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a mock Supabase client for bulkUpdateContacts.
+ *
+ * bulkUpdateContacts does:
+ *   supabase.from("contacts").update(update).in("id", ids)
+ *
+ * The chain: from() → { update() → { in() → Promise<{error}> } }
+ */
+function makeBulkUpdateClient(overrides: {
+  error?: { message: string; code?: string } | null;
+} = {}) {
+  const inResult: Record<string, unknown> = {};
+  inResult.then = (
+    resolve: (v: { error: typeof overrides.error; count?: number | null }) => unknown,
+    reject: (e: unknown) => unknown
+  ) => Promise.resolve({ error: overrides.error ?? null, count: null }).then(resolve, reject);
+
+  const mockIn = vi.fn().mockReturnValue(inResult);
+  const mockUpdate = vi.fn().mockReturnValue({ in: mockIn });
+  const mockFrom = vi.fn().mockReturnValue({ update: mockUpdate });
+
+  return { client: { from: mockFrom }, mockFrom, mockUpdate, mockIn };
+}
+
+/**
+ * Build a mock Supabase client for bulkDeleteContacts.
+ *
+ * bulkDeleteContacts does a single batched soft-delete:
+ *   supabase.auth.getUser()
+ *   supabase.from("contacts").update({ deleted_at, deleted_by }, { count: "exact" }).in("id", ids)
+ *
+ * The chain: from() → { update() → { in() → Promise<{error, count}> } }
+ */
+function makeBulkDeleteClient(overrides: {
+  user?: { id: string } | null;
+  error?: { message: string } | null;
+  count?: number | null;
+  fromSpy?: ReturnType<typeof vi.fn>;
+} = {}) {
+  const user = overrides.user !== undefined ? overrides.user : { id: "admin-user-uuid" };
+  const returnedCount = overrides.count !== undefined ? overrides.count : null;
+
+  const inResult: Record<string, unknown> = {};
+  inResult.then = (
+    resolve: (v: { error: typeof overrides.error; count: number | null }) => unknown,
+    reject: (e: unknown) => unknown
+  ) => Promise.resolve({ error: overrides.error ?? null, count: returnedCount }).then(resolve, reject);
+
+  const mockIn = vi.fn().mockReturnValue(inResult);
+  const mockUpdate = vi.fn().mockReturnValue({ in: mockIn });
+
+  const fromSpy =
+    overrides.fromSpy ??
+    vi.fn().mockReturnValue({ update: mockUpdate });
+
+  return {
+    client: {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
+      },
+      from: fromSpy,
+    },
+    mockIn,
+    mockUpdate,
+    fromSpy,
+  };
+}
+
+describe("bulkUpdateContacts (S10-4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue(
+      { role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never
+    );
+  });
+
+  describe("happy path", () => {
+    it("returns { updated: 3 } and calls supabase with correct update payload and ids", async () => {
+      const { client, mockFrom, mockUpdate, mockIn } = makeBulkUpdateClient();
+      setClient(client);
+
+      const ids = ["id-1", "id-2", "id-3"];
+      const result = await bulkUpdateContacts(ids, { type: "donor" });
+
+      expect(result).toEqual({ updated: 3 });
+      expect(mockFrom).toHaveBeenCalledWith("contacts");
+      expect(mockUpdate).toHaveBeenCalledWith({ type: "donor" });
+      expect(mockIn).toHaveBeenCalledWith("id", ids);
+    });
+
+    it("calls supabase with only marketing_consent when update contains only that field", async () => {
+      const { client, mockUpdate } = makeBulkUpdateClient();
+      setClient(client);
+
+      await bulkUpdateContacts(["id-1"], { marketing_consent: true });
+
+      expect(mockUpdate).toHaveBeenCalledWith({ marketing_consent: true });
+      // Verify type is NOT in the payload
+      const payload = mockUpdate.mock.calls[0][0] as Record<string, unknown>;
+      expect(payload).not.toHaveProperty("type");
+    });
+  });
+
+  describe("no-op for empty ids", () => {
+    it("returns { updated: 0 } without calling supabase when ids is empty", async () => {
+      const { client, mockFrom } = makeBulkUpdateClient();
+      setClient(client);
+
+      const result = await bulkUpdateContacts([], { type: "donor" });
+
+      expect(result).toEqual({ updated: 0 });
+      expect(mockFrom).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("cap enforcement", () => {
+    it("returns { error: /too many/i } and does not call supabase when ids.length > 500", async () => {
+      const { client, mockFrom } = makeBulkUpdateClient();
+      setClient(client);
+
+      const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+      const result = await bulkUpdateContacts(ids, { type: "donor" });
+
+      expect(result).toMatchObject({ error: expect.stringMatching(/too many/i) });
+      expect(mockFrom).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("empty update object", () => {
+    it("returns { error: /no fields/i } and does not call supabase when update is empty", async () => {
+      const { client, mockFrom } = makeBulkUpdateClient();
+      setClient(client);
+
+      const result = await bulkUpdateContacts(["id-1", "id-2"], {});
+
+      expect(result).toMatchObject({ error: expect.stringMatching(/no fields/i) });
+      expect(mockFrom).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("DB error propagation", () => {
+    it("returns { error: message } when supabase returns a DB error", async () => {
+      const { client } = makeBulkUpdateClient({ error: { message: "bulk update failed" } });
+      setClient(client);
+
+      const result = await bulkUpdateContacts(["id-1"], { type: "other" });
+
+      expect(result).toMatchObject({ error: "bulk update failed" });
+    });
+  });
+
+  describe("authorization", () => {
+    it("propagates error when requireAdmin throws", async () => {
+      vi.mocked(adminModule.requireAdmin).mockRejectedValue(new Error("Unauthorized"));
+      const { client } = makeBulkUpdateClient();
+      setClient(client);
+
+      await expect(bulkUpdateContacts(["id-1"], { type: "donor" })).rejects.toThrow("Unauthorized");
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S10-4 (RED): bulkDeleteContacts
+// ---------------------------------------------------------------------------
+
+describe("bulkDeleteContacts (S10-4)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue(
+      { role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never
+    );
+  });
+
+  describe("happy path", () => {
+    it("returns { deleted: 3 } and calls update with deleted_at/deleted_by via .in('id', ids)", async () => {
+      const { client, mockUpdate, mockIn } = makeBulkDeleteClient({ user: { id: "admin-user-uuid" } });
+      setClient(client);
+
+      const ids = ["id-1", "id-2", "id-3"];
+      const result = await bulkDeleteContacts(ids);
+
+      expect(result).toEqual({ deleted: 3 });
+
+      // Verify the update payload contains deleted_at (ISO string) and deleted_by
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deleted_by: "admin-user-uuid",
+          deleted_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        }),
+        expect.anything()  // count: "exact" option
+      );
+      const payload = (mockUpdate.mock.calls[0] as [{ deleted_at: string }])[0];
+      expect(isNaN(new Date(payload.deleted_at).getTime())).toBe(false);
+
+      // Verify ids passed through to .in()
+      expect(mockIn).toHaveBeenCalledWith("id", ids);
+    });
+  });
+
+  describe("no-op for empty ids", () => {
+    it("returns { deleted: 0 } without calling supabase when ids is empty", async () => {
+      const { client, fromSpy } = makeBulkDeleteClient();
+      setClient(client);
+
+      const result = await bulkDeleteContacts([]);
+
+      expect(result).toEqual({ deleted: 0 });
+      expect(fromSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("cap enforcement", () => {
+    it("returns { error: /too many/i } when ids.length > 500", async () => {
+      const { client, fromSpy } = makeBulkDeleteClient();
+      setClient(client);
+
+      const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+      const result = await bulkDeleteContacts(ids);
+
+      expect(result).toMatchObject({ error: expect.stringMatching(/too many/i) });
+      expect(fromSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("team_members not touched", () => {
+    it("never calls from('team_members') during bulk delete", async () => {
+      const contactsInResult: Record<string, unknown> = {};
+      contactsInResult.then = (resolve: (v: { error: null; count: number }) => unknown, reject: (e: unknown) => unknown) =>
+        Promise.resolve({ error: null, count: 2 }).then(resolve, reject);
+
+      const fromSpy = vi.fn((table: string) => {
+        if (table === "contacts") {
+          return {
+            update: vi.fn().mockReturnValue({ in: vi.fn().mockReturnValue(contactsInResult) }),
+          };
+        }
+        // Any call to another table should not happen
+        return { update: vi.fn() };
+      });
+
+      setClient({
+        auth: {
+          getUser: vi.fn().mockResolvedValue({ data: { user: { id: "admin-user-uuid" } }, error: null }),
+        },
+        from: fromSpy,
+      });
+
+      await bulkDeleteContacts(["id-1", "id-2"]);
+
+      const calledTables = (fromSpy.mock.calls as [string][]).map(([t]) => t);
+      expect(calledTables).not.toContain("team_members");
+    });
+  });
+
+  describe("DB error propagation", () => {
+    it("returns { error: message } when supabase returns a DB error", async () => {
+      const { client } = makeBulkDeleteClient({ error: { message: "bulk delete failed" } });
+      setClient(client);
+
+      const result = await bulkDeleteContacts(["id-1", "id-2"]);
+
+      expect(result).toMatchObject({ error: "bulk delete failed" });
     });
   });
 });

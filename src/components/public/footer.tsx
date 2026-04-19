@@ -11,17 +11,14 @@ export function Footer() {
         <div className="grid gap-12 md:grid-cols-12">
           {/* Brand column */}
           <div className="md:col-span-5">
-            <div className="flex items-center gap-3">
+            <div className="flex items-center">
               <Image
-                src="/logo.png"
+                src="/brand/ccc-logo-full.svg"
                 alt="Craven Cancer Classic"
-                width={48}
-                height={48}
-                className="brightness-0 invert opacity-80"
+                width={180}
+                height={64}
+                className="h-10 w-auto brightness-0 invert opacity-80"
               />
-              <span className="font-display text-xl font-semibold text-white">
-                Craven Cancer Classic
-              </span>
             </div>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/50 italic">
               &ldquo;Remembering those who have lost their battle, supporting

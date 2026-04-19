@@ -119,7 +119,10 @@ export type Database = {
           name: string
           registration_fee_cents: number
           registration_open: boolean
+          tournament_end_date: string | null
+          tournament_start_date: string | null
           updated_at: string
+          venue_name: string | null
           year: number
         }
         Insert: {
@@ -135,7 +138,10 @@ export type Database = {
           name?: string
           registration_fee_cents?: number
           registration_open?: boolean
+          tournament_end_date?: string | null
+          tournament_start_date?: string | null
           updated_at?: string
+          venue_name?: string | null
           year?: number
         }
         Update: {
@@ -151,7 +157,10 @@ export type Database = {
           name?: string
           registration_fee_cents?: number
           registration_open?: boolean
+          tournament_end_date?: string | null
+          tournament_start_date?: string | null
           updated_at?: string
+          venue_name?: string | null
           year?: number
         }
         Relationships: []

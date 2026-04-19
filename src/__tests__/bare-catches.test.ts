@@ -2,12 +2,11 @@
  * S3-10: Bare catches meta-test.
  *
  * Asserts that `catch {` (empty catch binding) appears only in the 2 allowlisted
- * locations in src/app/auth/login/page.tsx (lines 44 and 59, both intentional
+ * locations in src/app/auth/login/login-form.tsx (both intentional
  * redirect-throw swallowers with explanatory comments).
  *
- * The test fails today because 15 other source files contain bare catches
- * without logging. After S3-10 (Bolt + Flux add console.error calls),
- * only the 2 allowlisted catches remain.
+ * S7-10 refactored login/page.tsx into a server wrapper + login-form.tsx client
+ * component. The 2 intentional bare catches moved to login-form.tsx.
  *
  * Implementation note: reads source files as text — does NOT import them.
  * This avoids RSC / missing-dependency issues and makes the assertion fast.
@@ -23,7 +22,7 @@ const SRC_ROOT = resolve(__dirname, "../../src");
 // Files that are ALLOWED to contain bare `catch {` — intentional silent catches
 // with explanatory comments for Next.js redirect() throws.
 const ALLOWLISTED_FILES = [
-  "app/auth/login/page.tsx",
+  "app/auth/login/login-form.tsx",
 ];
 
 // ---------------------------------------------------------------------------
@@ -76,9 +75,10 @@ describe("S3-10 bare catches in source files", () => {
     expect(nonAllowlisted).toEqual([]);
   });
 
-  it("login/page.tsx still contains its 2 intentional bare catches", () => {
-    const loginPath = join(SRC_ROOT, "app/auth/login/page.tsx");
-    const content = readFileSync(loginPath, "utf-8");
+  it("login-form.tsx still contains its 2 intentional bare catches", () => {
+    // S7-10: the bare catches live in login-form.tsx (extracted client component)
+    const loginFormPath = join(SRC_ROOT, "app/auth/login/login-form.tsx");
+    const content = readFileSync(loginFormPath, "utf-8");
     const matches = [...content.matchAll(/catch\s*\{/g)];
     expect(matches).toHaveLength(2);
   });

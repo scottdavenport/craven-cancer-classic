@@ -2,9 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 type AuthResult = { error: string } | { success: string } | void;
+
+// Derive the callback URL from the current request, not a build-time env var.
+// Eliminates env-sync drift between local/preview/production.
+async function getCallbackUrl(): Promise<string> {
+  const h = await headers();
+  const origin =
+    h.get("origin") ??
+    (h.get("x-forwarded-proto") && h.get("host")
+      ? `${h.get("x-forwarded-proto")}://${h.get("host")}`
+      : null) ??
+    process.env.NEXT_PUBLIC_SITE_URL;
+  return `${origin}/auth/callback`;
+}
 
 export async function signInWithPassword(formData: FormData): Promise<AuthResult> {
   const supabase = await createClient();
@@ -28,7 +42,7 @@ export async function signInWithMagicLink(formData: FormData): Promise<AuthResul
   const { error } = await supabase.auth.signInWithOtp({
     email: formData.get("email") as string,
     options: {
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      emailRedirectTo: await getCallbackUrl(),
     },
   });
 
@@ -45,7 +59,7 @@ export async function signInWithGoogle(): Promise<AuthResult> {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
+      redirectTo: await getCallbackUrl(),
     },
   });
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { AdminPageHeading } from "@/components/admin/admin-page-heading";
-import { getContacts } from "./actions";
+import { getContacts, getTeamsForFilter } from "./actions";
 import { ContactList } from "./contact-list";
 
 export const metadata: Metadata = {
@@ -10,15 +10,15 @@ export const metadata: Metadata = {
 
 export default async function AdminContactsPage() {
   await requireAdmin();
-  const contacts = await getContacts();
+  const [contacts, teams] = await Promise.all([getContacts(), getTeamsForFilter()]);
 
   return (
     <div>
       <AdminPageHeading
         title="Contacts"
-        description="Email contacts captured from public forms."
+        description="People captured from public forms and the mailing list import."
       />
-      <ContactList contacts={contacts} />
+      <ContactList contacts={contacts} teams={teams} />
     </div>
   );
 }

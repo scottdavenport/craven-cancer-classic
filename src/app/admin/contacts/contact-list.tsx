@@ -11,13 +11,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { exportContactsCSV } from "./actions";
 import type { Contact } from "@/types/database";
+import type { ContactFilter, TeamFilterOption } from "./actions";
 
 type ContactType = "player" | "sponsor" | "donor" | "other";
 
 interface ContactListProps {
   contacts: Contact[];
+  teams: TeamFilterOption[];
 }
 
 const TYPE_BADGE_CLASSES: Record<string, string> = {
@@ -38,8 +41,37 @@ function TypeBadge({ type }: { type: string }) {
   );
 }
 
+function ConsentBadge({ consented }: { consented: boolean }) {
+  return consented ? (
+    <span
+      className="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold bg-success-muted text-success"
+      title="Subscribed to marketing"
+    >
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+        <path
+          d="M1.5 5.5L3.5 7.5L8.5 2.5"
+          stroke="currentColor"
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      Subscribed
+    </span>
+  ) : (
+    <span
+      className="inline-flex items-center gap-1 rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold bg-neutral-100 text-neutral-500"
+      title="Not subscribed"
+    >
+      Unsubscribed
+    </span>
+  );
+}
+
 function relativeTime(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
+  const date = new Date(dateStr);
+  if (isNaN(date.getTime())) return "—";
+  const diff = Date.now() - date.getTime();
   const rtf = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
   const seconds = Math.floor(diff / 1000);
   if (seconds < 60) return rtf.format(-seconds, "second");
@@ -54,42 +86,60 @@ function relativeTime(dateStr: string): string {
   return rtf.format(-Math.floor(months / 12), "year");
 }
 
-export function ContactList({ contacts }: ContactListProps) {
+const TABLE_HEADERS = ["Name", "Email", "Type", "Company", "Year", "Consent", "Added"];
+
+export function ContactList({ contacts, teams }: ContactListProps) {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
+  const [companyFilter, setCompanyFilter] = useState<string>("");
+  const [consentFilter, setConsentFilter] = useState<string>("all");
+  const [teamFilter, setTeamFilter] = useState<string>("all");
+  const [captainOnly, setCaptainOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
 
   const availableYears = useMemo(() => {
-    const years = Array.from(new Set(contacts.map((c) => c.year_first_seen))).sort(
+    return Array.from(new Set(contacts.map((c) => c.year_first_seen))).sort(
       (a, b) => b - a
     );
-    return years;
   }, [contacts]);
 
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
       if (typeFilter !== "all" && c.type !== typeFilter) return false;
       if (yearFilter !== "all" && c.year_first_seen !== Number(yearFilter)) return false;
+      if (companyFilter.trim()) {
+        const search = companyFilter.trim().toLowerCase();
+        if (!(c.company ?? "").toLowerCase().includes(search)) return false;
+      }
+      if (consentFilter === "subscribed" && !c.marketing_consent) return false;
+      if (consentFilter === "unsubscribed" && c.marketing_consent) return false;
       return true;
     });
-  }, [contacts, typeFilter, yearFilter]);
+  }, [contacts, typeFilter, yearFilter, companyFilter, consentFilter]);
 
-  const isFiltered = typeFilter !== "all" || yearFilter !== "all";
+  const isFiltered =
+    typeFilter !== "all" ||
+    yearFilter !== "all" ||
+    companyFilter.trim() !== "" ||
+    consentFilter !== "all" ||
+    teamFilter !== "all" ||
+    captainOnly;
 
   async function handleExportCSV() {
     setExporting(true);
     try {
-      const filterArg: { type?: ContactType; year?: number } = {};
+      const filterArg: ContactFilter = {};
       if (typeFilter !== "all") filterArg.type = typeFilter as ContactType;
       if (yearFilter !== "all") filterArg.year = Number(yearFilter);
+      if (teamFilter !== "all") filterArg.team_id = teamFilter;
+      if (captainOnly) filterArg.captain_only = true;
 
       const csv = await exportContactsCSV(filterArg);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const today = new Date().toISOString().slice(0, 10);
       const typeLabel = typeFilter !== "all" ? typeFilter : "all";
-      const yearLabel = yearFilter !== "all" ? yearFilter : "all";
-      const filename = `contacts-${typeLabel}-${yearLabel}-${today}.csv`;
+      const filename = `contacts-subscribed-${typeLabel}-${today}.csv`;
 
       const a = document.createElement("a");
       a.href = url;
@@ -118,13 +168,15 @@ export function ContactList({ contacts }: ContactListProps) {
           size="sm"
           onClick={handleExportCSV}
           disabled={exporting}
+          title="Exports subscribed contacts only (CAN-SPAM)"
         >
-          {exporting ? "Exporting..." : "Export CSV"}
+          {exporting ? "Exporting..." : "Export CSV (subscribed only)"}
         </Button>
       </div>
 
       {/* Filter controls */}
-      <div className="flex flex-wrap gap-3">
+      <div className="flex flex-wrap gap-3 items-center">
+        {/* Type */}
         <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="All Types" />
@@ -138,8 +190,9 @@ export function ContactList({ contacts }: ContactListProps) {
           </SelectContent>
         </Select>
 
+        {/* Year */}
         <Select value={yearFilter} onValueChange={(v) => setYearFilter(v ?? "all")}>
-          <SelectTrigger className="w-[160px]">
+          <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="All Years" />
           </SelectTrigger>
           <SelectContent>
@@ -151,14 +204,69 @@ export function ContactList({ contacts }: ContactListProps) {
             ))}
           </SelectContent>
         </Select>
+
+        {/* Company search */}
+        <Input
+          type="text"
+          placeholder="Search company..."
+          value={companyFilter}
+          onChange={(e) => setCompanyFilter(e.target.value)}
+          className="w-[180px] text-sm"
+        />
+
+        {/* Consent filter */}
+        <Select value={consentFilter} onValueChange={(v) => setConsentFilter(v ?? "all")}>
+          <SelectTrigger className="w-[175px]">
+            <SelectValue placeholder="All Contacts" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Contacts</SelectItem>
+            <SelectItem value="subscribed">Subscribed only</SelectItem>
+            <SelectItem value="unsubscribed">Unsubscribed only</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {/* Team filter */}
+        <Select value={teamFilter} onValueChange={(v) => setTeamFilter(v ?? "all")}>
+          <SelectTrigger className="w-[175px]">
+            <SelectValue placeholder="All Teams" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Teams</SelectItem>
+            {teams.map((t) => (
+              <SelectItem key={t.id} value={t.id}>
+                {t.team_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* Captain-only toggle */}
+        <label className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
+          <input
+            type="checkbox"
+            checked={captainOnly}
+            onChange={(e) => setCaptainOnly(e.target.checked)}
+            className="accent-brand h-4 w-4 rounded"
+          />
+          Captains only
+        </label>
       </div>
+
+      {/* Team/captain filter note — these filters apply on export, not in client table */}
+      {(teamFilter !== "all" || captainOnly) && (
+        <p className="text-[0.75rem] text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+          Team and captain filters apply to the CSV export only. The table shows all
+          contacts with other active filters applied.
+        </p>
+      )}
 
       {/* Table */}
       <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">
         <table className="w-full caption-bottom text-sm">
           <thead className="bg-neutral-50">
             <tr>
-              {["Name", "Email", "Type", "Year", "Notes", "Added"].map((h) => (
+              {TABLE_HEADERS.map((h) => (
                 <th
                   key={h}
                   className="px-4 py-3 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
@@ -171,20 +279,20 @@ export function ContactList({ contacts }: ContactListProps) {
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={6}>
+                <td colSpan={TABLE_HEADERS.length}>
                   <div className="py-16 flex flex-col items-center gap-3">
                     <h3 className="font-display text-xl font-semibold text-foreground">
-                      No contacts yet
+                      No contacts found
                     </h3>
                     {isFiltered ? (
                       <p className="font-sans text-sm text-muted-foreground max-w-xs text-center">
-                        No contacts match the current filter.
+                        No contacts match the current filters. Try clearing some filters.
                       </p>
                     ) : (
                       <>
                         <p className="font-sans text-sm text-muted-foreground max-w-xs text-center">
                           Contacts are captured when visitors submit the email forms on
-                          public pages.
+                          public pages, or imported from the mailing list.
                         </p>
                         <Link
                           href="/"
@@ -198,34 +306,64 @@ export function ContactList({ contacts }: ContactListProps) {
                 </td>
               </tr>
             ) : (
-              filtered.map((contact) => (
-                <tr
-                  key={contact.id}
-                  className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100"
-                >
-                  <td className="px-4 py-3 text-[0.8125rem] font-medium text-foreground">
-                    {contact.full_name}
-                  </td>
-                  <td className="px-4 py-3 font-mono text-[0.75rem] text-muted-foreground">
-                    {contact.email}
-                  </td>
-                  <td className="px-4 py-3">
-                    <TypeBadge type={contact.type} />
-                  </td>
-                  <td className="px-4 py-3 font-mono tabular-nums text-[0.8125rem] text-foreground text-center">
-                    {contact.year_first_seen}
-                  </td>
-                  <td
-                    className="px-4 py-3 text-[0.8125rem] text-muted-foreground truncate max-w-[180px]"
-                    title={contact.notes ?? undefined}
+              filtered.map((contact) => {
+                const displayName =
+                  contact.first_name || contact.last_name
+                    ? [contact.first_name, contact.last_name].filter(Boolean).join(" ")
+                    : null;
+
+                return (
+                  <tr
+                    key={contact.id}
+                    className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100"
                   >
-                    {contact.notes ?? "—"}
-                  </td>
-                  <td className="px-4 py-3 text-[0.75rem] text-muted-foreground">
-                    {relativeTime(contact.created_at)}
-                  </td>
-                </tr>
-              ))
+                    {/* Name — structured name + full_name fallback */}
+                    <td className="px-4 py-3">
+                      <span className="text-[0.8125rem] font-medium text-foreground block">
+                        {displayName ?? contact.full_name}
+                      </span>
+                      {displayName && displayName !== contact.full_name && (
+                        <span className="text-[0.75rem] text-muted-foreground block">
+                          {contact.full_name}
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Email */}
+                    <td className="px-4 py-3 font-mono text-[0.75rem] text-muted-foreground">
+                      {contact.email ?? <span className="text-neutral-400 italic">none</span>}
+                    </td>
+
+                    {/* Type */}
+                    <td className="px-4 py-3">
+                      <TypeBadge type={contact.type} />
+                    </td>
+
+                    {/* Company */}
+                    <td
+                      className="px-4 py-3 text-[0.8125rem] text-muted-foreground truncate max-w-[160px]"
+                      title={contact.company ?? undefined}
+                    >
+                      {contact.company ?? <span className="text-neutral-300">—</span>}
+                    </td>
+
+                    {/* Year */}
+                    <td className="px-4 py-3 font-mono tabular-nums text-[0.8125rem] text-foreground text-center">
+                      {contact.year_first_seen}
+                    </td>
+
+                    {/* Consent */}
+                    <td className="px-4 py-3">
+                      <ConsentBadge consented={contact.marketing_consent} />
+                    </td>
+
+                    {/* Added */}
+                    <td className="px-4 py-3 text-[0.75rem] text-muted-foreground">
+                      {relativeTime(contact.created_at)}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>

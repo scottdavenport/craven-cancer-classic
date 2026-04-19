@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getScores } from "./actions";
 import { ScoreManager } from "./score-manager";
+import { AdminPageHeading } from "@/components/admin/admin-page-heading";
 
 export const metadata: Metadata = {
   title: "Manage Scores",
@@ -11,13 +12,11 @@ export default async function AdminScoresPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">Scores</h1>
-      <p className="mt-1 text-muted-foreground">
-        Upload scores from CSV or add manually
-      </p>
-      <div className="mt-8">
-        <ScoreManager scores={scores} />
-      </div>
+      <AdminPageHeading
+        title="Scores"
+        description="Import CSV scores and manage the leaderboard data."
+      />
+      <ScoreManager scores={scores} />
     </div>
   );
 }

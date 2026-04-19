@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -20,6 +19,29 @@ import type { Team } from "@/types/database";
 
 interface RegistrationListProps {
   teams: Team[];
+}
+
+function PaymentStatusBadge({ status }: { status: string }) {
+  const classes: Record<string, string> = {
+    paid: "bg-success-muted text-success",
+    pending: "bg-warning-muted text-warning",
+    failed: "bg-destructive/10 text-destructive",
+    comped: "bg-neutral-100 text-neutral-600",
+  };
+  const cls = classes[status] ?? "bg-neutral-100 text-neutral-600";
+  return (
+    <span className={`inline-flex items-center rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold capitalize ${cls}`}>
+      {status}
+    </span>
+  );
+}
+
+function SessionBadge({ session }: { session: string }) {
+  return (
+    <span className="inline-flex items-center rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.05em] bg-neutral-100 text-neutral-600">
+      {session}
+    </span>
+  );
 }
 
 export function RegistrationList({ teams }: RegistrationListProps) {
@@ -108,7 +130,7 @@ export function RegistrationList({ teams }: RegistrationListProps) {
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-md bg-destructive/10 text-destructive border border-destructive/20 p-3 text-sm">
           {error}
         </div>
       )}
@@ -135,7 +157,7 @@ export function RegistrationList({ teams }: RegistrationListProps) {
         </Card>
         <Card>
           <CardContent className="pt-4">
-            <p className="text-2xl font-bold">
+            <p className="font-mono tabular-nums lining-nums text-2xl font-bold">
               ${(totalRevenue / 100).toLocaleString()}
             </p>
             <p className="text-xs text-muted-foreground">Revenue</p>
@@ -267,87 +289,73 @@ export function RegistrationList({ teams }: RegistrationListProps) {
       )}
 
       {/* Teams table */}
-      <Card>
-        <CardContent className="pt-4">
-          <Table>
-            <TableHeader>
+      <div className="shadow-sm border border-border/60 rounded-lg overflow-hidden">
+        <Table>
+          <TableHeader className="bg-neutral-50">
+            <TableRow>
+              <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Team</TableHead>
+              <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Captain</TableHead>
+              <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Session</TableHead>
+              <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
+              <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground text-right">Amount</TableHead>
+              <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Date</TableHead>
+              <TableHead className="w-16" />
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filtered.length === 0 ? (
               <TableRow>
-                <TableHead>Team</TableHead>
-                <TableHead>Captain</TableHead>
-                <TableHead>Session</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="w-16" />
+                <TableCell
+                  colSpan={7}
+                  className="text-center text-muted-foreground"
+                >
+                  {search
+                    ? "No teams match your search"
+                    : "No registrations yet"}
+                </TableCell>
               </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filtered.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="text-center text-muted-foreground"
-                  >
-                    {search
-                      ? "No teams match your search"
-                      : "No registrations yet"}
+            ) : (
+              filtered.map((team) => (
+                <TableRow key={team.id}>
+                  <TableCell className="font-medium">
+                    {team.team_name}
+                  </TableCell>
+                  <TableCell>
+                    <div>
+                      <p className="text-sm">{team.captain_name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {team.captain_email}
+                      </p>
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <SessionBadge session={team.session} />
+                  </TableCell>
+                  <TableCell>
+                    <PaymentStatusBadge status={team.payment_status} />
+                  </TableCell>
+                  <TableCell className="text-right font-mono tabular-nums lining-nums text-[0.8125rem] text-muted-foreground">
+                    ${(team.amount_paid_cents / 100).toLocaleString()}
+                  </TableCell>
+                  <TableCell className="font-mono text-[0.8125rem] text-muted-foreground">
+                    {new Date(team.created_at).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="icon-sm"
+                      onClick={() => handleDelete(team.id)}
+                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
                   </TableCell>
                 </TableRow>
-              ) : (
-                filtered.map((team) => (
-                  <TableRow key={team.id}>
-                    <TableCell className="font-medium">
-                      {team.team_name}
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="text-sm">{team.captain_name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {team.captain_email}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="capitalize">
-                        {team.session}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          team.payment_status === "paid"
-                            ? "default"
-                            : team.payment_status === "comped"
-                              ? "secondary"
-                              : "outline"
-                        }
-                      >
-                        {team.payment_status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      ${(team.amount_paid_cents / 100).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(team.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        onClick={() => handleDelete(team.id)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 import {
   Sidebar,
   SidebarContent,
@@ -44,12 +45,11 @@ export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar>
+    <Sidebar className="bg-neutral-50">
       <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
         <Link href="/admin" className="flex items-center gap-2">
-          <span className="text-lg font-bold text-sidebar-primary">
-            CCC Admin
-          </span>
+          <span className="font-display text-base font-semibold text-foreground">CCC</span>
+          <span className="font-sans text-base font-medium text-muted-foreground">Admin</span>
         </Link>
       </SidebarHeader>
 
@@ -57,21 +57,29 @@ export function AdminSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Management</SidebarGroupLabel>
           <SidebarMenu>
-            {menuItems.map((item) => (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  isActive={
-                    item.href === "/admin"
-                      ? pathname === "/admin"
-                      : pathname.startsWith(item.href)
-                  }
-                  render={<Link href={item.href} />}
-                >
-                  <item.icon className="h-4 w-4" />
-                  <span>{item.label}</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
+            {menuItems.map((item) => {
+              const isActive =
+                item.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname.startsWith(item.href);
+              return (
+                <SidebarMenuItem key={item.href}>
+                  <SidebarMenuButton
+                    isActive={isActive}
+                    render={<Link href={item.href} />}
+                    className={cn(
+                      "border-l-2 transition-colors duration-150",
+                      isActive
+                        ? "border-primary text-foreground"
+                        : "border-transparent text-muted-foreground hover:text-foreground hover:bg-neutral-50"
+                    )}
+                  >
+                    <item.icon className="h-4 w-4" />
+                    <span>{item.label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              );
+            })}
           </SidebarMenu>
         </SidebarGroup>
       </SidebarContent>

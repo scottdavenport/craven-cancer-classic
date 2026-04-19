@@ -609,6 +609,156 @@ Page heading block → `InviteForm` in `max-w-2xl`. Already correct.
 
 ---
 
+### Page: `/admin/photos`
+
+**Files:** `src/app/admin/photos/page.tsx`, `src/app/admin/photos/photo-moderation.tsx`
+
+**Page goal:** Review and moderate user-uploaded tournament photos — approve, reject, or delete submissions.
+
+#### Current State
+
+`page.tsx` renders a bare `<div>` with a raw `text-2xl font-bold` heading ("Photos") and a 15px `text-muted-foreground` description, then passes data to `PhotoModeration`.
+
+`PhotoModeration` (`photo-moderation.tsx`) is a fully functional client component:
+- Filter tabs (Pending / Approved / Rejected / All) with count badges — uses raw `<button>` elements, not shadcn components.
+- Masonry grid of photo `Card` components (`sm:grid-cols-2 lg:grid-cols-3`), each with a 4:3 image, a status badge overlaid top-right, caption + uploader info below, and Approve / Reject / Delete action buttons.
+- Empty state: plain `<p className="py-12 text-center text-muted-foreground">`.
+- Action buttons: Approve uses hardcoded `className="text-green-600"` — not token-based.
+- Status badge: `bg-white/90` overlay — loses contrast against light photos.
+
+#### Layout Composition
+
+1. **Admin heading block** — standard pattern: `border-b border-border/60 pb-6 mb-8`, Inter semibold 24px title "Photos", Inter 14px description "Review and moderate uploaded tournament photos."
+2. **Filter tab bar** — current structure is correct; apply segmented-control polish (see below).
+3. **Photo grid** — `sm:grid-cols-2 lg:grid-cols-3 gap-4`. Cards with Sprint 6 `shadow-sm border border-border/60`.
+4. **Empty state** — elevated treatment (see below).
+
+#### Component Choices
+
+- **Page heading block** (`page.tsx`): replace raw `<div><h1 className="text-2xl font-bold">` with the global admin heading pattern.
+- **Filter tabs** (`photo-moderation.tsx`): convert raw `<button>` elements to the segmented-control container pattern used in `/auth/login`. Container: `flex gap-0 border-b border-border mb-0`. Each tab: raw `<button>` is acceptable here because these are true tab controls, not mode selectors. Keep existing `border-b-2 border-primary` active indicator. Upgrade inactive tab color to `text-muted-foreground hover:text-foreground`. Count pill: change from inline `text-xs text-muted-foreground` to a proper count badge: `ml-1.5 inline-flex items-center rounded-full bg-neutral-100 px-1.5 py-0.5 text-[0.625rem] font-semibold text-muted-foreground tabular-nums`. Active tab count pill: `bg-primary/10 text-primary`.
+- **Photo Card** (`photo-moderation.tsx`): apply `shadow-sm border border-border/60` to each `Card`. Add thumbnail hover: `overflow-hidden` already present on `Card` — add `transition-transform duration-200 group-hover:scale-[1.02]` on the inner `Image` wrapper `<div>`, and add `group` to the `Card`. This gives a subtle zoom on hover.
+- **Status badge overlay**: change `bg-white/90 text-xs` to status-specific token colors:
+  - `approved`: `bg-success-muted text-success border border-success/20`
+  - `rejected`: `bg-destructive/10 text-destructive border border-destructive/20`
+  - `pending`: `bg-warning-muted text-warning border border-warning/20`
+  - All share: `text-[0.6875rem] font-semibold uppercase tracking-[0.05em] px-2 py-0.5 rounded-sm shadow-xs`
+  - Remove `variant` prop usage on the Badge for these — apply className directly for precise token control.
+- **Uploader info**: change `text-xs text-muted-foreground` to `font-sans text-[0.75rem] text-muted-foreground` for explicit font assignment. Date line: add `tabular-nums` to the date `<p>`.
+- **Approve button**: replace `className="text-green-600"` with `className="text-success hover:text-success"`. Token-based.
+- **Reject button**: already unstyled — add `hover:text-destructive hover:border-destructive/40 transition-colors duration-150`.
+- **Delete button**: already `text-destructive` — add `hover:bg-destructive/10 transition-colors duration-150`.
+- **Loading state**: when `loading === photo.id`, the entire card's action row is `opacity-50 pointer-events-none`. Currently disabled prop handles the button but does not dim the row. Add `disabled ? "opacity-50 pointer-events-none" : ""` to the action `<div>`.
+- **Empty state**: replace `<p className="py-12 text-center text-muted-foreground">` with:
+  ```
+  [py-16 flex flex-col items-center gap-2]
+    [Inter 14px text-muted-foreground/70] "No [tab] photos"
+    [Inter 12px text-muted-foreground/50] "Photos submitted via the public gallery appear here."
+  ```
+  Empty state only shows the second line when `tab === "pending"` (the most actionable tab).
+
+#### Implementation Notes
+
+- File to modify: `src/app/admin/photos/page.tsx` — apply admin heading block pattern.
+- File to modify: `src/app/admin/photos/photo-moderation.tsx` — all visual polish: tab count badges, card shadow + thumbnail hover, status badge token colors, action button token colors, empty state upgrade.
+- No structural changes to data flow or server actions.
+- No new files needed.
+
+---
+
+### Page: `/admin/contacts` (NEW)
+
+**Files to create:**
+- `src/app/admin/contacts/page.tsx` — server component, fetches data, passes to client list
+- `src/app/admin/contacts/actions.ts` — server actions: `getContacts(filter?)`, `exportContactsCSV(filter?)`
+- `src/app/admin/contacts/contact-list.tsx` — client component: filter controls, table, CSV export
+
+**Page goal:** Admin views all email-captured contacts from public forms, filtered by type and year. Contacts are stored in the `contacts` table with `type: 'player' | 'sponsor' | 'donor' | 'other'`.
+
+#### Layout Composition
+
+1. **Admin heading block** — standard pattern: `border-b border-border/60 pb-6 mb-8`, Inter semibold 24px "Contacts", Inter 14px description "Email contacts captured from public forms."
+2. **Action bar** — `flex items-center justify-between mb-6`. Left: contact count in Inter 13px `text-muted-foreground` (e.g., "247 contacts"). Right: "Export CSV" `variant="outline" size="sm"` Button.
+3. **Filter controls** — `flex flex-wrap gap-3 mb-6`. Type dropdown (All / Player / Sponsor / Donor / Other) + Year select (All Years / 2025 / 2026 / ...). Both use shadcn `Select` component with `w-[160px]` width.
+4. **Contacts table** — admin table treatment (see below).
+5. **Empty state** — elevated treatment (see below).
+
+#### Component Choices
+
+- **Action bar export button**: `variant="outline" size="sm"`. Label: "Export CSV". On click: calls `exportContactsCSV(currentFilter)` server action and triggers browser file download. The action returns a CSV string; the client uses `Blob` + `URL.createObjectURL` to trigger download with filename `contacts-[type]-[year]-[date].csv`.
+- **Filter selects**: shadcn `Select`. Type options: "All Types", "Player", "Sponsor", "Donor", "Other". Year options: "All Years" + dynamic years from data (derived from `year_first_seen` column). When filter changes, the client re-fetches or filters in-memory from the full dataset (prefer in-memory for <1000 rows; server refetch if dataset grows).
+- **Contacts table**:
+  - Wrapper: `overflow-hidden rounded-lg border border-border/60 shadow-sm`
+  - `<thead>`: `bg-neutral-50`
+  - Column headers: Inter `text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground px-4 py-3`
+  - Columns: Name | Email | Type | Year | Notes | Added
+  - `<tbody>` rows: `border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100`
+  - Name cell: Inter `text-[0.8125rem] font-medium text-foreground`
+  - Email cell: `font-mono text-[0.75rem] text-muted-foreground` (monospaced for email readability)
+  - Type cell: type badge (see badge spec below)
+  - Year cell: `font-mono tabular-nums text-[0.8125rem] text-foreground text-center`
+  - Notes cell: `text-[0.8125rem] text-muted-foreground truncate max-w-[180px]` — show tooltip on hover via `title={fullNotes}` attribute
+  - Added cell: relative time in Inter `text-[0.75rem] text-muted-foreground` (e.g., "3 days ago" via `Intl.RelativeTimeFormat`)
+- **Type badge**: inline badge pattern, `rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.05em]`:
+  - `player`: `bg-teal-50 text-teal-700` (maps to primary brand color family)
+  - `sponsor`: `bg-purple-50 text-purple-700` (muted purple — sponsor context)
+  - `donor`: `bg-success-muted text-success` (token-based green)
+  - `other`: `bg-neutral-100 text-neutral-600`
+- **Empty state**: centered, `py-16 flex flex-col items-center gap-3`:
+  - `<h3 className="font-display text-xl font-semibold text-foreground">No contacts yet</h3>` — Fraunces for the single editorial heading
+  - `<p className="font-sans text-sm text-muted-foreground max-w-xs text-center">Contacts are captured when visitors submit the email forms on public pages.</p>`
+  - `<Link href="/" className={buttonVariants({ variant: "outline", size: "sm" })}>View public forms</Link>` — links to public site so admin can verify forms are live
+  - If filter is active and returns no results (but contacts exist): suppress the CTA link, change subhead to "No contacts match the current filter."
+
+#### Server Actions (`actions.ts`)
+
+```ts
+// getContacts — called by page.tsx at render time
+export async function getContacts(filter?: {
+  type?: 'player' | 'sponsor' | 'donor' | 'other';
+  year?: number;
+}): Promise<Contact[]>
+
+// exportContactsCSV — called by client on Export CSV click
+export async function exportContactsCSV(filter?: {
+  type?: 'player' | 'sponsor' | 'donor' | 'other';
+  year?: number;
+}): Promise<string> // returns CSV string
+```
+
+CSV columns (in order): `name,email,type,year_first_seen,notes,created_at`. Header row in lowercase. `created_at` as ISO 8601. Wrap `notes` values in double quotes and escape internal quotes.
+
+#### Component API
+
+```ts
+// contact-list.tsx
+interface ContactListProps {
+  contacts: Contact[];
+}
+
+// Contact type (from database schema)
+interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  type: 'player' | 'sponsor' | 'donor' | 'other';
+  year_first_seen: number;
+  notes: string | null;
+  created_at: string;
+}
+```
+
+#### Implementation Notes
+
+- Follow the `src/app/admin/sponsors/page.tsx` pattern exactly: server component calls actions, passes data as props to a client list component.
+- `page.tsx`: server component, calls `getContacts()`, passes result to `<ContactList contacts={contacts} />`. Apply admin heading block. No `"use client"`.
+- `contact-list.tsx`: `"use client"`. Receives full contact list. Manages filter state locally. Derives filtered view in-memory. Handles CSV export trigger.
+- `actions.ts`: uses Supabase server client (`@/lib/supabase/server`). Query `contacts` table. Order by `created_at DESC`. Filter by `type` and `year_first_seen` when provided.
+- Sidebar link already exists (noted as 404 source) — no sidebar change needed, only the new page files.
+- Net-new files: `page.tsx`, `actions.ts`, `contact-list.tsx` — all three in `src/app/admin/contacts/`.
+
+---
+
 ## Global Admin Heading Pattern
 
 Apply this pattern to every admin page `page.tsx`:
@@ -646,6 +796,8 @@ This replaces the current raw `text-2xl font-bold` heading in all 7 admin page f
 - [ ] Admin tables (scores, sponsors, sponsorships, registrations): `thead bg-neutral-50`, column headers Inter 11px uppercase tracked, numeric cells `font-mono tabular-nums`, `shadow-sm` on table wrapper
 - [ ] Admin forms (sponsors, sponsorships, event, settings): `bg-success-muted`/`bg-destructive/10` feedback colors (no raw `bg-green-*` or `bg-red-*`)
 - [ ] `/admin/registrations`: payment status badges use Sprint 6 state tokens; session badges use `bg-neutral-100`
+- [ ] `/admin/photos`: heading block applied; status badges use token colors (`bg-success-muted`, `bg-destructive/10`, `bg-warning-muted`); Approve button is `text-success` (not hardcoded `text-green-600`); thumbnail hover scale present; empty state upgraded; tab count badges styled
+- [ ] `/admin/contacts`: page renders contact list with filter controls (type dropdown + year select); table uses admin pattern (bg-neutral-50 thead, Inter 11px uppercase tracked headers, tabular-nums year column, monospaced email column); type badges use correct muted-color variants per type; Export CSV button downloads filtered CSV; empty state shows Fraunces headline + Inter subhead + "View public forms" CTA; filtered empty state suppresses CTA
 - [ ] `tsc` clean, no new lint warnings, all existing Vitest tests pass
 
 ---
@@ -681,3 +833,8 @@ This replaces the current raw `text-2xl font-bold` heading in all 7 admin page f
 | `src/app/admin/event/event-settings-form.tsx` | Fieldset grouping, feedback tokens |
 | `src/app/admin/settings/page.tsx` | Heading block |
 | `src/app/admin/settings/invite-form.tsx` | Card wrapping, feedback tokens |
+| `src/app/admin/photos/page.tsx` | Heading block |
+| `src/app/admin/photos/photo-moderation.tsx` | Tab badge polish, card shadow, thumbnail hover, status badge tokens, action button tokens, empty state |
+| `src/app/admin/contacts/page.tsx` | New file — server component, heading block, data fetch |
+| `src/app/admin/contacts/actions.ts` | New file — `getContacts`, `exportContactsCSV` server actions |
+| `src/app/admin/contacts/contact-list.tsx` | New file — client component, filter controls, table, CSV export |

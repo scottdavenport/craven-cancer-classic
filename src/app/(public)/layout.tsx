@@ -10,7 +10,7 @@ export default function PublicLayout({
   return (
     <>
       <Navbar />
-      <main className="flex-1 pb-16 sm:pb-0">{children}</main>
+      <main className="flex-1 pb-20 sm:pb-0">{children}</main>
       <Footer />
       <StickyCTABar />
     </>

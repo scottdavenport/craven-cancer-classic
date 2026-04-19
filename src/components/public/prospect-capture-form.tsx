@@ -135,7 +135,7 @@ export function ProspectCaptureForm({
       <Button
         type="submit"
         disabled={loading}
-        className="rounded-none bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
+        className="bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
       >
         {loading ? "Submitting..." : "Get Notified"}
       </Button>

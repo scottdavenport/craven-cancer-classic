@@ -142,7 +142,7 @@ export default async function SponsorsPage() {
           <div className="mt-8">
             <LinkButton
               href="/sponsorships"
-              className="rounded-none bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
+              className="bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
             >
               View Sponsorship Packages
             </LinkButton>

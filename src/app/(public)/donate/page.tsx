@@ -117,7 +117,7 @@ export default function DonatePage() {
               href="https://www.carolinaeasthealth.com/foundation/donate-now/"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-none bg-purple px-8 text-[0.8125rem] uppercase tracking-wider text-purple-foreground hover:bg-purple-hover shadow-xs hover:shadow-sm hover:-translate-y-px transition-[background-color,box-shadow,transform] duration-150"
+              className="bg-purple px-8 text-[0.8125rem] uppercase tracking-wider text-purple-foreground hover:bg-purple-hover shadow-xs hover:shadow-sm hover:-translate-y-px transition-[background-color,box-shadow,transform] duration-150"
             >
               Donate via Carolina East Foundation
             </LinkButton>

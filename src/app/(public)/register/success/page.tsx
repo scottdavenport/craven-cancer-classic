@@ -32,14 +32,14 @@ export default function RegistrationSuccessPage() {
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             <LinkButton
               href="/"
-              className="rounded-none bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
+              className="bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
             >
               Back to Home
             </LinkButton>
             <LinkButton
               href="/sponsors"
               variant="outline"
-              className="rounded-none px-8 text-sm uppercase tracking-wider"
+              className="px-8 text-sm uppercase tracking-wider"
             >
               View Sponsors
             </LinkButton>

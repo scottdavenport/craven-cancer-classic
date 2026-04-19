@@ -272,7 +272,7 @@ export function RegistrationForm({
         <Button
           type="submit"
           disabled={loading}
-          className="mt-4 w-full rounded-none bg-primary text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
+          className="mt-4 w-full bg-primary text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
         >
           {loading ? "Processing..." : "Proceed to Payment"}
         </Button>

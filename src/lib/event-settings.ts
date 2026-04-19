@@ -43,22 +43,31 @@ export function formatTournamentDate(
       month: "long",
       day: "numeric",
       year: "numeric",
+      timeZone: "UTC",
     });
   }
 
-  if (!endDate || startDate.toDateString() === endDate.toDateString()) {
+  // Compare dates using UTC values so local timezone offset never shifts the day
+  const sameDay =
+    !endDate ||
+    (startDate.getUTCFullYear() === endDate.getUTCFullYear() &&
+      startDate.getUTCMonth() === endDate.getUTCMonth() &&
+      startDate.getUTCDate() === endDate.getUTCDate());
+
+  if (sameDay) {
     return startDate.toLocaleDateString("en-US", {
       month: "long",
       day: "numeric",
       year: "numeric",
+      timeZone: "UTC",
     });
   }
 
   // Same month: "September 18–19, 2026"
-  if (startDate.getMonth() === endDate.getMonth()) {
-    return `${startDate.toLocaleDateString("en-US", { month: "long", day: "numeric" })}–${endDate.getDate()}, ${startDate.getFullYear()}`;
+  if (startDate.getUTCMonth() === endDate.getUTCMonth() && startDate.getUTCFullYear() === endDate.getUTCFullYear()) {
+    return `${startDate.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })}–${endDate.getUTCDate()}, ${startDate.getUTCFullYear()}`;
   }
 
   // Cross-month: "August 31 – September 1, 2026"
-  return `${startDate.toLocaleDateString("en-US", { month: "long", day: "numeric" })} – ${endDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}`;
+  return `${startDate.toLocaleDateString("en-US", { month: "long", day: "numeric", timeZone: "UTC" })} – ${endDate.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric", timeZone: "UTC" })}`;
 }

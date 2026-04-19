@@ -46,7 +46,7 @@ export function Navbar() {
           <LinkButton
             href="/donate"
             size="sm"
-            className="ml-3 rounded-none bg-primary px-5 text-[13px] uppercase tracking-wider text-primary-foreground hover:bg-secondary"
+            className="ml-3 bg-primary px-5 text-[13px] uppercase tracking-wider text-primary-foreground hover:bg-secondary"
           >
             Donate
           </LinkButton>
@@ -85,7 +85,7 @@ export function Navbar() {
           <LinkButton
             href="/donate"
             size="sm"
-            className="mt-3 w-full rounded-none bg-primary text-[13px] uppercase tracking-wider text-primary-foreground hover:bg-secondary"
+            className="mt-3 w-full bg-primary text-[13px] uppercase tracking-wider text-primary-foreground hover:bg-secondary"
           >
             Donate
           </LinkButton>

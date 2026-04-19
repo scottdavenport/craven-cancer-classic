@@ -27,6 +27,7 @@ import {
   Settings,
   LogOut,
   ExternalLink,
+  Trash2,
 } from "lucide-react";
 import { signOut } from "@/app/auth/actions";
 
@@ -41,6 +42,7 @@ const menuItems = [
   { label: "Scores", href: "/admin/scores", icon: Trophy },
   { label: "Contacts & Email", href: "/admin/contacts", icon: Mail },
   { label: "Settings", href: "/admin/settings", icon: Settings },
+  { label: "Trash", href: "/admin/trash", icon: Trash2 },
 ];
 
 export function AdminSidebar() {

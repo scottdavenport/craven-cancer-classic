@@ -3,13 +3,15 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
+import { softDelete } from "@/lib/supabase/soft-delete";
+import type { Photo } from "@/types/database";
 
 export async function getPhotos(status?: "pending" | "approved" | "rejected") {
   await requireAdmin();
   const supabase = await createClient();
 
   let query = supabase
-    .from("photos")
+    .from("photos_active")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -19,7 +21,9 @@ export async function getPhotos(status?: "pending" | "approved" | "rejected") {
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data;
+  // photos_active view inherits NOT NULL from underlying photos table;
+  // Supabase types views as fully-nullable, so assert here.
+  return (data ?? []) as unknown as Photo[];
 }
 
 export async function updatePhotoStatus(
@@ -41,28 +45,10 @@ export async function updatePhotoStatus(
   return { success: true };
 }
 
-export async function deletePhoto(id: string) {
+export async function deletePhoto(
+  id: string
+): Promise<{ ok: true } | { error: string }> {
   await requireAdmin();
   const supabase = await createClient();
-
-  // Get photo URL to delete from storage
-  const { data: photo } = await supabase
-    .from("photos")
-    .select("image_url")
-    .eq("id", id)
-    .single();
-
-  if (photo?.image_url) {
-    const path = photo.image_url.split("/photos/")[1];
-    if (path) {
-      await supabase.storage.from("photos").remove([path]);
-    }
-  }
-
-  const { error } = await supabase.from("photos").delete().eq("id", id);
-  if (error) return { error: error.message };
-
-  revalidatePath("/admin/photos");
-  revalidatePath("/gallery");
-  return { success: true };
+  return softDelete(supabase, "photos", id);
 }

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getPhotos } from "./actions";
 import { PhotoModeration } from "./photo-moderation";
+import { AdminPageHeading } from "@/components/admin/admin-page-heading";
 
 export const metadata: Metadata = {
   title: "Moderate Photos",
@@ -11,13 +12,11 @@ export default async function AdminPhotosPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">Photos</h1>
-      <p className="mt-1 text-muted-foreground">
-        Review and moderate uploaded tournament photos
-      </p>
-      <div className="mt-8">
-        <PhotoModeration photos={photos} />
-      </div>
+      <AdminPageHeading
+        title="Photos"
+        description="Review and moderate submitted photos."
+      />
+      <PhotoModeration photos={photos} />
     </div>
   );
 }

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { createClient } from "@/lib/supabase/server";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +21,95 @@ export async function POST(request: Request) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/** Split a full name on the last space — best-effort, no hard requirement. */
+function splitName(fullName: string): { first_name: string; last_name: string | null } {
+  const trimmed = fullName.trim();
+  const lastSpace = trimmed.lastIndexOf(" ");
+  if (lastSpace === -1) {
+    return { first_name: trimmed, last_name: null };
+  }
+  return {
+    first_name: trimmed.slice(0, lastSpace),
+    last_name: trimmed.slice(lastSpace + 1),
+  };
+}
+
+/**
+ * Find or create a contact row.
+ *
+ * If `email` is provided: upsert on the partial unique index
+ * (contacts_email_unique_when_present) so we don't create duplicates.
+ * If no email: always insert a new row (no deduplication possible).
+ *
+ * Returns the contact id, or throws on DB error.
+ */
+async function findOrCreateContact(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any>,
+  params: {
+    full_name: string;
+    email?: string | null;
+    phone?: string | null;
+  }
+): Promise<string> {
+  const { first_name, last_name } = splitName(params.full_name);
+
+  const contactPayload = {
+    full_name: params.full_name,
+    first_name,
+    last_name,
+    email: params.email || null,
+    phone: params.phone || null,
+    type: "player",
+    source: "web_registration_2026",
+  };
+
+  if (params.email) {
+    // Upsert: if email already exists (partial unique index), update metadata
+    // but don't overwrite name (use ignoreDuplicates: false to merge).
+    const { data, error } = await supabase
+      .from("contacts")
+      .upsert(contactPayload, {
+        onConflict: "email",
+        ignoreDuplicates: false,
+      })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      throw new Error(`Failed to upsert contact: ${error?.message}`);
+    }
+    return data.id;
+  }
+
+  // No email — always insert a new row
+  const { data, error } = await supabase
+    .from("contacts")
+    .insert(contactPayload)
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    throw new Error(`Failed to insert contact: ${error?.message}`);
+  }
+  return data.id;
+}
+
+// ---------------------------------------------------------------------------
+// Registration handler
+// ---------------------------------------------------------------------------
+
+interface TeammateInput {
+  full_name: string;
+  email?: string;
+  phone?: string;
+  tbd: boolean;
+}
+
 async function handleRegistrationCheckout(body: Record<string, unknown>) {
   const {
     team_name,
@@ -27,14 +117,14 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
     captain_email,
     captain_phone,
     session: sessionTime,
-    players,
+    teammates,
   } = body as {
     team_name: string;
     captain_name: string;
     captain_email: string;
     captain_phone?: string;
     session: string;
-    players?: { full_name: string; email?: string; phone?: string; handicap?: number }[];
+    teammates?: TeammateInput[];
   };
 
   if (!team_name || !captain_name || !captain_email || !sessionTime) {
@@ -90,20 +180,74 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
     eventSettings.registration_fee_cents ??
     70000;
 
-  if (players && Array.isArray(players)) {
-    const playerInserts = players
-      .filter((p) => p.full_name)
-      .map((p) => ({
-        team_id: teamId,
-        full_name: p.full_name,
-        email: p.email || null,
-        phone: p.phone || null,
-        handicap: p.handicap || null,
-      }));
+  // ---------------------------------------------------------------------------
+  // Build contact rows + team_members after the team is created.
+  // Failures here are logged but do NOT abort the Stripe session — the team
+  // exists and roster can be fixed in admin (Sprint 9 simplicity trade-off).
+  // ---------------------------------------------------------------------------
+  try {
+    // 1. Captain contact — find or create
+    const captainContactId = await findOrCreateContact(supabase, {
+      full_name: captain_name,
+      email: captain_email,
+      phone: captain_phone || null,
+    });
 
-    if (playerInserts.length > 0) {
-      await supabase.from("players").insert(playerInserts);
+    // 2. Insert captain as slot 1
+    const { error: captainMemberError } = await supabase.from("team_members").insert({
+      team_id: teamId,
+      contact_id: captainContactId,
+      role: "captain",
+      slot: 1,
+    });
+
+    if (captainMemberError) {
+      console.error("Failed to insert captain team_member:", captainMemberError);
     }
+
+    // 3. Teammates in slots 2-4 (non-TBD only, up to 3)
+    const nonTbdTeammates = (teammates ?? [])
+      .filter((t) => !t.tbd && t.full_name)
+      .slice(0, 3);
+
+    for (let i = 0; i < nonTbdTeammates.length; i++) {
+      const teammate = nonTbdTeammates[i];
+      const slot = i + 2; // slots 2, 3, 4
+
+      try {
+        const contactId = await findOrCreateContact(supabase, {
+          full_name: teammate.full_name,
+          email: teammate.email || null,
+          phone: teammate.phone || null,
+        });
+
+        const { error: memberError } = await supabase.from("team_members").insert({
+          team_id: teamId,
+          contact_id: contactId,
+          role: "player",
+          slot,
+        });
+
+        if (memberError) {
+          console.error(`Failed to insert team_member slot ${slot}:`, memberError);
+        }
+      } catch (err) {
+        console.error(`Failed to process teammate slot ${slot}:`, err);
+      }
+    }
+
+    // 4. Update teams.captain_contact_id
+    const { error: updateError } = await supabase
+      .from("teams")
+      .update({ captain_contact_id: captainContactId })
+      .eq("id", teamId);
+
+    if (updateError) {
+      console.error("Failed to update captain_contact_id:", updateError);
+    }
+  } catch (err) {
+    // Roster build failed — log and continue to Stripe. Team exists.
+    console.error("Failed to build team roster (non-fatal):", err);
   }
 
   const checkoutSession = await getStripe().checkout.sessions.create({

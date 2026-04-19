@@ -21,16 +21,22 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
         {items.map((item) => {
           const soldOut =
             item.max_quantity !== null && item.sold_count >= item.max_quantity;
+          const availabilityPct =
+            item.max_quantity && item.max_quantity > 0
+              ? Math.min((item.sold_count / item.max_quantity) * 100, 100)
+              : 0;
 
           return (
             <Card
               key={item.id}
-              className={`relative transition-all ${
-                soldOut ? "opacity-60" : "hover:ring-2 hover:ring-primary/30"
+              className={`relative shadow-sm border border-border/60 transition-[box-shadow,transform] duration-200 ${
+                soldOut
+                  ? "opacity-60"
+                  : "hover:shadow-md hover:-translate-y-0.5"
               } ${selectedId === item.id ? "ring-2 ring-primary" : ""}`}
             >
               {soldOut && (
-                <div className="absolute right-3 top-3 rounded bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                <div className="absolute right-3 top-3 bg-neutral-100 text-neutral-600 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] px-2 py-0.5 rounded-sm">
                   Sold Out
                 </div>
               )}
@@ -38,7 +44,7 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
                 <p className="font-display text-3xl font-bold text-foreground">
                   ${(item.price_cents / 100).toLocaleString()}
                 </p>
-                <h3 className="mt-2 text-lg font-semibold text-foreground">
+                <h3 className="mt-2 font-display text-[1.25rem] font-[500] text-foreground">
                   {item.name}
                 </h3>
                 {item.description && (
@@ -46,14 +52,22 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
                     {item.description}
                   </p>
                 )}
-                {item.max_quantity && (
-                  <p className="mt-3 text-xs text-muted-foreground">
-                    {item.max_quantity - item.sold_count} of{" "}
-                    {item.max_quantity} available
-                  </p>
+                {item.max_quantity && item.max_quantity > 0 && (
+                  <div className="mt-3">
+                    <p className="font-sans text-[0.75rem] text-muted-foreground/70">
+                      {item.max_quantity - item.sold_count} of{" "}
+                      {item.max_quantity} available
+                    </p>
+                    <div className="mt-1 w-full h-0.5 bg-border/40 rounded-full">
+                      <div
+                        className="h-full bg-primary rounded-full"
+                        style={{ width: `${availabilityPct}%` }}
+                      />
+                    </div>
+                  </div>
                 )}
                 <Button
-                  className="mt-4 w-full rounded-none bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover"
+                  className={`mt-4 w-full rounded-none bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover ${soldOut ? "pointer-events-none" : ""}`}
                   disabled={soldOut}
                   onClick={() =>
                     setSelectedId(selectedId === item.id ? null : item.id)
@@ -133,7 +147,7 @@ function PurchaseForm({
   }
 
   return (
-    <div className="rounded-lg border border-primary/20 bg-primary/5 p-6">
+    <div className="rounded-lg border border-border/60 bg-neutral-50 shadow-sm p-6">
       <div className="flex items-start justify-between">
         <div>
           <h3 className="font-display text-xl font-semibold">
@@ -149,7 +163,7 @@ function PurchaseForm({
       </div>
 
       {error && (
-        <div className="mt-4 rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
         </div>
       )}

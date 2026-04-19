@@ -31,14 +31,14 @@ export default async function SponsorshipsPage() {
       {/* Header */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8BB5C9]">
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
             Support the Tournament
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Sponsorship Opportunities
           </h1>
           <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
-          <p className="mt-6 text-base text-white/50">
+          <p className="mt-6 text-base text-white/70">
             Every sponsorship directly supports cancer patients in our community
             through the Carolina East Health Foundation.
           </p>
@@ -48,8 +48,11 @@ export default async function SponsorshipsPage() {
       <section className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-5xl">
           {/* Mission context */}
-          <div className="mx-auto mb-12 max-w-2xl text-center">
-            <p className="text-[15px] leading-[1.8] text-muted-foreground">
+          <div className="mx-auto mb-16 max-w-2xl text-center">
+            <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+              Our Mission
+            </p>
+            <p className="font-sans text-[0.9375rem] leading-[1.8] text-muted-foreground">
               Since 2010, the Craven Cancer Classic has raised over{" "}
               <strong className="font-semibold text-foreground">$450,000</strong>{" "}
               for cancer patients in Craven County. Your sponsorship funds
@@ -61,6 +64,18 @@ export default async function SponsorshipsPage() {
             </p>
           </div>
 
+          {/* Section heading above grid */}
+          {items.length > 0 && (
+            <div className="mb-10 text-center">
+              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+                2026 Sponsorship Packages
+              </p>
+              <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
+                Support the Classic
+              </h2>
+            </div>
+          )}
+
           {items.length > 0 ? (
             <SponsorshipGrid items={items} />
           ) : (
@@ -68,7 +83,7 @@ export default async function SponsorshipsPage() {
               <h2 className="font-display text-xl font-semibold text-foreground">
                 Sponsorship Packages Coming Soon
               </h2>
-              <p className="mt-3 text-[15px] leading-[1.8] text-muted-foreground">
+              <p className="mt-3 font-sans text-[0.9375rem] leading-[1.8] text-muted-foreground">
                 This year&apos;s sponsorship tiers are being finalized. Leave
                 your name and email and we will reach out as soon as packages
                 are available.

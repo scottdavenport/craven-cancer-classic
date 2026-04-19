@@ -103,7 +103,7 @@ export function GalleryGrid({
       </div>
 
       {success && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
+        <div className="rounded-md bg-success-muted p-3 text-sm text-success">
           Photo uploaded! It will appear after admin review.
         </div>
       )}
@@ -112,13 +112,13 @@ export function GalleryGrid({
       {showUpload && (
         <Card>
           <CardContent className="pt-6">
-            <h3 className="font-semibold">Share a Photo</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h3 className="font-display text-h3 font-semibold">Share a Photo</h3>
+            <p className="mt-1 font-sans text-[0.9375rem] text-muted-foreground">
               Photos are reviewed by an admin before appearing in the gallery.
             </p>
 
             {error && (
-              <div className="mt-3 rounded-md bg-red-50 p-3 text-sm text-red-700">
+              <div className="mt-3 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
                 {error}
               </div>
             )}
@@ -151,7 +151,7 @@ export function GalleryGrid({
                   accept="image/*"
                   required
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[0.8125rem] text-muted-foreground">
                   Max 10MB. JPG, PNG, or WebP.
                 </p>
               </div>
@@ -189,6 +189,9 @@ export function GalleryGrid({
         <div className="space-y-16">
           {yearGroups.map(({ year, photos: yearPhotos }) => (
             <section key={year} aria-label={`${year} Tournament photos`}>
+              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+                Tournament Year
+              </p>
               <h2
                 className="mb-6 font-display text-2xl font-semibold text-foreground"
                 data-testid={`year-heading-${year}`}
@@ -199,14 +202,16 @@ export function GalleryGrid({
                 {yearPhotos.map((photo) => (
                   <div key={photo.id} className="mb-4 break-inside-avoid">
                     <div className="group relative overflow-hidden rounded-lg">
-                      <Image
-                        src={photo.image_url}
-                        alt={photo.caption || "Tournament photo"}
-                        width={600}
-                        height={400}
-                        className="w-full object-cover"
-                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                      />
+                      <div className="transition-transform duration-200 group-hover:scale-[1.01]">
+                        <Image
+                          src={photo.image_url}
+                          alt={photo.caption || "Tournament photo"}
+                          width={600}
+                          height={400}
+                          className="w-full object-cover"
+                          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        />
+                      </div>
                       {photo.caption && (
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-4 opacity-0 transition-opacity group-hover:opacity-100">
                           <p className="text-sm text-white">{photo.caption}</p>

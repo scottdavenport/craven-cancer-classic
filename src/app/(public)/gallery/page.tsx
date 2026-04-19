@@ -56,7 +56,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps = {
     <div>
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8BB5C9]">
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
             Memories
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">

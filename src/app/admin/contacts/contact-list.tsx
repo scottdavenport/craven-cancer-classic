@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { exportContactsCSV } from "./actions";
+import { exportContactsCSV, getContacts } from "./actions";
 import type { Contact } from "@/types/database";
 import type { ContactFilter, TeamFilterOption } from "./actions";
 
@@ -88,7 +88,8 @@ function relativeTime(dateStr: string): string {
 
 const TABLE_HEADERS = ["Name", "Email", "Type", "Company", "Year", "Consent", "Added"];
 
-export function ContactList({ contacts, teams }: ContactListProps) {
+export function ContactList({ contacts: initialContacts, teams }: ContactListProps) {
+  const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
   const [companyFilter, setCompanyFilter] = useState<string>("");
@@ -96,13 +97,17 @@ export function ContactList({ contacts, teams }: ContactListProps) {
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [captainOnly, setCaptainOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
+  // availableYears derived from the current contacts set (server-filtered when team/captain active)
   const availableYears = useMemo(() => {
     return Array.from(new Set(contacts.map((c) => c.year_first_seen))).sort(
       (a, b) => b - a
     );
   }, [contacts]);
 
+  // Client-side filters: type, year, company, consent
+  // team_id / captain_only are handled server-side via re-fetch
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
       if (typeFilter !== "all" && c.type !== typeFilter) return false;
@@ -124,6 +129,32 @@ export function ContactList({ contacts, teams }: ContactListProps) {
     consentFilter !== "all" ||
     teamFilter !== "all" ||
     captainOnly;
+
+  // Re-fetch contacts from server when team/captain filters change
+  function fetchWithServerFilter(newTeamFilter: string, newCaptainOnly: boolean) {
+    startTransition(async () => {
+      try {
+        const filterArg: ContactFilter = {};
+        if (newTeamFilter !== "all") filterArg.team_id = newTeamFilter;
+        if (newCaptainOnly) filterArg.captain_only = true;
+        const result = await getContacts(filterArg);
+        setContacts(result);
+      } catch (err) {
+        console.error("[ContactList] getContacts re-fetch failed:", err);
+      }
+    });
+  }
+
+  function handleTeamFilterChange(value: string | null) {
+    const next = value ?? "all";
+    setTeamFilter(next);
+    fetchWithServerFilter(next, captainOnly);
+  }
+
+  function handleCaptainOnlyChange(checked: boolean) {
+    setCaptainOnly(checked);
+    fetchWithServerFilter(teamFilter, checked);
+  }
 
   async function handleExportCSV() {
     setExporting(true);
@@ -227,7 +258,7 @@ export function ContactList({ contacts, teams }: ContactListProps) {
         </Select>
 
         {/* Team filter */}
-        <Select value={teamFilter} onValueChange={(v) => setTeamFilter(v ?? "all")}>
+        <Select value={teamFilter} onValueChange={handleTeamFilterChange}>
           <SelectTrigger className="w-[175px]">
             <SelectValue placeholder="All Teams" />
           </SelectTrigger>
@@ -246,23 +277,23 @@ export function ContactList({ contacts, teams }: ContactListProps) {
           <input
             type="checkbox"
             checked={captainOnly}
-            onChange={(e) => setCaptainOnly(e.target.checked)}
+            onChange={(e) => handleCaptainOnlyChange(e.target.checked)}
             className="accent-brand h-4 w-4 rounded"
           />
           Captains only
         </label>
       </div>
 
-      {/* Team/captain filter note — these filters apply on export, not in client table */}
-      {(teamFilter !== "all" || captainOnly) && (
-        <p className="text-[0.75rem] text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-          Team and captain filters apply to the CSV export only. The table shows all
-          contacts with other active filters applied.
-        </p>
-      )}
-
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">
+      <div
+        className="overflow-hidden rounded-lg border border-border/60 shadow-sm transition-opacity duration-150"
+        style={{ opacity: isPending ? 0.6 : 1 }}
+      >
+        {isPending && (
+          <div className="px-4 py-2 text-[0.75rem] text-muted-foreground bg-neutral-50 border-b border-border/60">
+            Refreshing...
+          </div>
+        )}
         <table className="w-full caption-bottom text-sm">
           <thead className="bg-neutral-50">
             <tr>

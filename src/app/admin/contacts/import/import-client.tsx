@@ -2,7 +2,7 @@
 
 import { useState, useRef, useCallback } from "react";
 import { previewImport, commitImport } from "../import-actions";
-import type { ParsedRow, CommitRow, ImportPreview } from "../import-actions";
+import type { ParsedRow, CommitRow, ImportPreview } from "../csv-parser";
 import { Button } from "@/components/ui/button";
 import {
   Select,

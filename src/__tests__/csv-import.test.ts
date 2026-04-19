@@ -63,8 +63,9 @@ vi.mock("@/lib/supabase/admin", () => ({
 // ---------------------------------------------------------------------------
 // Import after mocks are set up
 // ---------------------------------------------------------------------------
-import { parseCSV, previewImport, commitImport } from "@/app/admin/contacts/import-actions";
-import type { CommitRow } from "@/app/admin/contacts/import-actions";
+import { previewImport, commitImport } from "@/app/admin/contacts/import-actions";
+import { parseCSV } from "@/app/admin/contacts/csv-parser";
+import type { CommitRow } from "@/app/admin/contacts/csv-parser";
 
 // ---------------------------------------------------------------------------
 // Helpers

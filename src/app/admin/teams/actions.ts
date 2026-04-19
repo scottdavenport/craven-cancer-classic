@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
+import { softDelete } from "@/lib/supabase/soft-delete";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -60,7 +61,7 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
   const targetYear = year ?? currentYear;
 
   const { data, error } = await supabase
-    .from("teams")
+    .from("teams_active")
     .select("*, team_members(contact_id, role, slot, contacts(id, full_name))")
     .eq("year", targetYear)
     .order("created_at", { ascending: false });
@@ -84,14 +85,16 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
 
     const member_count = members.length;
 
+    // teams_active view inherits NOT NULL from underlying teams table;
+    // Supabase types views as fully-nullable, so assert here.
     return {
-      id: team.id,
-      team_name: team.team_name,
-      year: team.year,
+      id: team.id!,
+      team_name: team.team_name!,
+      year: team.year!,
       captain_contact_id: team.captain_contact_id ?? null,
-      payment_status: team.payment_status,
-      amount_paid_cents: team.amount_paid_cents,
-      session: team.session,
+      payment_status: team.payment_status!,
+      amount_paid_cents: team.amount_paid_cents!,
+      session: team.session!,
       members,
       member_count,
       open_slots: 4 - member_count,
@@ -220,6 +223,35 @@ export async function updateTeamMembers(
   }
 
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// deleteTeam
+// ---------------------------------------------------------------------------
+
+export async function deleteTeam(
+  team_id: string
+): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+  return softDelete(supabase, "teams", team_id);
+}
+
+// ---------------------------------------------------------------------------
+// getScoreCount
+// ---------------------------------------------------------------------------
+
+export async function getScoreCount(team_id: string): Promise<number> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("scores")
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", team_id);
+
+  if (error) return 0;
+  return count ?? 0;
 }
 
 // ---------------------------------------------------------------------------

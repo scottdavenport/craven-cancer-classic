@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Trash2, Download, Search } from "lucide-react";
-import { deleteTeam } from "./actions";
+import { deleteTeam } from "../teams/actions";
 import type { Team } from "@/types/database";
 
 interface RegistrationListProps {

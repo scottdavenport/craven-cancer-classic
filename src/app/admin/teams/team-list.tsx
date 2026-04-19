@@ -19,8 +19,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
-import { markTeamPaid } from "./actions";
+import { Plus, Trash2 } from "lucide-react";
+import { markTeamPaid, deleteTeam, getScoreCount } from "./actions";
 import { TeamForm } from "./team-form";
 import type { TeamWithMembers } from "./actions";
 
@@ -131,6 +131,147 @@ function MarkPaidForm({ team, defaultFeeDollars, onDone, onCancel }: MarkPaidFor
 }
 
 // ---------------------------------------------------------------------------
+// Delete Team Dialog
+// ---------------------------------------------------------------------------
+
+interface DeleteTeamDialogProps {
+  team: TeamWithMembers;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onDeleted: () => void;
+}
+
+function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: DeleteTeamDialogProps) {
+  const [confirmText, setConfirmText] = useState("");
+  const [scoreCount, setScoreCount] = useState<number | null>(null);
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  const isPaid = team.payment_status === "paid" && team.amount_paid_cents > 0;
+  const hasScores = scoreCount !== null && scoreCount > 0;
+  const requiresTypeConfirm = isPaid;
+  const deleteEnabled = !requiresTypeConfirm || confirmText === team.team_name;
+
+  const captainName = team.members.find((m) => m.role === "captain")?.full_name ?? "—";
+  const amountDollars = (team.amount_paid_cents / 100).toFixed(2);
+
+  // Fetch score count when dialog opens
+  function handleOpenChange(nextOpen: boolean) {
+    if (nextOpen && scoreCount === null) {
+      getScoreCount(team.id).then(setScoreCount);
+    }
+    if (!nextOpen) {
+      setConfirmText("");
+      setError(null);
+      setScoreCount(null);
+    }
+    onOpenChange(nextOpen);
+  }
+
+  function handleDelete() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await deleteTeam(team.id);
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
+        onOpenChange(false);
+        onDeleted();
+      } catch (err) {
+        console.error("[DeleteTeamDialog] deleteTeam failed:", err);
+        setError("Failed to delete team. Please try again.");
+      }
+    });
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-destructive">
+            Delete team &ldquo;{team.team_name}&rdquo;?
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4 py-2">
+          {/* Paid warning */}
+          {isPaid && (
+            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm space-y-1">
+              <p className="font-semibold text-destructive">
+                Warning: This team paid ${amountDollars}.
+              </p>
+              <p className="text-muted-foreground">
+                Deleting will NOT refund — handle the refund in Stripe manually if needed.
+              </p>
+            </div>
+          )}
+
+          {/* Score count notice */}
+          {scoreCount === null ? (
+            <p className="text-sm text-muted-foreground">Loading score data&hellip;</p>
+          ) : hasScores ? (
+            <p className="text-sm text-muted-foreground">
+              This team has <span className="font-semibold">{scoreCount} score(s)</span>.
+              They&apos;ll remain on the scores page but disconnected from the team record.
+            </p>
+          ) : null}
+
+          {/* Team info */}
+          <p className="text-sm text-muted-foreground">
+            Members: {team.member_count}/4 &middot; Captain: {captainName}
+          </p>
+
+          <p className="text-sm text-muted-foreground">
+            The team will be moved to Trash. You can restore from Admin &rarr; Trash later.
+          </p>
+
+          {/* Type-to-confirm for paid teams */}
+          {requiresTypeConfirm && (
+            <div className="space-y-1.5">
+              <Label htmlFor={`delete-confirm-${team.id}`}>
+                Type the team name <span className="font-semibold">exactly</span> to confirm:
+              </Label>
+              <Input
+                id={`delete-confirm-${team.id}`}
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                placeholder={team.team_name}
+                autoComplete="off"
+              />
+            </div>
+          )}
+
+          {error && (
+            <p className="text-xs text-destructive">{error}</p>
+          )}
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleOpenChange(false)}
+            disabled={pending}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="destructive"
+            size="sm"
+            onClick={handleDelete}
+            disabled={!deleteEnabled || pending || scoreCount === null}
+          >
+            {pending ? "Deleting..." : "Delete"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // TeamList
 // ---------------------------------------------------------------------------
 
@@ -148,6 +289,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
   const [teams, setTeams] = useState<TeamWithMembers[]>(initialTeams);
   const [modal, setModal] = useState<ModalState>({ type: "none" });
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [deletingTeam, setDeletingTeam] = useState<TeamWithMembers | null>(null);
 
   // After a mutation we refresh by reloading the page (server component pattern)
   function handleFormSuccess() {
@@ -157,6 +299,10 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
 
   function handleMarkPaidDone() {
     setMarkingPaidId(null);
+    window.location.reload();
+  }
+
+  function handleDeleted() {
     window.location.reload();
   }
 
@@ -275,6 +421,14 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
                             Mark Paid
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
+                          onClick={() => setDeletingTeam(team)}
+                        >
+                          <Trash2 className="size-3.5" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -320,6 +474,16 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
           <DialogFooter />
         </DialogContent>
       </Dialog>
+
+      {/* Delete confirm dialog */}
+      {deletingTeam && (
+        <DeleteTeamDialog
+          team={deletingTeam}
+          open={deletingTeam !== null}
+          onOpenChange={(open) => { if (!open) setDeletingTeam(null); }}
+          onDeleted={handleDeleted}
+        />
+      )}
     </div>
   );
 }

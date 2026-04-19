@@ -43,6 +43,7 @@ import {
   createTeam,
   updateTeamMembers,
   markTeamPaid,
+  deleteTeam,
 } from "@/app/admin/teams/actions";
 
 // ---------------------------------------------------------------------------
@@ -80,7 +81,9 @@ function makeClient(overrides: {
       };
     }
 
-    if (table === "teams") {
+    // Accept both "teams" (write target) and "teams_active" (view read target).
+    // getTeams SELECTs from teams_active (soft-delete filter); mutations UPDATE teams.
+    if (table === "teams" || table === "teams_active") {
       const teamsUpdateEq = vi.fn().mockResolvedValue(teamsUpdateEqResult);
       const teamsUpdate = vi.fn().mockReturnValue({ eq: teamsUpdateEq });
       const teamsOrder = vi.fn().mockResolvedValue(teamsOrderResult);
@@ -436,5 +439,169 @@ describe("markTeamPaid", () => {
     const result = await markTeamPaid("team-uuid", 70000);
 
     expect(result).toMatchObject({ error: "DB error" });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S10-5: deleteTeam (soft-delete — RED phase)
+// ---------------------------------------------------------------------------
+// These tests will FAIL until Bolt implements deleteTeam in teams/actions.ts
+// using softDelete(supabase, "teams", id). The current file has no deleteTeam.
+// ---------------------------------------------------------------------------
+
+describe("deleteTeam", () => {
+  const AUTH_USER_ID = "auth-user-uuid";
+
+  // Build a client where:
+  //   auth.getUser()              → user with id = AUTH_USER_ID (or null when overridden)
+  //   from("teams").update().eq() → success (or error when overridden)
+  //   from("team_members").delete() — tracked so we can assert it's NOT called
+  //   from("scores").delete()       — tracked so we can assert it's NOT called
+  function makeDeleteClient(overrides: {
+    userResult?: { data: { user: { id: string } | null } };
+    teamsUpdateEqResult?: { error: null | { message: string } };
+  } = {}) {
+    const {
+      userResult = { data: { user: { id: AUTH_USER_ID } } },
+      teamsUpdateEqResult = { error: null },
+    } = overrides;
+
+    const teamMembersDeleteEq = vi.fn().mockResolvedValue({ error: null });
+    const teamMembersDelete = vi.fn().mockReturnValue({ eq: teamMembersDeleteEq });
+
+    const scoresDeleteEq = vi.fn().mockResolvedValue({ error: null });
+    const scoresDelete = vi.fn().mockReturnValue({ eq: scoresDeleteEq });
+
+    const teamsUpdateEq = vi.fn().mockResolvedValue(teamsUpdateEqResult);
+    const teamsUpdate = vi.fn().mockReturnValue({ eq: teamsUpdateEq });
+
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "teams") return { update: teamsUpdate };
+      if (table === "team_members") return { delete: teamMembersDelete };
+      if (table === "scores") return { delete: scoresDelete };
+      return {};
+    });
+
+    return {
+      client: {
+        auth: {
+          getUser: vi.fn().mockResolvedValue(userResult),
+        },
+        from: mockFrom,
+      },
+      spies: {
+        teamsUpdate,
+        teamsUpdateEq,
+        teamMembersDelete,
+        scoresDelete,
+      },
+    };
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+  });
+
+  it("happy path: calls update on teams with deleted_at and deleted_by, returns { ok: true }", async () => {
+    const { client } = makeDeleteClient();
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    const result = await deleteTeam("team-uuid-1");
+
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("sets deleted_at to a valid ISO timestamp in the update payload", async () => {
+    const { client, spies } = makeDeleteClient();
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    await deleteTeam("team-uuid-1");
+
+    expect(spies.teamsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ deleted_at: expect.any(String) })
+    );
+
+    // The string must parse as a valid Date
+    const callArg = spies.teamsUpdate.mock.calls[0][0] as { deleted_at: string };
+    expect(new Date(callArg.deleted_at).toString()).not.toBe("Invalid Date");
+  });
+
+  it("sets deleted_by to the authenticated user's id in the update payload", async () => {
+    const { client, spies } = makeDeleteClient();
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    await deleteTeam("team-uuid-1");
+
+    expect(spies.teamsUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ deleted_by: AUTH_USER_ID })
+    );
+  });
+
+  it("does not call delete on team_members (history preserved)", async () => {
+    const { client, spies } = makeDeleteClient();
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    await deleteTeam("team-uuid-1");
+
+    expect(spies.teamMembersDelete).not.toHaveBeenCalled();
+  });
+
+  it("does not call delete on scores (historical record stays intact)", async () => {
+    const { client, spies } = makeDeleteClient();
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    await deleteTeam("team-uuid-1");
+
+    expect(spies.scoresDelete).not.toHaveBeenCalled();
+  });
+
+  it("returns { error: /unauthenticated/i } when auth.getUser returns no user", async () => {
+    const { client } = makeDeleteClient({
+      userResult: { data: { user: null } },
+    });
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    const result = await deleteTeam("team-uuid-1");
+
+    expect(result).toMatchObject({ error: expect.stringMatching(/unauthenticated/i) });
+  });
+
+  it("propagates error when requireAdmin throws (non-admin user)", async () => {
+    const { requireAdmin } = await import("@/lib/supabase/admin");
+    vi.mocked(requireAdmin).mockRejectedValueOnce(new Error("Unauthorized"));
+
+    const { client } = makeDeleteClient();
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    await expect(deleteTeam("team-uuid-1")).rejects.toThrow("Unauthorized");
+  });
+
+  it("returns { error: string } when the Supabase update fails", async () => {
+    const { client } = makeDeleteClient({
+      teamsUpdateEqResult: { error: { message: "database connection lost" } },
+    });
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      client as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    const result = await deleteTeam("team-uuid-1");
+
+    expect(result).toEqual({ error: "database connection lost" });
   });
 });

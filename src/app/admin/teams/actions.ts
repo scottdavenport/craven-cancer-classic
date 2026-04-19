@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
+import { softDelete } from "@/lib/supabase/soft-delete";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -220,6 +221,35 @@ export async function updateTeamMembers(
   }
 
   return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
+// deleteTeam
+// ---------------------------------------------------------------------------
+
+export async function deleteTeam(
+  team_id: string
+): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+  return softDelete(supabase, "teams", team_id);
+}
+
+// ---------------------------------------------------------------------------
+// getScoreCount
+// ---------------------------------------------------------------------------
+
+export async function getScoreCount(team_id: string): Promise<number> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("scores")
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", team_id);
+
+  if (error) return 0;
+  return count ?? 0;
 }
 
 // ---------------------------------------------------------------------------

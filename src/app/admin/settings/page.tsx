@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { InviteForm } from "./invite-form";
+import { AdminPageHeading } from "@/components/admin/admin-page-heading";
 
 export const metadata: Metadata = {
   title: "Settings",
@@ -11,11 +12,11 @@ export default async function AdminSettingsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">Settings</h1>
-      <p className="mt-1 text-muted-foreground">
-        Manage admin access and user invitations
-      </p>
-      <div className="mt-8 max-w-2xl">
+      <AdminPageHeading
+        title="Settings"
+        description="Manage admin user access and invitations."
+      />
+      <div className="max-w-2xl">
         <InviteForm />
       </div>
     </div>

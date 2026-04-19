@@ -44,6 +44,7 @@ import {
   getTeamsForFilter,
   createContact,
   updateContact,
+  deleteContact,
 } from "@/app/admin/contacts/actions";
 
 // ---------------------------------------------------------------------------
@@ -176,7 +177,7 @@ describe("getContacts — team_id filter", () => {
 
     const mockFrom = vi.fn((table: string) => {
       if (table === "team_members") return { select: mockTeamMembersSelect };
-      if (table === "contacts") return mockContactsChain;
+      if (table === "contacts" || table === "contacts_active") return mockContactsChain;
       return {};
     });
 
@@ -237,7 +238,7 @@ describe("getContacts — team_id filter", () => {
 
     const mockFrom = vi.fn((table: string) => {
       if (table === "team_members") return { select: mockTeamMembersSelect };
-      if (table === "contacts") return mockContactsChain;
+      if (table === "contacts" || table === "contacts_active") return mockContactsChain;
       return {};
     });
 
@@ -270,7 +271,7 @@ describe("getContacts — captain_only filter", () => {
 
     const mockFrom = vi.fn((table: string) => {
       if (table === "team_members") return { select: mockTeamMembersSelect };
-      if (table === "contacts") return mockContactsChain;
+      if (table === "contacts" || table === "contacts_active") return mockContactsChain;
       return {};
     });
 
@@ -688,6 +689,149 @@ describe("updateContact (S10-2)", () => {
       setClient({ from: vi.fn() });
 
       await expect(updateContact("contact-uuid", { type: "donor" })).rejects.toThrow("Unauthorized");
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S10-3 (RED): deleteContact
+// ---------------------------------------------------------------------------
+
+/**
+ * Build a mock Supabase client for softDelete-style calls.
+ *
+ * softDelete does:
+ *   1. supabase.auth.getUser()
+ *   2. supabase.from(table).update({ deleted_at, deleted_by }).eq("id", id)
+ */
+function makeSoftDeleteClient(overrides: {
+  user?: { id: string } | null;
+  updateError?: { message: string } | null;
+  fromSpy?: ReturnType<typeof vi.fn>;
+}) {
+  const user = overrides.user !== undefined ? overrides.user : { id: "admin-user-uuid" };
+
+  const eqResult: Record<string, unknown> = {};
+  eqResult.then = (
+    resolve: (v: { error: typeof overrides.updateError }) => unknown,
+    reject: (e: unknown) => unknown
+  ) => Promise.resolve({ error: overrides.updateError ?? null }).then(resolve, reject);
+
+  const mockEq = vi.fn().mockReturnValue(eqResult);
+  const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+  const fromSpy = overrides.fromSpy ?? vi.fn().mockReturnValue({ update: mockUpdate });
+
+  return {
+    client: {
+      auth: {
+        getUser: vi.fn().mockResolvedValue({ data: { user }, error: null }),
+      },
+      from: fromSpy,
+    },
+    mockUpdate,
+    mockEq,
+  };
+}
+
+describe("deleteContact (S10-3)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue(
+      { role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never
+    );
+  });
+
+  describe("happy path", () => {
+    it("returns { ok: true } when soft-delete succeeds", async () => {
+      const { client } = makeSoftDeleteClient({});
+      setClient(client);
+
+      const result = await deleteContact("contact-uuid-1");
+
+      expect(result).toEqual({ ok: true });
+    });
+
+    it("calls update on contacts table with deleted_at ISO string and deleted_by = auth user id", async () => {
+      const { client, mockUpdate, mockEq } = makeSoftDeleteClient({
+        user: { id: "admin-user-uuid" },
+      });
+      setClient(client);
+
+      await deleteContact("contact-uuid-1");
+
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deleted_by: "admin-user-uuid",
+          deleted_at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T/),
+        })
+      );
+      // deleted_at must be a parseable ISO timestamp
+      const payload = mockUpdate.mock.calls[0][0] as { deleted_at: string };
+      expect(() => new Date(payload.deleted_at)).not.toThrow();
+      expect(isNaN(new Date(payload.deleted_at).getTime())).toBe(false);
+
+      expect(mockEq).toHaveBeenCalledWith("id", "contact-uuid-1");
+    });
+
+    it("does NOT touch the team_members table", async () => {
+      const fromSpy = vi.fn((table: string) => {
+        if (table === "contacts") {
+          const eqResult: Record<string, unknown> = {};
+          eqResult.then = (resolve: (v: { error: null }) => unknown, reject: (e: unknown) => unknown) =>
+            Promise.resolve({ error: null }).then(resolve, reject);
+          return { update: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(eqResult) }) };
+        }
+        return {};
+      });
+
+      setClient({
+        auth: {
+          getUser: vi.fn().mockResolvedValue({ data: { user: { id: "admin-user-uuid" } }, error: null }),
+        },
+        from: fromSpy,
+      });
+
+      await deleteContact("contact-uuid-1");
+
+      const calledTables = (fromSpy.mock.calls as [string][]).map(([t]) => t);
+      expect(calledTables).not.toContain("team_members");
+    });
+  });
+
+  describe("unauthenticated", () => {
+    it("returns { error } matching /unauthenticated/i when auth.getUser returns no user", async () => {
+      const { client } = makeSoftDeleteClient({ user: null });
+      setClient(client);
+
+      const result = await deleteContact("contact-uuid-1");
+
+      expect(result).toMatchObject({ error: expect.stringMatching(/unauthenticated/i) });
+    });
+  });
+
+  describe("non-admin", () => {
+    it("propagates error when requireAdmin throws", async () => {
+      vi.mocked(adminModule.requireAdmin).mockRejectedValue(new Error("Unauthorized"));
+      const { client } = makeSoftDeleteClient({});
+      setClient(client);
+
+      await expect(deleteContact("contact-uuid-1")).rejects.toThrow("Unauthorized");
+    });
+  });
+
+  describe("DB error", () => {
+    it("returns { error: message } when supabase update fails", async () => {
+      const { client } = makeSoftDeleteClient({
+        updateError: { message: "db write failed" },
+      });
+      setClient(client);
+
+      const result = await deleteContact("contact-uuid-1");
+
+      expect(result).toMatchObject({ error: "db write failed" });
     });
   });
 });

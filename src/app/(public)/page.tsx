@@ -40,15 +40,17 @@ export default function HomePage() {
             alt=""
             width={80}
             height={80}
-            className="mx-auto mb-8 brightness-0 invert opacity-60"
+            className="mx-auto mb-8 brightness-0 invert opacity-85"
             aria-hidden="true"
           />
 
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8BB5C9]">
+          {/* Overline: Inter 11px, semibold, uppercase, tracking-[0.25em], teal */}
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
             Annual Charity Golf Tournament
           </p>
 
-          <h1 className="mt-5 font-display text-5xl font-bold tracking-tight text-white sm:text-7xl">
+          {/* h1: 3-step responsive scale — mobile / tablet / desktop */}
+          <h1 className="mt-5 font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-7xl">
             Craven Cancer
             <br />
             <span className="italic font-normal text-[#8BB5C9]">Classic</span>
@@ -56,11 +58,13 @@ export default function HomePage() {
 
           <div className="mx-auto mt-8 h-px w-24 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
 
-          <p className="mx-auto mt-8 max-w-lg text-base leading-relaxed text-white/60">
+          {/* Subhead: /60 → /70 */}
+          <p className="mx-auto mt-8 max-w-lg text-base leading-relaxed text-white/70">
             Remembering those who have lost their battle, supporting those who
             continue their fight.
           </p>
 
+          {/* Memorial line: stays /35 — intentionally recessive */}
           <p className="mt-3 text-sm text-white/35">
             Honoring Scott Davenport Sr. &middot; Brian Fisher &middot; John
             Aylward
@@ -86,8 +90,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Impact stats — understated, editorial */}
-      <section className="border-b border-border bg-white px-4 py-20">
+      {/* Impact stats — bg-neutral-50, thin teal rule above each value */}
+      <section className="border-b border-border bg-neutral-50 px-4 py-20">
         <div className="mx-auto max-w-4xl">
           <div className="grid gap-12 sm:grid-cols-3">
             {[
@@ -96,30 +100,38 @@ export default function HomePage() {
               { value: "72", label: "Teams Per Tournament" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">
+                {/* Thin teal rule above each stat */}
+                <div className="w-12 h-0.5 bg-primary mx-auto mb-4" />
                 <p className="font-display text-5xl font-bold text-foreground">
                   {stat.value}
                 </p>
-                <p className="mt-2 text-xs uppercase tracking-widest text-muted-foreground">
+                {/* Stat label: Inter 11px, uppercase, tracking-[0.2em] */}
+                <p className="mt-2 font-sans text-[0.6875rem] uppercase tracking-[0.2em] text-muted-foreground">
                   {stat.label}
                 </p>
               </div>
             ))}
           </div>
+          {/* Event details tagline */}
+          <p className="text-sm text-muted-foreground/60 italic mt-8 text-center">
+            September 18&ndash;19, 2026 &middot; New Bern Golf &amp; Country Club
+          </p>
         </div>
       </section>
 
       {/* Mission — generous whitespace, serif headings */}
       <section className="px-4 py-24 sm:py-32">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+          {/* Section overline: Inter 11px, semibold, uppercase, tracking-[0.25em] */}
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary mb-3">
             Our Mission
           </p>
-          <h2 className="mt-4 font-display text-3xl font-semibold text-foreground sm:text-4xl">
+          <h2 className="font-display text-3xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
             Making a Difference in
             <br />
             Our Community
           </h2>
-          <p className="mx-auto mt-8 max-w-xl text-base leading-relaxed text-muted-foreground">
+          <p className="font-sans text-[0.9375rem] leading-[1.65] text-muted-foreground max-w-xl mx-auto">
             Every dollar raised goes directly to supporting cancer patients
             through the Carolina East Health Foundation — providing financial
             assistance for transportation, medical equipment, and lodging during
@@ -127,7 +139,7 @@ export default function HomePage() {
           </p>
         </div>
 
-        {/* Features — clean grid, no cards, just typography */}
+        {/* Feature grid — group-hover teal rule + heading color */}
         <div className="mx-auto mt-20 grid max-w-4xl gap-px bg-border sm:grid-cols-2">
           {[
             {
@@ -152,7 +164,9 @@ export default function HomePage() {
             },
           ].map((item) => (
             <div key={item.title} className="bg-white p-10 group">
-              <h3 className="font-display text-lg font-semibold text-foreground">
+              {/* Teal rule: grows from w-8 → w-12 on hover */}
+              <div className="w-8 h-0.5 bg-primary mb-4 transition-all duration-200 group-hover:w-12" />
+              <h3 className="font-display text-lg font-semibold text-foreground group-hover:text-primary transition-colors duration-150">
                 {item.title}
               </h3>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -163,18 +177,19 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Donate CTA — subtle, refined */}
-      <section className="bg-[#F1F4F6] px-4 py-24 sm:py-32">
+      {/* Donate CTA — bg-neutral-50 (warmer), purple CTAs unchanged */}
+      <section className="bg-neutral-50 px-4 py-24 sm:py-32">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-primary">
+          {/* Section overline */}
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary mb-3">
             Get Involved
           </p>
-          <h2 className="mt-4 font-display text-3xl font-semibold text-foreground sm:text-4xl">
+          <h2 className="font-display text-3xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
             Every Contribution
             <br />
             Makes an Impact
           </h2>
-          <p className="mx-auto mt-6 max-w-md text-muted-foreground">
+          <p className="font-sans text-[0.9375rem] leading-[1.65] text-muted-foreground max-w-xl mx-auto">
             Whether you play, sponsor, or donate — you help cancer patients in
             our community.
           </p>

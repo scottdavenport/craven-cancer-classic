@@ -20,14 +20,14 @@ export default function DonatePage() {
       {/* Hero */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8BB5C9]">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
             Make a Difference
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Donate
           </h1>
           <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
-          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/60">
+          <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/70">
             Every dollar raised goes to the Carolina East Health Foundation —
             covering transportation, lodging, and medical equipment for cancer
             patients in our community who are actively in treatment.
@@ -36,11 +36,12 @@ export default function DonatePage() {
       </section>
 
       {/* Impact stats */}
-      <section className="border-b border-border bg-white px-4 py-14">
+      <section className="border-b border-border bg-neutral-50 px-4 py-14">
         <div className="mx-auto max-w-3xl">
           <div className="grid gap-10 sm:grid-cols-3">
             {STATS.map((stat) => (
               <div key={stat.label} className="text-center">
+                <div className="mx-auto mb-4 h-0.5 w-12 bg-primary" />
                 <p className="font-display text-5xl font-bold text-foreground">
                   {stat.value}
                 </p>
@@ -56,10 +57,13 @@ export default function DonatePage() {
       {/* Mission + CTA */}
       <section className="px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-display text-2xl font-semibold text-foreground">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
+            Your Impact
+          </p>
+          <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
             Where Your Gift Goes
           </h2>
-          <div className="mt-1 h-px w-12 bg-primary/40" />
+          <div className="mt-2 h-0.5 w-12 bg-primary" />
           <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
             The Craven Cancer Classic has raised over $450,000 since 2010 — all
             of it directed to patients who need help getting to appointments,
@@ -85,7 +89,7 @@ export default function DonatePage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="flex gap-4 border-l-2 border-primary/30 pl-5"
+                className="flex gap-4 border-l-[3px] border-primary/40 pl-5"
               >
                 <div>
                   <p className="text-sm font-semibold text-foreground">
@@ -99,7 +103,7 @@ export default function DonatePage() {
             ))}
           </div>
 
-          <div className="mt-12 rounded-lg border border-border bg-muted/50 p-5">
+          <div className="mt-12 rounded-lg border border-border/60 bg-neutral-50 p-5 shadow-xs">
             <p className="text-sm text-muted-foreground">
               When donating, please designate your gift to:
             </p>
@@ -113,7 +117,7 @@ export default function DonatePage() {
               href="https://www.carolinaeasthealth.com/foundation/donate-now/"
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-none bg-purple px-8 text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover"
+              className="rounded-none bg-purple px-8 text-[0.8125rem] uppercase tracking-wider text-purple-foreground hover:bg-purple-hover shadow-xs hover:shadow-sm hover:-translate-y-px transition-[background-color,box-shadow,transform] duration-150"
             >
               Donate via Carolina East Foundation
             </LinkButton>
@@ -122,25 +126,28 @@ export default function DonatePage() {
       </section>
 
       {/* In Loving Memory */}
-      <section className="border-y border-border bg-[#F1F4F6] px-4 py-16 sm:py-20">
+      <section className="border-y border-purple/20 bg-purple/5 px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-display text-2xl font-semibold text-foreground">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
             In Loving Memory
+          </p>
+          <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
+            Those We Honor
           </h2>
-          <div className="mt-1 h-px w-12 bg-primary/40" />
+          <div className="mt-2 h-0.5 w-12 bg-primary" />
           <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
             This tournament is dedicated to the memory of{" "}
-            <strong className="font-semibold text-foreground">
+            <span className="font-display italic font-semibold text-foreground">
               Scott Davenport Sr.
-            </strong>
+            </span>
             ,{" "}
-            <strong className="font-semibold text-foreground">
+            <span className="font-display italic font-semibold text-foreground">
               Brian Fisher
-            </strong>
+            </span>
             , and{" "}
-            <strong className="font-semibold text-foreground">
+            <span className="font-display italic font-semibold text-foreground">
               John Aylward
-            </strong>{" "}
+            </span>{" "}
             — three men who valiantly fought this devastating disease. Their
             courage and spirit inspire every swing, every donation, and every
             moment of this event.
@@ -149,12 +156,15 @@ export default function DonatePage() {
       </section>
 
       {/* Stay in Touch email capture */}
-      <section className="px-4 py-20 sm:py-28">
+      <section className="border-t border-border/60 bg-neutral-50 px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-2xl">
-          <h2 className="font-display text-2xl font-semibold text-foreground">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
+            Stay Connected
+          </p>
+          <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
             Stay in Touch
           </h2>
-          <div className="mt-1 h-px w-12 bg-primary/40" />
+          <div className="mt-2 h-0.5 w-12 bg-primary" />
           <p className="mt-4 text-[15px] leading-relaxed text-muted-foreground">
             Leave your name and email and we will let you know when registration
             opens and how to get involved — whether that means donating, playing,

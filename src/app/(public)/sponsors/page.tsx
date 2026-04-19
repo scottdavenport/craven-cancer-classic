@@ -37,14 +37,14 @@ export default async function SponsorsPage() {
       {/* Header */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8BB5C9]">
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
             Thank You
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Our Sponsors
           </h1>
           <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
-          <p className="mt-6 text-base text-white/50">
+          <p className="mt-6 text-base text-white/70">
             These generous organizations make the Craven Cancer Classic possible
           </p>
         </div>
@@ -64,36 +64,49 @@ export default async function SponsorsPage() {
                   <h2 className="font-display text-xl font-semibold text-foreground">
                     {tier.name}
                   </h2>
-                  <div className="mx-auto mt-2 h-px w-12 bg-primary/30" />
+                  <div className="mx-auto mt-2 h-0.5 w-12 bg-primary" />
                 </div>
 
                 {tierSponsors.length > 0 ? (
-                  <div className="flex flex-wrap items-center justify-center gap-8">
+                  <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:grid-cols-4">
                     {tierSponsors.map((sponsor) => (
-                      <div key={sponsor.id} className="group">
+                      <div key={sponsor.id}>
                         {sponsor.logo_url ? (
                           <a
                             href={sponsor.website ?? "#"}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="block transition-opacity hover:opacity-80"
+                            className="group flex flex-col items-center gap-3 rounded-lg border border-border/60 bg-white shadow-xs p-6 transition-[box-shadow,transform] duration-200 hover:shadow-sm hover:-translate-y-0.5"
                           >
                             <Image
                               src={sponsor.logo_url}
                               alt={sponsor.name}
                               width={160}
                               height={80}
-                              className="h-20 w-auto object-contain"
+                              className="h-16 w-auto object-contain [filter:grayscale(1)_opacity(0.6)] transition-[filter] duration-200 group-hover:[filter:grayscale(0)_opacity(1)]"
                             />
+                            <div className="text-center">
+                              <p className="font-sans text-[0.75rem] text-muted-foreground leading-snug">
+                                {sponsor.name}
+                              </p>
+                              <p className="font-sans text-[0.6875rem] italic text-muted-foreground/60 mt-0.5">
+                                {tier.name}
+                              </p>
+                            </div>
                           </a>
                         ) : (
                           <a
                             href={sponsor.website ?? "#"}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="flex h-20 items-center rounded-lg border border-border px-6 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground"
+                            className="flex flex-col items-center justify-center gap-2 rounded-lg border border-border/60 bg-neutral-50 shadow-xs p-6 min-h-[7rem] transition-[box-shadow,transform] duration-200 hover:shadow-sm hover:-translate-y-0.5"
                           >
-                            {sponsor.name}
+                            <span className="font-sans text-sm font-medium text-foreground text-center leading-snug">
+                              {sponsor.name}
+                            </span>
+                            <span className="font-sans text-[0.6875rem] italic text-muted-foreground/60">
+                              {tier.name}
+                            </span>
                           </a>
                         )}
                       </div>
@@ -117,7 +130,7 @@ export default async function SponsorsPage() {
       </section>
 
       {/* CTA */}
-      <section className="bg-[#F1F4F6] px-4 py-20">
+      <section className="bg-neutral-50 border-t border-border/60 px-4 py-20">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-display text-2xl font-semibold text-foreground">
             Become a Sponsor

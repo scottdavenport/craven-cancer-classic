@@ -118,6 +118,49 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
 
       <Card>
         <CardHeader>
+          <CardTitle>Tournament Dates &amp; Venue</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <fieldset className="space-y-4">
+            <legend className="font-sans text-[0.75rem] uppercase tracking-[0.15em] text-muted-foreground/70 mb-4">
+              Dates &amp; Venue
+            </legend>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="tournament_start_date">Start Date</Label>
+                <Input
+                  id="tournament_start_date"
+                  name="tournament_start_date"
+                  type="date"
+                  defaultValue={settings?.tournament_start_date ?? ""}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="tournament_end_date">End Date</Label>
+                <Input
+                  id="tournament_end_date"
+                  name="tournament_end_date"
+                  type="date"
+                  defaultValue={settings?.tournament_end_date ?? ""}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="venue_name">Venue Name</Label>
+              <Input
+                id="venue_name"
+                name="venue_name"
+                defaultValue={settings?.venue_name ?? ""}
+                placeholder="New Bern Golf &amp; Country Club"
+              />
+            </div>
+          </fieldset>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Registration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">

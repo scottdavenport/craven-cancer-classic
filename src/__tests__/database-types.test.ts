@@ -43,6 +43,9 @@ describe("database types", () => {
       year: 2026,
       hero_image_url: null,
       updated_at: "2026-01-01T00:00:00Z",
+      tournament_start_date: null,
+      tournament_end_date: null,
+      venue_name: null,
     };
     expect(event.name).toBe("Craven Cancer Classic");
     expect(event.registration_fee_cents).toBe(70000);

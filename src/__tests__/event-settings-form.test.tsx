@@ -21,6 +21,9 @@ const mockSettings = {
   year: 2026,
   hero_image_url: null,
   updated_at: "2026-01-01T00:00:00Z",
+  tournament_start_date: null,
+  tournament_end_date: null,
+  venue_name: null,
 };
 
 describe("EventSettingsForm", () => {

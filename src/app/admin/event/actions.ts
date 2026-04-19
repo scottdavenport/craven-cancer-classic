@@ -44,6 +44,9 @@ export async function updateEventSettings(formData: FormData) {
     afternoon_cap: parseInt(formData.get("afternoon_cap") as string) || 36,
     registration_open: formData.get("registration_open") === "on",
     registration_fee_cents: registrationFeeCents,
+    tournament_start_date: (formData.get("tournament_start_date") as string) || null,
+    tournament_end_date: (formData.get("tournament_end_date") as string) || null,
+    venue_name: (formData.get("venue_name") as string) || null,
   };
 
   // Check if settings exist for this year

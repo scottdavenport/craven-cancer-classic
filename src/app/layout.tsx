@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s | Craven Cancer Classic",
   },
   description:
-    "Annual charity golf tournament honoring Scott Davenport Sr., Brian Fisher & John Aylward. Remembering those who have lost their battle, supporting those who continue their fight.",
+    "Annual charity golf tournament honoring Scott Davenport Sr., Brian Fisher & John Aylward. Remembering those who valiantly fought cancer, supporting those who continue their fight.",
   openGraph: {
     title: "Craven Cancer Classic",
     description:

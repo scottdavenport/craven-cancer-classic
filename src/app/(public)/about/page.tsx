@@ -130,7 +130,7 @@ export default function AboutPage() {
             {/* Quote block */}
             <div className="border-y border-border py-12 text-center">
               <p className="font-display text-xl font-medium italic text-foreground leading-relaxed">
-                &ldquo;Remembering those who have lost their battle,
+                &ldquo;Remembering those who valiantly fought cancer,
                 <br />
                 supporting those who continue their fight.&rdquo;
               </p>

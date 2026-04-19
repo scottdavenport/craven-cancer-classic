@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { redirect } from "next/navigation";
 import { LinkButton } from "@/components/ui/link-button";
 import {
   getPublicEventSettings,
@@ -12,7 +13,22 @@ import {
 const HERO_PHOTO_URL =
   "https://images.unsplash.com/photo-1535131749006-b7f58c99034b?w=1920&q=80&fm=jpg";
 
-export default async function HomePage() {
+type SearchParams = Promise<{ code?: string; next?: string }>;
+
+export default async function HomePage(
+  props: { searchParams?: SearchParams } = {}
+) {
+  // Safety net: if Supabase ever falls back to Site URL (root) during OAuth
+  // instead of routing to /auth/callback, catch the stray ?code= here and
+  // forward it so the session exchange completes.
+  const params = (await props.searchParams) ?? {};
+  if (typeof params.code === "string" && params.code.length > 0) {
+    const next = typeof params.next === "string" ? params.next : "/admin";
+    redirect(
+      `/auth/callback?code=${encodeURIComponent(params.code)}&next=${encodeURIComponent(next)}`
+    );
+  }
+
   const settings = await getPublicEventSettings();
 
   const dateString = formatTournamentDate(

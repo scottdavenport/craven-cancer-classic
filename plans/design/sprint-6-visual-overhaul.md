@@ -88,11 +88,11 @@ All sizes in rem (1rem = 16px browser default). Line heights in unitless ratios.
 ```ts
 import { Fraunces, Inter } from 'next/font/google'
 
+// variable font — weight range exposed via axes; do not add weight array
 const fraunces = Fraunces({
   subsets: ['latin'],
   variable: '--font-display',
   axes: ['opsz'],            // optical size axis (9–144)
-  weight: ['400', '500', '600', '700', '800', '900'],
   style: ['normal', 'italic'],
   display: 'swap',
 })

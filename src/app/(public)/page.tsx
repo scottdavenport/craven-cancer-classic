@@ -44,8 +44,8 @@ export default function HomePage() {
             aria-hidden="true"
           />
 
-          {/* Overline: Inter 11px, semibold, uppercase, tracking-[0.25em], teal */}
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
+          {/* Overline: Manrope 11px, semibold, uppercase, tracking-[0.25em], brand-light */}
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
             Annual Charity Golf Tournament
           </p>
 
@@ -53,10 +53,10 @@ export default function HomePage() {
           <h1 className="mt-5 font-display text-4xl font-bold tracking-tight text-white sm:text-5xl lg:text-7xl">
             Craven Cancer
             <br />
-            <span className="italic font-normal text-[#8BB5C9]">Classic</span>
+            <span className="italic font-normal text-brand-light">Classic</span>
           </h1>
 
-          <div className="mx-auto mt-8 h-px w-24 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
+          <div className="mx-auto mt-8 h-px w-24 bg-gradient-to-r from-transparent via-brand to-transparent" />
 
           {/* Subhead: /60 → /70 */}
           <p className="mx-auto mt-8 max-w-lg text-base leading-relaxed text-white/70">
@@ -74,7 +74,7 @@ export default function HomePage() {
             <LinkButton
               href="/register"
               size="lg"
-              className="rounded-none bg-[#5B8FA8] px-8 text-sm uppercase tracking-wider text-white hover:bg-[#4A7E97]"
+              className="rounded-none bg-brand px-8 text-sm uppercase tracking-wider text-white hover:bg-brand-dark"
             >
               Register Your Team
             </LinkButton>
@@ -105,7 +105,7 @@ export default function HomePage() {
                 <p className="font-display text-5xl font-bold text-foreground">
                   {stat.value}
                 </p>
-                {/* Stat label: Inter 11px, uppercase, tracking-[0.2em] */}
+                {/* Stat label: Manrope 11px, uppercase, tracking-[0.2em] */}
                 <p className="mt-2 font-sans text-[0.6875rem] uppercase tracking-[0.2em] text-muted-foreground">
                   {stat.label}
                 </p>
@@ -122,7 +122,7 @@ export default function HomePage() {
       {/* Mission — generous whitespace, serif headings */}
       <section className="px-4 py-24 sm:py-32">
         <div className="mx-auto max-w-3xl text-center">
-          {/* Section overline: Inter 11px, semibold, uppercase, tracking-[0.25em] */}
+          {/* Section overline: Manrope 11px, semibold, uppercase, tracking-[0.25em] */}
           <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary mb-3">
             Our Mission
           </p>

@@ -13,13 +13,13 @@ export default function AboutPage() {
       {/* Header */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8BB5C9]">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-light">
             Our Story
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             About Our Cause
           </h1>
-          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
+          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-brand to-transparent" />
           <p className="mt-6 text-base text-white/50">
             A community united against cancer since 2010
           </p>

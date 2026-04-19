@@ -58,13 +58,13 @@ export default async function RegisterPage() {
       {/* Header */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-[#8BB5C9]">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-light">
             Four-Person Team &middot; {feeLabel}
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Register Your Team
           </h1>
-          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
+          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-brand to-transparent" />
           {eventSettings?.date && (
             <p className="mt-6 text-base text-white/50">
               {new Date(eventSettings.date + "T00:00:00").toLocaleDateString(

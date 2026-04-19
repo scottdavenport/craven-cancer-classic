@@ -20,13 +20,13 @@ export default function DonatePage() {
       {/* Hero */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
             Make a Difference
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Donate
           </h1>
-          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
+          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-brand to-transparent" />
           <p className="mx-auto mt-6 max-w-xl text-base leading-relaxed text-white/70">
             Every dollar raised goes to the Carolina East Health Foundation —
             covering transportation, lodging, and medical equipment for cancer
@@ -57,7 +57,7 @@ export default function DonatePage() {
       {/* Mission + CTA */}
       <section className="px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-2xl">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
             Your Impact
           </p>
           <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
@@ -128,7 +128,7 @@ export default function DonatePage() {
       {/* In Loving Memory */}
       <section className="border-y border-purple/20 bg-purple/5 px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
             In Loving Memory
           </p>
           <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
@@ -158,7 +158,7 @@ export default function DonatePage() {
       {/* Stay in Touch email capture */}
       <section className="border-t border-border/60 bg-neutral-50 px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-2xl">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9]">
+          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
             Stay Connected
           </p>
           <h2 className="font-display text-[1.75rem] font-semibold text-foreground">

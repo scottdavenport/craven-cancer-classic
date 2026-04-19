@@ -15,18 +15,18 @@ interface RegistrationFormProps {
   registrationFeeCents: number;
 }
 
-interface PlayerInfo {
+interface TeammateInfo {
   full_name: string;
   email: string;
   phone: string;
-  handicap: string;
+  tbd: boolean;
 }
 
-const emptyPlayer = (): PlayerInfo => ({
+const emptyTeammate = (): TeammateInfo => ({
   full_name: "",
   email: "",
   phone: "",
-  handicap: "",
+  tbd: false,
 });
 
 function formatFee(cents: number): string {
@@ -35,6 +35,8 @@ function formatFee(cents: number): string {
     ? `$${dollars.toFixed(0)}`
     : `$${dollars.toFixed(2)}`;
 }
+
+const TEAMMATE_LABELS = ["Player 2", "Player 3", "Player 4"];
 
 export function RegistrationForm({
   morningCap,
@@ -47,19 +49,22 @@ export function RegistrationForm({
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<"morning" | "afternoon">("morning");
-  const [players, setPlayers] = useState<PlayerInfo[]>([
-    emptyPlayer(),
-    emptyPlayer(),
-    emptyPlayer(),
-    emptyPlayer(),
+  const [teammates, setTeammates] = useState<TeammateInfo[]>([
+    emptyTeammate(),
+    emptyTeammate(),
+    emptyTeammate(),
   ]);
 
   const morningAvailable = morningCap - morningCount;
   const afternoonAvailable = afternoonCap - afternoonCount;
 
-  function updatePlayer(index: number, field: keyof PlayerInfo, value: string) {
-    setPlayers((prev) =>
-      prev.map((p, i) => (i === index ? { ...p, [field]: value } : p))
+  function updateTeammate(
+    index: number,
+    field: keyof TeammateInfo,
+    value: string | boolean
+  ) {
+    setTeammates((prev) =>
+      prev.map((t, i) => (i === index ? { ...t, [field]: value } : t))
     );
   }
 
@@ -77,7 +82,16 @@ export function RegistrationForm({
       captain_email: formData.get("captain_email"),
       captain_phone: formData.get("captain_phone"),
       session,
-      players: players.filter((p) => p.full_name.trim()),
+      teammates: teammates.map((t) =>
+        t.tbd
+          ? { full_name: "", email: "", phone: "", tbd: true }
+          : {
+              full_name: t.full_name.trim(),
+              email: t.email.trim(),
+              phone: t.phone.trim(),
+              tbd: false,
+            }
+      ),
     };
 
     try {
@@ -98,7 +112,7 @@ export function RegistrationForm({
         window.location.href = data.url;
       }
     } catch (err) {
-      console.error('[RegistrationForm] checkout fetch failed:', err);
+      console.error("[RegistrationForm] checkout fetch failed:", err);
       setError("Failed to start registration. Please try again.");
     } finally {
       setLoading(false);
@@ -170,11 +184,11 @@ export function RegistrationForm({
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="captain_name">Captain Name</Label>
+              <Label htmlFor="captain_name">Your Name (Captain)</Label>
               <Input id="captain_name" name="captain_name" required />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="captain_email">Captain Email</Label>
+              <Label htmlFor="captain_email">Your Email</Label>
               <Input
                 id="captain_email"
                 name="captain_email"
@@ -184,78 +198,96 @@ export function RegistrationForm({
             </div>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="captain_phone">Captain Phone</Label>
+            <Label htmlFor="captain_phone">
+              Your Phone{" "}
+              <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <Input id="captain_phone" name="captain_phone" type="tel" />
           </div>
         </CardContent>
       </Card>
 
-      {/* Players */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Players</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {players.map((player, i) => (
-            <div key={i} className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">
-                Player {i + 1} {i === 0 && "(Captain)"}
-              </p>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1">
-                  <Label htmlFor={`player_${i}_name`} className="text-xs">
-                    Name
-                  </Label>
-                  <Input
-                    id={`player_${i}_name`}
-                    value={player.full_name}
-                    onChange={(e) =>
-                      updatePlayer(i, "full_name", e.target.value)
-                    }
-                    required={i === 0}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`player_${i}_email`} className="text-xs">
-                    Email
-                  </Label>
-                  <Input
-                    id={`player_${i}_email`}
-                    type="email"
-                    value={player.email}
-                    onChange={(e) => updatePlayer(i, "email", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`player_${i}_phone`} className="text-xs">
-                    Phone
-                  </Label>
-                  <Input
-                    id={`player_${i}_phone`}
-                    type="tel"
-                    value={player.phone}
-                    onChange={(e) => updatePlayer(i, "phone", e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label htmlFor={`player_${i}_handicap`} className="text-xs">
-                    Handicap
-                  </Label>
-                  <Input
-                    id={`player_${i}_handicap`}
-                    type="number"
-                    value={player.handicap}
-                    onChange={(e) =>
-                      updatePlayer(i, "handicap", e.target.value)
-                    }
-                  />
-                </div>
+      {/* Teammate cards */}
+      {TEAMMATE_LABELS.map((label, i) => {
+        const teammate = teammates[i];
+        return (
+          <Card key={i}>
+            <CardHeader>
+              <CardTitle>{label}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* TBD checkbox */}
+              <div className="flex items-center gap-3">
+                <input
+                  id={`teammate_${i}_tbd`}
+                  type="checkbox"
+                  checked={teammate.tbd}
+                  onChange={(e) => updateTeammate(i, "tbd", e.target.checked)}
+                  className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                />
+                <Label
+                  htmlFor={`teammate_${i}_tbd`}
+                  className="cursor-pointer text-sm font-normal text-muted-foreground"
+                >
+                  I&apos;ll add this player later
+                </Label>
               </div>
-              {i < 3 && <div className="border-b border-border/50" />}
-            </div>
-          ))}
-        </CardContent>
-      </Card>
+
+              {teammate.tbd ? (
+                <p className="rounded-md bg-muted px-4 py-3 text-sm text-muted-foreground">
+                  Slot reserved — you can add this player after registration.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <Label htmlFor={`teammate_${i}_name`}>Name</Label>
+                    <Input
+                      id={`teammate_${i}_name`}
+                      value={teammate.full_name}
+                      onChange={(e) =>
+                        updateTeammate(i, "full_name", e.target.value)
+                      }
+                      autoComplete="off"
+                    />
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1">
+                      <Label htmlFor={`teammate_${i}_email`}>
+                        Email{" "}
+                        <span className="text-muted-foreground">(optional)</span>
+                      </Label>
+                      <Input
+                        id={`teammate_${i}_email`}
+                        type="email"
+                        value={teammate.email}
+                        onChange={(e) =>
+                          updateTeammate(i, "email", e.target.value)
+                        }
+                        autoComplete="off"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor={`teammate_${i}_phone`}>
+                        Phone{" "}
+                        <span className="text-muted-foreground">(optional)</span>
+                      </Label>
+                      <Input
+                        id={`teammate_${i}_phone`}
+                        type="tel"
+                        value={teammate.phone}
+                        onChange={(e) =>
+                          updateTeammate(i, "phone", e.target.value)
+                        }
+                        autoComplete="off"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {/* Submit */}
       <div className="rounded-lg border border-border bg-muted/50 p-6">

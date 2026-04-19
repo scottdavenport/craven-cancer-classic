@@ -23,13 +23,17 @@ describe("RegistrationForm", () => {
   it("renders team info fields", () => {
     render(<RegistrationForm {...defaultProps} />);
     expect(screen.getByLabelText(/team name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/captain name/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/captain email/i)).toBeInTheDocument();
+    // Captain label reads "Your Name (Captain)"
+    expect(screen.getByLabelText(/your name \(captain\)/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/your email/i)).toBeInTheDocument();
   });
 
   it("renders player sections", () => {
     render(<RegistrationForm {...defaultProps} />);
-    expect(screen.getAllByText(/Player \d/i).length).toBeGreaterThanOrEqual(4);
+    // Captain + 3 teammate cards — card titles: "Player 2", "Player 3", "Player 4"
+    expect(screen.getAllByText(/Player \d/i).length).toBeGreaterThanOrEqual(3);
+    // TBD checkboxes present for each teammate slot
+    expect(screen.getAllByRole("checkbox").length).toBe(3);
   });
 
   it("renders the registration fee from props", () => {

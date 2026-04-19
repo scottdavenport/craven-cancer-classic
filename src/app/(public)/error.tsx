@@ -16,7 +16,7 @@ export default function Error({
 
   return (
     <section className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-24 text-center">
-      <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+      <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
         Something Went Wrong
       </p>
       <h2 className="font-display text-h2 font-semibold text-foreground mb-4">

@@ -189,7 +189,7 @@ export function GalleryGrid({
         <div className="space-y-16">
           {yearGroups.map(({ year, photos: yearPhotos }) => (
             <section key={year} aria-label={`${year} Tournament photos`}>
-              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
                 Tournament Year
               </p>
               <h2

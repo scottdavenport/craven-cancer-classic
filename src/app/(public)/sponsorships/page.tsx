@@ -31,13 +31,13 @@ export default async function SponsorshipsPage() {
       {/* Header */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
             Support the Tournament
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Sponsorship Opportunities
           </h1>
-          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-[#5B8FA8] to-transparent" />
+          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-brand to-transparent" />
           <p className="mt-6 text-base text-white/70">
             Every sponsorship directly supports cancer patients in our community
             through the Carolina East Health Foundation.
@@ -49,7 +49,7 @@ export default async function SponsorshipsPage() {
         <div className="mx-auto max-w-5xl">
           {/* Mission context */}
           <div className="mx-auto mb-16 max-w-2xl text-center">
-            <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+            <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
               Our Mission
             </p>
             <p className="font-sans text-[0.9375rem] leading-[1.8] text-muted-foreground">
@@ -67,7 +67,7 @@ export default async function SponsorshipsPage() {
           {/* Section heading above grid */}
           {items.length > 0 && (
             <div className="mb-10 text-center">
-              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-[#8BB5C9] mb-3">
+              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
                 2026 Sponsorship Packages
               </p>
               <h2 className="font-display text-[1.75rem] font-semibold text-foreground">

@@ -66,13 +66,13 @@ export default async function RegisterPage() {
             Register Your Team
           </h1>
           <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-brand to-transparent" />
-          {eventSettings?.date && (
+          {eventSettings?.tournament_start_date && (
             <p className="mt-6 text-base text-white/50">
-              {new Date(eventSettings.date + "T00:00:00").toLocaleDateString(
+              {new Date(eventSettings.tournament_start_date + "T00:00:00").toLocaleDateString(
                 "en-US",
                 { weekday: "long", year: "numeric", month: "long", day: "numeric" }
               )}{" "}
-              &middot; {eventSettings.location}
+              {eventSettings.venue_name && <>&middot; {eventSettings.venue_name}</>}
             </p>
           )}
         </div>
@@ -88,9 +88,9 @@ export default async function RegisterPage() {
                 </h2>
                 <p className="mt-3 text-muted-foreground">
                   Registration for the{" "}
-                  {eventSettings?.date
+                  {eventSettings?.tournament_start_date
                     ? new Date(
-                        eventSettings.date + "T00:00:00"
+                        eventSettings.tournament_start_date + "T00:00:00"
                       ).getFullYear()
                     : new Date().getFullYear()}{" "}
                   tournament is not yet open. Leave your name and email below

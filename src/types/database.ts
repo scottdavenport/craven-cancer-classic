@@ -142,11 +142,9 @@ export type Database = {
         Row: {
           afternoon_cap: number
           afternoon_slots: number
-          date: string | null
           description: string | null
           hero_image_url: string | null
           id: string
-          location: string
           morning_cap: number
           morning_slots: number
           name: string
@@ -161,11 +159,9 @@ export type Database = {
         Insert: {
           afternoon_cap?: number
           afternoon_slots?: number
-          date?: string | null
           description?: string | null
           hero_image_url?: string | null
           id?: string
-          location?: string
           morning_cap?: number
           morning_slots?: number
           name?: string
@@ -180,11 +176,9 @@ export type Database = {
         Update: {
           afternoon_cap?: number
           afternoon_slots?: number
-          date?: string | null
           description?: string | null
           hero_image_url?: string | null
           id?: string
-          location?: string
           morning_cap?: number
           morning_slots?: number
           name?: string
@@ -271,44 +265,6 @@ export type Database = {
           year?: number
         }
         Relationships: []
-      }
-      players: {
-        Row: {
-          created_at: string
-          email: string | null
-          full_name: string
-          handicap: number | null
-          id: string
-          phone: string | null
-          team_id: string
-        }
-        Insert: {
-          created_at?: string
-          email?: string | null
-          full_name: string
-          handicap?: number | null
-          id?: string
-          phone?: string | null
-          team_id: string
-        }
-        Update: {
-          created_at?: string
-          email?: string | null
-          full_name?: string
-          handicap?: number | null
-          id?: string
-          phone?: string | null
-          team_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "players_team_id_fkey"
-            columns: ["team_id"]
-            isOneToOne: false
-            referencedRelation: "teams"
-            referencedColumns: ["id"]
-          },
-        ]
       }
       profiles: {
         Row: {
@@ -807,7 +763,6 @@ export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type EventSettings = Database["public"]["Tables"]["event_settings"]["Row"];
 export type Sponsor = Database["public"]["Tables"]["sponsors"]["Row"];
 export type Team = Database["public"]["Tables"]["teams"]["Row"];
-export type Player = Database["public"]["Tables"]["players"]["Row"];
 export type SponsorshipItem = Database["public"]["Tables"]["sponsorship_items"]["Row"];
 export type SponsorshipPurchase = Database["public"]["Tables"]["sponsorship_purchases"]["Row"];
 export type Photo = Database["public"]["Tables"]["photos"]["Row"];

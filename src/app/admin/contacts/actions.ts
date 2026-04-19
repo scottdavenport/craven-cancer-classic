@@ -11,7 +11,7 @@ import {
   isValidPhone,
   isValidZip,
 } from "@/lib/contacts/contact-utils";
-import { softDelete } from "@/lib/supabase/soft-delete";
+import { softDelete, bulkSoftDelete } from "@/lib/supabase/soft-delete";
 
 type ContactType = "player" | "sponsor" | "donor" | "other";
 
@@ -302,4 +302,37 @@ export async function deleteContact(
   await requireAdmin();
   const supabase = await createClient();
   return softDelete(supabase, "contacts", id);
+}
+
+export type BulkUpdate = {
+  type?: ContactType;
+  marketing_consent?: boolean;
+};
+
+export async function bulkUpdateContacts(
+  ids: string[],
+  update: BulkUpdate
+): Promise<{ updated: number } | { error: string }> {
+  await requireAdmin();
+
+  if (ids.length === 0) return { updated: 0 };
+  if (ids.length > 500) return { error: "Too many contacts selected — select 500 or fewer" };
+  if (Object.keys(update).length === 0) return { error: "No fields to update" };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("contacts")
+    .update(update)
+    .in("id", ids);
+
+  if (error) return { error: error.message };
+  return { updated: ids.length };
+}
+
+export async function bulkDeleteContacts(
+  ids: string[]
+): Promise<{ deleted: number } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+  return bulkSoftDelete(supabase, "contacts", ids);
 }

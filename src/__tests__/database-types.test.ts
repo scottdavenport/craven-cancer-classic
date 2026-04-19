@@ -65,6 +65,8 @@ describe("database types", () => {
       notes: null,
       year: 2026,
       created_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
+      deleted_by: null,
     };
     expect(team.session).toBe("morning");
   });
@@ -79,6 +81,8 @@ describe("database types", () => {
       status: "pending",
       year: 2026,
       created_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
+      deleted_by: null,
     };
     expect(photo.status).toBe("pending");
   });

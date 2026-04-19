@@ -146,7 +146,7 @@ export async function createTeam(
     p_team_name: params.team_name,
     p_captain_name: "",
     p_captain_email: "",
-    p_captain_phone: null,
+    p_captain_phone: undefined,
   });
 
   if (rpcError) return { error: rpcError.message };

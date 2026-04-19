@@ -7,30 +7,10 @@ export type Json =
   | Json[]
 
 export type Database = {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
+  __InternalSupabase: {
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -41,6 +21,8 @@ export type Database = {
           city: string | null
           company: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           email: string | null
           first_name: string | null
           full_name: string
@@ -62,6 +44,8 @@ export type Database = {
           city?: string | null
           company?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           first_name?: string | null
           full_name: string
@@ -83,6 +67,8 @@ export type Database = {
           city?: string | null
           company?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           email?: string | null
           first_name?: string | null
           full_name?: string
@@ -237,6 +223,8 @@ export type Database = {
         Row: {
           caption: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           image_url: string
           status: string
@@ -247,6 +235,8 @@ export type Database = {
         Insert: {
           caption?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           image_url: string
           status?: string
@@ -257,6 +247,8 @@ export type Database = {
         Update: {
           caption?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           image_url?: string
           status?: string
@@ -335,6 +327,13 @@ export type Database = {
             referencedRelation: "teams"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "scores_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams_active"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sponsors: {
@@ -344,6 +343,8 @@ export type Database = {
           contact_name: string | null
           contact_phone: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           display_order: number
           id: string
           logo_url: string | null
@@ -360,6 +361,8 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           display_order?: number
           id?: string
           logo_url?: string | null
@@ -376,6 +379,8 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           display_order?: number
           id?: string
           logo_url?: string | null
@@ -394,6 +399,13 @@ export type Database = {
             referencedRelation: "sponsorship_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sponsors_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_items_active"
+            referencedColumns: ["id"]
+          },
         ]
       }
       sponsorship_items: {
@@ -401,6 +413,8 @@ export type Database = {
           active: boolean
           benefits: Json
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           description: string | null
           id: string
           max_quantity: number | null
@@ -414,6 +428,8 @@ export type Database = {
           active?: boolean
           benefits?: Json
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           max_quantity?: number | null
@@ -427,6 +443,8 @@ export type Database = {
           active?: boolean
           benefits?: Json
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           description?: string | null
           id?: string
           max_quantity?: number | null
@@ -486,6 +504,13 @@ export type Database = {
             referencedRelation: "sponsorship_items"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "sponsorship_purchases_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_items_active"
+            referencedColumns: ["id"]
+          },
         ]
       }
       stripe_events: {
@@ -533,6 +558,20 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "team_members_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "team_members_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_active"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "team_members_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
@@ -540,10 +579,10 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "team_members_contact_id_fkey"
-            columns: ["contact_id"]
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
             isOneToOne: false
-            referencedRelation: "contacts"
+            referencedRelation: "teams_active"
             referencedColumns: ["id"]
           },
         ]
@@ -556,6 +595,8 @@ export type Database = {
           captain_name: string
           captain_phone: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           notes: string | null
           payment_status: string
@@ -571,6 +612,8 @@ export type Database = {
           captain_name: string
           captain_phone?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           notes?: string | null
           payment_status?: string
@@ -586,6 +629,8 @@ export type Database = {
           captain_name?: string
           captain_phone?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           notes?: string | null
           payment_status?: string
@@ -594,32 +639,353 @@ export type Database = {
           team_name?: string
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teams_captain_contact_id_fkey"
+            columns: ["captain_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_captain_contact_id_fkey"
+            columns: ["captain_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_active"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
-      [_ in never]: never
+      contacts_active: {
+        Row: {
+          address1: string | null
+          address2: string | null
+          city: string | null
+          company: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          email: string | null
+          first_name: string | null
+          full_name: string | null
+          id: string | null
+          last_name: string | null
+          marketing_consent: boolean | null
+          notes: string | null
+          phone: string | null
+          salutation: string | null
+          source: string | null
+          state: string | null
+          type: string | null
+          year_first_seen: number | null
+          zip: string | null
+        }
+        Insert: {
+          address1?: string | null
+          address2?: string | null
+          city?: string | null
+          company?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string | null
+          last_name?: string | null
+          marketing_consent?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          salutation?: string | null
+          source?: string | null
+          state?: string | null
+          type?: string | null
+          year_first_seen?: number | null
+          zip?: string | null
+        }
+        Update: {
+          address1?: string | null
+          address2?: string | null
+          city?: string | null
+          company?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          email?: string | null
+          first_name?: string | null
+          full_name?: string | null
+          id?: string | null
+          last_name?: string | null
+          marketing_consent?: boolean | null
+          notes?: string | null
+          phone?: string | null
+          salutation?: string | null
+          source?: string | null
+          state?: string | null
+          type?: string | null
+          year_first_seen?: number | null
+          zip?: string | null
+        }
+        Relationships: []
+      }
+      photos_active: {
+        Row: {
+          caption: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string | null
+          image_url: string | null
+          status: string | null
+          uploaded_by_email: string | null
+          uploaded_by_name: string | null
+          year: number | null
+        }
+        Insert: {
+          caption?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string | null
+          image_url?: string | null
+          status?: string | null
+          uploaded_by_email?: string | null
+          uploaded_by_name?: string | null
+          year?: number | null
+        }
+        Update: {
+          caption?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string | null
+          image_url?: string | null
+          status?: string | null
+          uploaded_by_email?: string | null
+          uploaded_by_name?: string | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      sponsors_active: {
+        Row: {
+          amount_paid_cents: number | null
+          contact_email: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          display_order: number | null
+          id: string | null
+          logo_url: string | null
+          name: string | null
+          payment_status: string | null
+          stripe_payment_id: string | null
+          tier_id: string | null
+          website: string | null
+          year: number | null
+        }
+        Insert: {
+          amount_paid_cents?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          display_order?: number | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          payment_status?: string | null
+          stripe_payment_id?: string | null
+          tier_id?: string | null
+          website?: string | null
+          year?: number | null
+        }
+        Update: {
+          amount_paid_cents?: number | null
+          contact_email?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          display_order?: number | null
+          id?: string | null
+          logo_url?: string | null
+          name?: string | null
+          payment_status?: string | null
+          stripe_payment_id?: string | null
+          tier_id?: string | null
+          website?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsors_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_items"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsors_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "sponsorship_items_active"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sponsorship_items_active: {
+        Row: {
+          active: boolean | null
+          benefits: Json | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          id: string | null
+          max_quantity: number | null
+          name: string | null
+          price_cents: number | null
+          sold_count: number | null
+          sort_order: number | null
+          year: number | null
+        }
+        Insert: {
+          active?: boolean | null
+          benefits?: Json | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string | null
+          max_quantity?: number | null
+          name?: string | null
+          price_cents?: number | null
+          sold_count?: number | null
+          sort_order?: number | null
+          year?: number | null
+        }
+        Update: {
+          active?: boolean | null
+          benefits?: Json | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          id?: string | null
+          max_quantity?: number | null
+          name?: string | null
+          price_cents?: number | null
+          sold_count?: number | null
+          sort_order?: number | null
+          year?: number | null
+        }
+        Relationships: []
+      }
+      teams_active: {
+        Row: {
+          amount_paid_cents: number | null
+          captain_contact_id: string | null
+          captain_email: string | null
+          captain_name: string | null
+          captain_phone: string | null
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          id: string | null
+          notes: string | null
+          payment_status: string | null
+          session: string | null
+          stripe_payment_id: string | null
+          team_name: string | null
+          year: number | null
+        }
+        Insert: {
+          amount_paid_cents?: number | null
+          captain_contact_id?: string | null
+          captain_email?: string | null
+          captain_name?: string | null
+          captain_phone?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string | null
+          notes?: string | null
+          payment_status?: string | null
+          session?: string | null
+          stripe_payment_id?: string | null
+          team_name?: string | null
+          year?: number | null
+        }
+        Update: {
+          amount_paid_cents?: number | null
+          captain_contact_id?: string | null
+          captain_email?: string | null
+          captain_name?: string | null
+          captain_phone?: string | null
+          created_at?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          id?: string | null
+          notes?: string | null
+          payment_status?: string | null
+          session?: string | null
+          stripe_payment_id?: string | null
+          team_name?: string | null
+          year?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teams_captain_contact_id_fkey"
+            columns: ["captain_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teams_captain_contact_id_fkey"
+            columns: ["captain_contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts_active"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       acquire_stripe_event_lock: {
         Args: { event_id: string }
-        Returns: void
+        Returns: undefined
       }
+      dearmor: { Args: { "": string }; Returns: string }
+      gen_random_uuid: { Args: never; Returns: string }
+      gen_salt: { Args: { "": string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
       is_admin_or_viewer: { Args: never; Returns: boolean }
+      pgp_armor_headers: {
+        Args: { "": string }
+        Returns: Record<string, unknown>[]
+      }
       register_team: {
         Args: {
+          p_captain_email: string
+          p_captain_name: string
+          p_captain_phone?: string
           p_session: string
           p_team_name: string
-          p_captain_name: string
-          p_captain_email: string
-          p_captain_phone?: string | null
         }
         Returns: Json
       }
       release_stripe_event_lock: {
         Args: { event_id: string }
-        Returns: void
+        Returns: undefined
       }
     }
     Enums: {
@@ -749,14 +1115,10 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-
 
 // Convenience type aliases
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];

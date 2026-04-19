@@ -25,6 +25,8 @@ function makePhoto(overrides: Partial<Photo> & { id: string }): Photo {
     status: overrides.status ?? "approved",
     year: overrides.year ?? 2024,
     created_at: overrides.created_at ?? "2024-09-01T00:00:00Z",
+    deleted_at: overrides.deleted_at ?? null,
+    deleted_by: overrides.deleted_by ?? null,
   };
 }
 

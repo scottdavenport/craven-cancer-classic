@@ -259,9 +259,6 @@ describe("POST /api/checkout — registration path (S2-4)", () => {
           error: eventSettings === null ? { message: "no rows" } : null,
         });
       }
-      if (table === "players") {
-        return { insert: vi.fn().mockResolvedValue({ error: null }) };
-      }
       return {};
     });
     // Registration now uses the atomic RPC — no direct teams count/insert
@@ -349,9 +346,6 @@ describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
     mockFrom.mockImplementation((table: string) => {
       if (table === "event_settings") {
         return makeEventSettingsChain({ data: eventSettings, error: null });
-      }
-      if (table === "players") {
-        return { insert: vi.fn().mockResolvedValue({ error: null }) };
       }
       return {};
     });

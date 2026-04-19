@@ -5,7 +5,6 @@ import type {
   EventSettings,
   Sponsor,
   Team,
-  Player,
   SponsorshipItem,
   SponsorshipPurchase,
   Photo,
@@ -31,8 +30,6 @@ describe("database types", () => {
     const event: EventSettings = {
       id: "uuid",
       name: "Craven Cancer Classic",
-      date: "2026-09-18",
-      location: "New Bern Golf & Country Club",
       description: "Test",
       morning_slots: 0,
       afternoon_slots: 0,
@@ -43,12 +40,14 @@ describe("database types", () => {
       year: 2026,
       hero_image_url: null,
       updated_at: "2026-01-01T00:00:00Z",
-      tournament_start_date: null,
+      tournament_start_date: "2026-09-18",
       tournament_end_date: null,
-      venue_name: null,
+      venue_name: "New Bern Golf & Country Club",
     };
     expect(event.name).toBe("Craven Cancer Classic");
     expect(event.registration_fee_cents).toBe(70000);
+    expect(event.tournament_start_date).toBe("2026-09-18");
+    expect(event.venue_name).toBe("New Bern Golf & Country Club");
   });
 
   it("Team type enforces session values", () => {
@@ -95,7 +94,6 @@ describe("database types", () => {
       | "event_settings"
       | "invitations"
       | "photos"
-      | "players"
       | "profiles"
       | "scores"
       | "sponsors"
@@ -118,7 +116,6 @@ describe("database types", () => {
       "event_settings",
       "invitations",
       "photos",
-      "players",
       "profiles",
       "scores",
       "sponsors",
@@ -128,7 +125,7 @@ describe("database types", () => {
       "team_members",
       "teams",
     ];
-    expect(tables).toHaveLength(14);
+    expect(tables).toHaveLength(13);
   });
 
   it("Insert types make required fields mandatory and optional fields optional", () => {

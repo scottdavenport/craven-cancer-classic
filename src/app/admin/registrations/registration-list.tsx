@@ -3,8 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -13,8 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Download, Search } from "lucide-react";
-import { createTeamManually, deleteTeam } from "./actions";
+import { Trash2, Download, Search } from "lucide-react";
+import { deleteTeam } from "./actions";
 import type { Team } from "@/types/database";
 
 interface RegistrationListProps {
@@ -45,7 +44,6 @@ function SessionBadge({ session }: { session: string }) {
 }
 
 export function RegistrationList({ teams }: RegistrationListProps) {
-  const [showForm, setShowForm] = useState(false);
   const [search, setSearch] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -60,24 +58,6 @@ export function RegistrationList({ teams }: RegistrationListProps) {
   const morningTeams = teams.filter((t) => t.session === "morning");
   const afternoonTeams = teams.filter((t) => t.session === "afternoon");
   const totalRevenue = teams.reduce((sum, t) => sum + t.amount_paid_cents, 0);
-
-  async function handleCreate(formData: FormData) {
-    setError(null);
-    setLoading(true);
-    try {
-      const result = await createTeamManually(formData);
-      if (result && "error" in result && typeof result.error === "string") {
-        setError(result.error);
-      } else {
-        setShowForm(false);
-      }
-    } catch (err) {
-      console.error('[RegistrationList] createTeamManually failed:', err);
-      setError("Failed to create team");
-    } finally {
-      setLoading(false);
-    }
-  }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this team and all its players?")) return;
@@ -180,113 +160,7 @@ export function RegistrationList({ teams }: RegistrationListProps) {
           <Download className="mr-1 h-4 w-4" />
           Export CSV
         </Button>
-        <Button size="sm" onClick={() => setShowForm(!showForm)}>
-          <Plus className="mr-1 h-4 w-4" />
-          Add Team
-        </Button>
       </div>
-
-      {/* Manual add form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Team Manually</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={handleCreate} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="team_name">Team Name</Label>
-                  <Input id="team_name" name="team_name" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="session">Session</Label>
-                  <select
-                    id="session"
-                    name="session"
-                    required
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                  >
-                    <option value="morning">Morning</option>
-                    <option value="afternoon">Afternoon</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="captain_name">Captain Name</Label>
-                  <Input id="captain_name" name="captain_name" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="captain_email">Captain Email</Label>
-                  <Input
-                    id="captain_email"
-                    name="captain_email"
-                    type="email"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="captain_phone">Captain Phone</Label>
-                  <Input id="captain_phone" name="captain_phone" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="payment_status">Payment Status</Label>
-                  <select
-                    id="payment_status"
-                    name="payment_status"
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                  >
-                    <option value="pending">Pending</option>
-                    <option value="paid">Paid</option>
-                    <option value="comped">Comped</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="amount_paid">Amount Paid</Label>
-                  <Input
-                    id="amount_paid"
-                    name="amount_paid"
-                    type="number"
-                    step="0.01"
-                    defaultValue="700"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
-                  <Input id="notes" name="notes" />
-                </div>
-              </div>
-
-              {/* Quick player fields */}
-              <div>
-                <p className="mb-2 text-sm font-medium">Players (optional)</p>
-                <div className="grid gap-2 sm:grid-cols-2">
-                  {[0, 1, 2, 3].map((i) => (
-                    <Input
-                      key={i}
-                      name={`player_${i}_name`}
-                      placeholder={`Player ${i + 1} name`}
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={loading}>
-                  {loading ? "Saving..." : "Add Team"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowForm(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Teams table */}
       <div className="shadow-sm border border-border/60 rounded-lg overflow-hidden">

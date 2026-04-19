@@ -157,7 +157,7 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
     p_team_name: team_name,
     p_captain_name: captain_name,
     p_captain_email: captain_email,
-    p_captain_phone: captain_phone || null,
+    p_captain_phone: captain_phone || undefined,
   });
 
   if (rpcError) {

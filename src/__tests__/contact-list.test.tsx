@@ -25,6 +25,8 @@ function makeContact(overrides: Partial<Contact> = {}): Contact {
     year_first_seen: 2026,
     notes: null,
     created_at: new Date().toISOString(),
+    deleted_at: null,
+    deleted_by: null,
     ...overrides,
   };
 }

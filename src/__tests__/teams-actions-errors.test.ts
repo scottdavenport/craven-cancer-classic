@@ -244,7 +244,7 @@ describe("getTeams — edge cases", () => {
       },
       from: vi.fn((table: string) => {
         if (table === "profiles") return { select: mockProfileSelect };
-        if (table === "teams") return { select: mockSelectTeams };
+        if (table === "teams" || table === "teams_active") return { select: mockSelectTeams };
         return {};
       }),
     });
@@ -268,7 +268,7 @@ describe("getTeams — edge cases", () => {
       },
       from: vi.fn((table: string) => {
         if (table === "profiles") return { select: mockProfileSelect };
-        if (table === "teams") return { select: mockSelectTeams };
+        if (table === "teams" || table === "teams_active") return { select: mockSelectTeams };
         return {};
       }),
     });

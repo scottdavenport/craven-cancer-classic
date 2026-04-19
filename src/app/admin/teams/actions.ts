@@ -61,7 +61,7 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
   const targetYear = year ?? currentYear;
 
   const { data, error } = await supabase
-    .from("teams")
+    .from("teams_active")
     .select("*, team_members(contact_id, role, slot, contacts(id, full_name))")
     .eq("year", targetYear)
     .order("created_at", { ascending: false });
@@ -85,14 +85,16 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
 
     const member_count = members.length;
 
+    // teams_active view inherits NOT NULL from underlying teams table;
+    // Supabase types views as fully-nullable, so assert here.
     return {
-      id: team.id,
-      team_name: team.team_name,
-      year: team.year,
+      id: team.id!,
+      team_name: team.team_name!,
+      year: team.year!,
       captain_contact_id: team.captain_contact_id ?? null,
-      payment_status: team.payment_status,
-      amount_paid_cents: team.amount_paid_cents,
-      session: team.session,
+      payment_status: team.payment_status!,
+      amount_paid_cents: team.amount_paid_cents!,
+      session: team.session!,
       members,
       member_count,
       open_slots: 4 - member_count,

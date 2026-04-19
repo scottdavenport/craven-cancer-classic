@@ -81,7 +81,9 @@ function makeClient(overrides: {
       };
     }
 
-    if (table === "teams") {
+    // Accept both "teams" (write target) and "teams_active" (view read target).
+    // getTeams SELECTs from teams_active (soft-delete filter); mutations UPDATE teams.
+    if (table === "teams" || table === "teams_active") {
       const teamsUpdateEq = vi.fn().mockResolvedValue(teamsUpdateEqResult);
       const teamsUpdate = vi.fn().mockReturnValue({ eq: teamsUpdateEq });
       const teamsOrder = vi.fn().mockResolvedValue(teamsOrderResult);

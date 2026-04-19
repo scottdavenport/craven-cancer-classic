@@ -3,19 +3,23 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
+import { softDelete } from "@/lib/supabase/soft-delete";
+import type { SponsorshipItem } from "@/types/database";
 
-export async function getSponsorshipItems() {
+export async function getSponsorshipItems(): Promise<SponsorshipItem[]> {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
   const { data, error } = await supabase
-    .from("sponsorship_items")
+    .from("sponsorship_items_active")
     .select("*")
     .eq("year", currentYear)
     .order("price_cents", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data;
+  // sponsorship_items_active view inherits NOT NULL from underlying table;
+  // Supabase types views as fully-nullable, so assert here.
+  return (data ?? []) as unknown as SponsorshipItem[];
 }
 
 export async function getSponsorshipPurchases() {
@@ -73,18 +77,10 @@ export async function updateSponsorshipItem(id: string, formData: FormData) {
   return { success: true };
 }
 
-export async function deleteSponsorshipItem(id: string) {
+export async function deleteSponsorshipItem(
+  id: string
+): Promise<{ ok: true } | { error: string }> {
   await requireAdmin();
   const supabase = await createClient();
-
-  const { error } = await supabase
-    .from("sponsorship_items")
-    .delete()
-    .eq("id", id);
-
-  if (error) return { error: error.message };
-
-  revalidatePath("/admin/sponsorships");
-  revalidatePath("/sponsorships");
-  return { success: true };
+  return softDelete(supabase, "sponsorship_items", id);
 }

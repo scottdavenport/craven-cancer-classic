@@ -21,19 +21,15 @@ export function Navbar() {
   return (
     <header className="sticky top-0 z-50 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80 border-b border-border/60">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6 lg:px-8">
-        <Link href="/" className="flex items-center gap-3 group">
+        <Link href="/" className="flex items-center group">
           <Image
-            src="/logo.png"
+            src="/brand/ccc-logo-full.svg"
             alt="Craven Cancer Classic"
-            width={40}
-            height={40}
-            className="transition-transform group-hover:scale-105"
+            width={134}
+            height={48}
+            priority
+            className="h-10 w-auto transition-opacity group-hover:opacity-80"
           />
-          <div className="hidden sm:block">
-            <span className="font-display text-lg font-semibold tracking-tight text-foreground">
-              Craven Cancer Classic
-            </span>
-          </div>
         </Link>
 
         {/* Desktop nav */}

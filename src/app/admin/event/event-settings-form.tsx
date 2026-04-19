@@ -82,28 +82,6 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="date">Tournament Date</Label>
-              <Input
-                id="date"
-                name="date"
-                type="date"
-                defaultValue={settings?.date ?? ""}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="location">Location</Label>
-              <Input
-                id="location"
-                name="location"
-                defaultValue={
-                  settings?.location ?? "New Bern Golf & Country Club"
-                }
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"

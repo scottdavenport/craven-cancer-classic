@@ -32,9 +32,6 @@ describe("EventSettingsForm", () => {
     expect(screen.getByLabelText(/tournament name/i)).toHaveValue(
       "Craven Cancer Classic"
     );
-    expect(screen.getByLabelText(/location/i)).toHaveValue(
-      "New Bern Golf & Country Club"
-    );
     expect(screen.getByLabelText(/morning slot cap/i)).toHaveValue(36);
     expect(screen.getByLabelText(/afternoon slot cap/i)).toHaveValue(36);
   });
@@ -44,9 +41,12 @@ describe("EventSettingsForm", () => {
     expect(screen.getByLabelText(/tournament name/i)).toHaveValue(
       "Craven Cancer Classic"
     );
-    expect(screen.getByLabelText(/location/i)).toHaveValue(
-      "New Bern Golf & Country Club"
-    );
+  });
+
+  it("does not render legacy date or location inputs", () => {
+    render(<EventSettingsForm settings={mockSettings} />);
+    expect(screen.queryByLabelText(/^location$/i)).toBeNull();
+    expect(screen.queryByLabelText(/^tournament date$/i)).toBeNull();
   });
 
   it("renders save button", () => {

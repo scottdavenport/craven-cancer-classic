@@ -37,8 +37,6 @@ export async function updateEventSettings(formData: FormData) {
 
   const updates: Database["public"]["Tables"]["event_settings"]["Update"] = {
     name: formData.get("name") as string,
-    date: (formData.get("date") as string) || null,
-    location: formData.get("location") as string,
     description: formData.get("description") as string,
     morning_cap: parseInt(formData.get("morning_cap") as string) || 36,
     afternoon_cap: parseInt(formData.get("afternoon_cap") as string) || 36,

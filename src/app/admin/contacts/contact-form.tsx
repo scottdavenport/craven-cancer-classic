@@ -86,20 +86,22 @@ export function ContactForm({
     });
   }
 
-  function validateEmail(val: string) {
+  function validateEmail(val: string): boolean {
     if (val.trim() && !isValidEmail(val.trim())) {
       setFieldError("email", "Invalid email format");
-    } else {
-      setFieldError("email", null);
+      return false;
     }
+    setFieldError("email", null);
+    return true;
   }
 
-  function validatePhone(val: string) {
+  function validatePhone(val: string): boolean {
     if (val.trim() && !isValidPhone(val.trim())) {
       setFieldError("phone", "Invalid phone number");
-    } else {
-      setFieldError("phone", null);
+      return false;
     }
+    setFieldError("phone", null);
+    return true;
   }
 
   function handlePhoneBlur() {
@@ -110,12 +112,13 @@ export function ContactForm({
     validatePhone(phone);
   }
 
-  function validateZip(val: string) {
+  function validateZip(val: string): boolean {
     if (val.trim() && !isValidZip(val.trim())) {
       setFieldError("zip", "ZIP must be 5 digits or 5+4 (e.g. 28562 or 28562-1234)");
-    } else {
-      setFieldError("zip", null);
+      return false;
     }
+    setFieldError("zip", null);
+    return true;
   }
 
   function validateIdentity() {
@@ -127,17 +130,20 @@ export function ContactForm({
     return true;
   }
 
+  // For the Submit button's disabled state (renders each cycle with latest errors state)
   const hasErrors = Object.keys(errors).length > 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Re-run all validations before submit
-    validateEmail(email);
-    validatePhone(phone);
-    validateZip(zip);
+    // Re-run all validations before submit; check return values synchronously.
+    // Don't rely on `errors` state — React batches setState so the latest
+    // setFieldError calls won't be reflected in `errors` during this handler.
+    const emailOk = validateEmail(email);
+    const phoneOk = validatePhone(phone);
+    const zipOk = validateZip(zip);
     const identityOk = validateIdentity();
-    if (!identityOk || hasErrors) return;
+    if (!emailOk || !phoneOk || !zipOk || !identityOk) return;
 
     const input: ContactInput = {
       salutation: nullify(salutation),

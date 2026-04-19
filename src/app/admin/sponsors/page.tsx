@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { getSponsors, getSponsorshipItems } from "./actions";
 import { SponsorList } from "./sponsor-list";
+import { AdminPageHeading } from "@/components/admin/admin-page-heading";
 
 export const metadata: Metadata = {
   title: "Manage Sponsors",
@@ -14,13 +15,11 @@ export default async function AdminSponsorsPage() {
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-foreground">Sponsors</h1>
-      <p className="mt-1 text-muted-foreground">
-        Manage sponsor tiers and individual sponsors
-      </p>
-      <div className="mt-8">
-        <SponsorList sponsors={sponsors} sponsorshipItems={sponsorshipItems} />
-      </div>
+      <AdminPageHeading
+        title="Sponsors"
+        description="Manage confirmed sponsors — add, edit, assign to tiers."
+      />
+      <SponsorList sponsors={sponsors} sponsorshipItems={sponsorshipItems} />
     </div>
   );
 }

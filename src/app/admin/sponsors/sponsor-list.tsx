@@ -4,7 +4,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -93,29 +92,18 @@ export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
     }
   }
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case "paid":
-        return "default";
-      case "comped":
-        return "secondary";
-      default:
-        return "outline";
-    }
-  };
-
   return (
     <div className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-md bg-destructive/10 text-destructive border border-destructive/20 p-3 text-sm">
           {error}
         </div>
       )}
 
       {/* Sponsors table */}
-      <Card>
+      <Card className="shadow-sm border border-border/60">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle>
+          <CardTitle className="font-sans text-base font-semibold">
             Sponsors ({sponsors.length})
           </CardTitle>
           <Button size="sm" onClick={() => setShowForm(!showForm)}>
@@ -126,8 +114,8 @@ export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
         <CardContent>
           {/* Add form */}
           {showForm && (
-            <div className="mb-6 rounded-lg border border-border p-4">
-              <h3 className="mb-4 font-medium">New Sponsor</h3>
+            <div className="mb-6 rounded-lg border border-border/60 bg-neutral-50 p-6 shadow-sm">
+              <h3 className="mb-4 font-sans text-base font-semibold text-foreground">New Sponsor</h3>
               <SponsorForm
                 onSubmit={handleCreate}
                 loading={loading}
@@ -137,84 +125,103 @@ export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
             </div>
           )}
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="w-24" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sponsors.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No sponsors yet. Click &quot;Add Sponsor&quot; to get started.
-                  </TableCell>
+          <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-neutral-50">
+                  <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Name</TableHead>
+                  <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tier</TableHead>
+                  <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Contact</TableHead>
+                  <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Website</TableHead>
+                  <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
+                  <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Amount</TableHead>
+                  <TableHead className="w-24" />
                 </TableRow>
-              ) : (
-                sponsors.map((sponsor) =>
-                  editingId === sponsor.id ? (
-                    <TableRow key={sponsor.id}>
-                      <TableCell colSpan={6}>
-                        <SponsorForm
-                          defaultValues={sponsor}
-                          onSubmit={(fd) => handleUpdate(sponsor.id, fd)}
-                          loading={loading}
-                          onCancel={() => setEditingId(null)}
-                          sponsorshipItems={sponsorshipItems}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    <TableRow key={sponsor.id}>
-                      <TableCell className="font-medium">
-                        {sponsor.name}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {sponsorshipItems.find((item) => item.id === sponsor.tier_id)?.name ?? (
-                          <span className="text-muted-foreground/50">Unknown tier</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {sponsor.contact_name || "—"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={statusColor(sponsor.payment_status)}>
-                          {sponsor.payment_status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        ${(sponsor.amount_paid_cents / 100).toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => setEditingId(sponsor.id)}
-                          >
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            onClick={() => handleDelete(sponsor.id)}
-                            className="text-destructive"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sponsors.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                      No sponsors yet. Click &quot;Add Sponsor&quot; to get started.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  sponsors.map((sponsor) =>
+                    editingId === sponsor.id ? (
+                      <TableRow key={sponsor.id}>
+                        <TableCell colSpan={7}>
+                          <SponsorForm
+                            defaultValues={sponsor}
+                            onSubmit={(fd) => handleUpdate(sponsor.id, fd)}
+                            loading={loading}
+                            onCancel={() => setEditingId(null)}
+                            sponsorshipItems={sponsorshipItems}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      <TableRow key={sponsor.id}>
+                        <TableCell className="font-medium text-[0.9375rem]">
+                          {sponsor.name}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {sponsorshipItems.find((item) => item.id === sponsor.tier_id)?.name ?? (
+                            <span className="text-muted-foreground/50">Unknown tier</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {sponsor.contact_name || "—"}
+                        </TableCell>
+                        <TableCell>
+                          {sponsor.website ? (
+                            <span className="font-mono text-xs text-muted-foreground/70 truncate max-w-[160px] block">
+                              {sponsor.website}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/50">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className={
+                            `rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.05em] ` +
+                            (sponsor.payment_status === "paid"
+                              ? "bg-success-muted text-success"
+                              : sponsor.payment_status === "comped"
+                              ? "bg-neutral-100 text-neutral-600"
+                              : "bg-warning-muted text-warning")
+                          }>
+                            {sponsor.payment_status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-right font-mono tabular-nums">
+                          ${(sponsor.amount_paid_cents / 100).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => setEditingId(sponsor.id)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              onClick={() => handleDelete(sponsor.id)}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
                   )
-                )
-              )}
-            </TableBody>
-          </Table>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
     </div>

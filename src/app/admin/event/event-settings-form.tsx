@@ -52,12 +52,12 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
   return (
     <form action={handleSubmit} className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20">
           {error}
         </div>
       )}
       {success && (
-        <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
+        <div className="rounded-md bg-success-muted p-3 text-sm text-success border border-success/20">
           Settings updated successfully
         </div>
       )}
@@ -67,47 +67,52 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
           <CardTitle>Tournament Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Tournament Name</Label>
-            <Input
-              id="name"
-              name="name"
-              defaultValue={settings?.name ?? "Craven Cancer Classic"}
-              required
-            />
-          </div>
+          <fieldset className="space-y-4">
+            <legend className="font-sans text-[0.75rem] uppercase tracking-[0.15em] text-muted-foreground/70 mb-4">
+              Event Details
+            </legend>
+            <div className="space-y-2">
+              <Label htmlFor="name">Tournament Name</Label>
+              <Input
+                id="name"
+                name="name"
+                defaultValue={settings?.name ?? "Craven Cancer Classic"}
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="date">Tournament Date</Label>
-            <Input
-              id="date"
-              name="date"
-              type="date"
-              defaultValue={settings?.date ?? ""}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="date">Tournament Date</Label>
+              <Input
+                id="date"
+                name="date"
+                type="date"
+                defaultValue={settings?.date ?? ""}
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="location">Location</Label>
-            <Input
-              id="location"
-              name="location"
-              defaultValue={
-                settings?.location ?? "New Bern Golf & Country Club"
-              }
-              required
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                name="location"
+                defaultValue={
+                  settings?.location ?? "New Bern Golf & Country Club"
+                }
+                required
+              />
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              rows={3}
-              defaultValue={settings?.description ?? ""}
-            />
-          </div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                name="description"
+                rows={3}
+                defaultValue={settings?.description ?? ""}
+              />
+            </div>
+          </fieldset>
         </CardContent>
       </Card>
 
@@ -116,65 +121,70 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
           <CardTitle>Registration</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <Label htmlFor="registration_open">Registration Open</Label>
-              <p className="text-sm text-muted-foreground">
-                Allow teams to register for the tournament
+          <fieldset className="space-y-4">
+            <legend className="font-sans text-[0.75rem] uppercase tracking-[0.15em] text-muted-foreground/70 mb-4">
+              Registration
+            </legend>
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="registration_open">Registration Open</Label>
+                <p className="text-sm text-muted-foreground">
+                  Allow teams to register for the tournament
+                </p>
+              </div>
+              <Switch
+                id="registration_open"
+                checked={registrationOpen}
+                onCheckedChange={setRegistrationOpen}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="registration_fee">Registration Fee (USD)</Label>
+              <Input
+                id="registration_fee"
+                name="registration_fee"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={
+                  settings?.registration_fee_cents != null
+                    ? (settings.registration_fee_cents / 100).toFixed(2)
+                    : "700.00"
+                }
+              />
+              <p className="mt-1 font-sans text-[0.75rem] text-muted-foreground">
+                Per-team fee shown on the public registration page.
               </p>
             </div>
-            <Switch
-              id="registration_open"
-              checked={registrationOpen}
-              onCheckedChange={setRegistrationOpen}
-            />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="registration_fee">Registration Fee (USD)</Label>
-            <Input
-              id="registration_fee"
-              name="registration_fee"
-              type="number"
-              step="0.01"
-              min="0"
-              defaultValue={
-                settings?.registration_fee_cents != null
-                  ? (settings.registration_fee_cents / 100).toFixed(2)
-                  : "700.00"
-              }
-            />
-            <p className="text-xs text-muted-foreground">
-              Per-team fee shown on the public registration page.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="morning_cap">Morning Slot Cap</Label>
-              <Input
-                id="morning_cap"
-                name="morning_cap"
-                type="number"
-                defaultValue={settings?.morning_cap ?? 36}
-                min={1}
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="morning_cap">Morning Slot Cap</Label>
+                <Input
+                  id="morning_cap"
+                  name="morning_cap"
+                  type="number"
+                  defaultValue={settings?.morning_cap ?? 36}
+                  min={1}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="afternoon_cap">Afternoon Slot Cap</Label>
+                <Input
+                  id="afternoon_cap"
+                  name="afternoon_cap"
+                  type="number"
+                  defaultValue={settings?.afternoon_cap ?? 36}
+                  min={1}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="afternoon_cap">Afternoon Slot Cap</Label>
-              <Input
-                id="afternoon_cap"
-                name="afternoon_cap"
-                type="number"
-                defaultValue={settings?.afternoon_cap ?? 36}
-                min={1}
-              />
-            </div>
-          </div>
+          </fieldset>
         </CardContent>
       </Card>
 
-      <Button type="submit" disabled={loading}>
+      <Button type="submit" size="lg" disabled={loading}>
         {loading ? "Saving..." : "Save Settings"}
       </Button>
     </form>

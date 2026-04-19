@@ -4,7 +4,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function InviteForm() {
   const [email, setEmail] = useState("");
@@ -51,17 +57,22 @@ export function InviteForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Invite a User</CardTitle>
+        <CardTitle className="font-sans text-base font-semibold">
+          Invite Admin
+        </CardTitle>
+        <CardDescription className="font-sans text-[0.8125rem] text-muted-foreground">
+          Invited users will receive an email with a sign-in link.
+        </CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+            <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20">
               {error}
             </div>
           )}
           {successEmail && (
-            <div className="rounded-md bg-green-50 p-3 text-sm text-green-700">
+            <div className="rounded-md bg-success-muted p-3 text-sm text-success border border-success/20">
               Invite sent to {successEmail}
             </div>
           )}
@@ -93,11 +104,7 @@ export function InviteForm() {
             </select>
           </div>
 
-          <Button
-            type="submit"
-            disabled={loading}
-            className="bg-teal-600 text-white hover:bg-teal-700"
-          >
+          <Button type="submit" size="sm" disabled={loading}>
             {loading ? "Sending…" : "Send Invite"}
           </Button>
         </form>

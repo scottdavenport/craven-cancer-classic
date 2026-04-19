@@ -11,6 +11,7 @@ import {
   isValidPhone,
   isValidZip,
 } from "@/lib/contacts/contact-utils";
+import { softDelete } from "@/lib/supabase/soft-delete";
 
 type ContactType = "player" | "sponsor" | "donor" | "other";
 
@@ -48,7 +49,7 @@ export async function getContacts(filter?: ContactFilter): Promise<Contact[]> {
     if (contactIds.length === 0) return [];
 
     let query = supabase
-      .from("contacts")
+      .from("contacts_active")
       .select("*")
       .in("id", contactIds)
       .order("created_at", { ascending: false });
@@ -61,7 +62,9 @@ export async function getContacts(filter?: ContactFilter): Promise<Contact[]> {
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return data ?? [];
+    // contacts_active view: Supabase types all columns as nullable; underlying contacts
+    // table has NOT NULL constraints on id, full_name, type, etc. — cast is safe.
+    return (data ?? []) as Contact[];
   }
 
   if (filter?.captain_only) {
@@ -78,7 +81,7 @@ export async function getContacts(filter?: ContactFilter): Promise<Contact[]> {
     if (captainIds.length === 0) return [];
 
     let query = supabase
-      .from("contacts")
+      .from("contacts_active")
       .select("*")
       .in("id", captainIds)
       .order("created_at", { ascending: false });
@@ -91,11 +94,13 @@ export async function getContacts(filter?: ContactFilter): Promise<Contact[]> {
 
     const { data, error } = await query;
     if (error) throw new Error(error.message);
-    return data ?? [];
+    // contacts_active view: Supabase types all columns as nullable; underlying contacts
+    // table has NOT NULL constraints on id, full_name, type, etc. — cast is safe.
+    return (data ?? []) as Contact[];
   }
 
   let query = supabase
-    .from("contacts")
+    .from("contacts_active")
     .select("*")
     .order("created_at", { ascending: false });
 
@@ -107,7 +112,9 @@ export async function getContacts(filter?: ContactFilter): Promise<Contact[]> {
 
   const { data, error } = await query;
   if (error) throw new Error(error.message);
-  return data ?? [];
+  // contacts_active view: Supabase types all columns as nullable; underlying contacts
+  // table has NOT NULL constraints on id, full_name, type, etc. — cast is safe.
+  return (data ?? []) as Contact[];
 }
 
 export async function exportContactsCSV(filter?: ContactFilter): Promise<string> {
@@ -287,4 +294,12 @@ export async function updateContact(
   }
 
   return { ok: true };
+}
+
+export async function deleteContact(
+  id: string
+): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+  return softDelete(supabase, "contacts", id);
 }

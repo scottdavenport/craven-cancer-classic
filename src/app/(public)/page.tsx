@@ -78,7 +78,7 @@ export default async function HomePage() {
                 className="mt-8 max-w-lg text-base leading-relaxed text-white/70 mx-auto lg:mx-0 text-center lg:text-left opacity-0 animate-[fadeUp_400ms_ease-out_forwards]"
                 style={{ animationDelay: "200ms" }}
               >
-                Remembering those who have lost their battle, supporting those
+                Remembering those who valiantly fought cancer, supporting those
                 who continue their fight.
               </p>
 

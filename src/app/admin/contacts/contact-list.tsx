@@ -13,6 +13,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { exportContactsCSV, getContacts } from "./actions";
+import { ContactDrawer } from "./contact-drawer";
 import type { Contact } from "@/types/database";
 import type { ContactFilter, TeamFilterOption } from "./actions";
 
@@ -88,6 +89,12 @@ function relativeTime(dateStr: string): string {
 
 const TABLE_HEADERS = ["Name", "Email", "Type", "Company", "Year", "Consent", "Added"];
 
+type DrawerState = {
+  open: boolean;
+  mode: "create" | "edit";
+  contact: Contact | null;
+};
+
 export function ContactList({ contacts: initialContacts, teams }: ContactListProps) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -98,13 +105,35 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
   const [captainOnly, setCaptainOnly] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [drawer, setDrawer] = useState<DrawerState>({
+    open: false,
+    mode: "create",
+    contact: null,
+  });
+
+  function refetch() {
+    startTransition(async () => {
+      try {
+        const filter: ContactFilter = {};
+        if (typeFilter !== "all") filter.type = typeFilter as ContactType;
+        if (yearFilter !== "all") filter.year = Number(yearFilter);
+        if (teamFilter !== "all") filter.team_id = teamFilter;
+        if (captainOnly) filter.captain_only = true;
+        const fresh = await getContacts(filter);
+        setContacts(fresh);
+      } catch (err) {
+        console.error("[ContactList] refetch failed:", err);
+      }
+    });
+  }
 
   // availableYears derived from the current contacts set (server-filtered when team/captain active)
   const availableYears = useMemo(() => {
-    return Array.from(new Set(contacts.map((c) => c.year_first_seen))).sort(
+    return Array.from(new Set(initialContacts.map((c) => c.year_first_seen))).sort(
       (a, b) => b - a
     );
-  }, [contacts]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialContacts]);
 
   // Client-side filters: type, year, company, consent
   // team_id / captain_only are handled server-side via re-fetch
@@ -194,15 +223,23 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
             ? ` of ${contacts.length} total`
             : ""}
         </p>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportCSV}
-          disabled={exporting}
-          title="Exports subscribed contacts only (CAN-SPAM)"
-        >
-          {exporting ? "Exporting..." : "Export CSV (subscribed only)"}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            disabled={exporting}
+            title="Exports subscribed contacts only (CAN-SPAM)"
+          >
+            {exporting ? "Exporting..." : "Export CSV (subscribed only)"}
+          </Button>
+          <Button
+            size="sm"
+            onClick={() => setDrawer({ open: true, mode: "create", contact: null })}
+          >
+            New Contact
+          </Button>
+        </div>
       </div>
 
       {/* Filter controls */}
@@ -346,7 +383,8 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                 return (
                   <tr
                     key={contact.id}
-                    className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100"
+                    className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer"
+                    onClick={() => setDrawer({ open: true, mode: "edit", contact })}
                   >
                     {/* Name — structured name + full_name fallback */}
                     <td className="px-4 py-3">
@@ -399,6 +437,14 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
           </tbody>
         </table>
       </div>
+
+      <ContactDrawer
+        open={drawer.open}
+        mode={drawer.mode}
+        contact={drawer.contact}
+        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
+        onSuccess={refetch}
+      />
     </div>
   );
 }

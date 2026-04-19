@@ -1,6 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "sonner";
 
 export default function AdminLayout({
   children,
@@ -19,6 +20,7 @@ export default function AdminLayout({
           <div className="p-6">{children}</div>
         </main>
       </SidebarProvider>
+      <Toaster richColors position="top-right" />
     </TooltipProvider>
   );
 }

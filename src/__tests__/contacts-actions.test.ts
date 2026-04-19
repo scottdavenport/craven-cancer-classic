@@ -1,10 +1,12 @@
 /**
- * S9-5: Admin contacts server actions — contract tests
+ * S9-5 + S10-2: Admin contacts server actions — contract tests
  *
  * Covers:
  * - getContacts: basic filters, team_id filter, captain_only filter, error paths
  * - exportContactsCSV: always uses marketing_consent=true gate, header columns
  * - getTeamsForFilter: returns id+team_name list
+ * - createContact (S10-2 RED): happy path, validation errors, duplicate email, unauthorized
+ * - updateContact (S10-2 RED): happy path partial update, normalization, duplicate email, unauthorized
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -35,10 +37,13 @@ vi.mock("@/lib/supabase/admin", () => ({
 // Imports after mocks
 // ---------------------------------------------------------------------------
 import * as serverModule from "@/lib/supabase/server";
+import * as adminModule from "@/lib/supabase/admin";
 import {
   getContacts,
   exportContactsCSV,
   getTeamsForFilter,
+  createContact,
+  updateContact,
 } from "@/app/admin/contacts/actions";
 
 // ---------------------------------------------------------------------------
@@ -429,5 +434,260 @@ describe("getTeamsForFilter", () => {
     setClient({ from: mockFrom });
 
     await expect(getTeamsForFilter()).rejects.toThrow("teams query failed");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S10-2 (RED): createContact
+// ---------------------------------------------------------------------------
+
+/** Minimal valid ContactInput for create tests. */
+function makeValidInput(overrides: Record<string, unknown> = {}) {
+  return {
+    salutation: null,
+    first_name: "Jane",
+    last_name: "Smith",
+    company: null,
+    email: "jane@example.com",
+    phone: null,
+    type: "player" as const,
+    address1: null,
+    address2: null,
+    city: null,
+    state: null,
+    zip: null,
+    marketing_consent: false,
+    notes: null,
+    year_first_seen: 2026,
+    ...overrides,
+  };
+}
+
+/** Build a mock Supabase insert chain for the contacts table. */
+function makeInsertChain(result: { data: unknown[] | null; error: null | { message: string; code?: string } }) {
+  const chain: Record<string, unknown> = {};
+  chain.then = (resolve: (v: typeof result) => unknown, reject: (e: unknown) => unknown) =>
+    Promise.resolve(result).then(resolve, reject);
+  chain.select = vi.fn().mockReturnValue(chain);
+  return {
+    insert: vi.fn().mockReturnValue(chain),
+  };
+}
+
+/** Build a mock Supabase update chain for the contacts table. */
+function makeUpdateChain(result: { data: unknown[] | null; error: null | { message: string; code?: string } }) {
+  const eqResult: Record<string, unknown> = {};
+  eqResult.then = (resolve: (v: typeof result) => unknown, reject: (e: unknown) => unknown) =>
+    Promise.resolve(result).then(resolve, reject);
+  return {
+    update: vi.fn().mockReturnValue({ eq: vi.fn().mockReturnValue(eqResult) }),
+  };
+}
+
+describe("createContact (S10-2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    // Reset requireAdmin to default passing state
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  describe("happy path", () => {
+    it("returns { id } on successful create with valid input", async () => {
+      const newRow = [{ id: "new-contact-uuid" }];
+      setClient({
+        from: vi.fn().mockReturnValue(makeInsertChain({ data: newRow, error: null })),
+      });
+
+      const result = await createContact(makeValidInput());
+
+      expect(result).toMatchObject({ id: "new-contact-uuid" });
+    });
+
+    it("derives full_name from first + last before inserting", async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({ data: [{ id: "uuid-1" }], error: null }),
+      });
+      setClient({ from: vi.fn().mockReturnValue({ insert: mockInsert }) });
+
+      await createContact(makeValidInput({ first_name: "John", last_name: "Doe", company: null }));
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ full_name: "John Doe" }),
+        ])
+      );
+    });
+
+    it("stores email lowercased and trimmed", async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({ data: [{ id: "uuid-1" }], error: null }),
+      });
+      setClient({ from: vi.fn().mockReturnValue({ insert: mockInsert }) });
+
+      await createContact(makeValidInput({ email: "  JANE@EXAMPLE.COM  " }));
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ email: "jane@example.com" }),
+        ])
+      );
+    });
+
+    it("stores phone in E.164 format when a valid US number is provided", async () => {
+      const mockInsert = vi.fn().mockReturnValue({
+        select: vi.fn().mockResolvedValue({ data: [{ id: "uuid-1" }], error: null }),
+      });
+      setClient({ from: vi.fn().mockReturnValue({ insert: mockInsert }) });
+
+      // (202) 555-1234 — real DC-area number that passes isValidPhoneNumber
+      await createContact(makeValidInput({ phone: "(202) 555-1234" }));
+
+      expect(mockInsert).toHaveBeenCalledWith(
+        expect.arrayContaining([
+          expect.objectContaining({ phone: "+12025551234" }),
+        ])
+      );
+    });
+  });
+
+  describe("validation errors", () => {
+    it("returns error when first, last, AND company are all null/empty", async () => {
+      setClient({ from: vi.fn() });
+
+      const result = await createContact(
+        makeValidInput({ first_name: null, last_name: null, company: null })
+      );
+
+      expect(result).toMatchObject({ error: "Contact needs a first/last name or a company" });
+    });
+
+    it("returns error when first, last, AND company are all empty strings", async () => {
+      setClient({ from: vi.fn() });
+
+      const result = await createContact(
+        makeValidInput({ first_name: "", last_name: "", company: "" })
+      );
+
+      expect(result).toMatchObject({ error: "Contact needs a first/last name or a company" });
+    });
+
+    it("returns error when email format is invalid", async () => {
+      setClient({ from: vi.fn() });
+
+      const result = await createContact(makeValidInput({ email: "not-an-email" }));
+
+      expect(result).toMatchObject({ error: "Invalid email format" });
+    });
+
+    it("returns error when phone is unparseable garbage", async () => {
+      setClient({ from: vi.fn() });
+
+      const result = await createContact(makeValidInput({ phone: "garbage" }));
+
+      expect(result).toMatchObject({ error: "Invalid phone number" });
+    });
+
+    it("returns error when ZIP does not match US format", async () => {
+      setClient({ from: vi.fn() });
+
+      const result = await createContact(makeValidInput({ zip: "ABCDE" }));
+
+      expect(result).toMatchObject({ error: expect.stringMatching(/ZIP must be 5 digits/) });
+    });
+  });
+
+  describe("duplicate email (Postgres 23505)", () => {
+    it("returns user-friendly error when unique constraint fires on email", async () => {
+      setClient({
+        from: vi.fn().mockReturnValue({
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: "duplicate key", code: "23505" },
+            }),
+          }),
+        }),
+      });
+
+      const result = await createContact(makeValidInput({ email: "dupe@example.com" }));
+
+      expect(result).toMatchObject({ error: "Email already in use by another contact" });
+    });
+  });
+
+  describe("authorization", () => {
+    it("propagates error when requireAdmin throws (non-admin user)", async () => {
+      vi.mocked(adminModule.requireAdmin).mockRejectedValue(new Error("Unauthorized"));
+      setClient({ from: vi.fn() });
+
+      await expect(createContact(makeValidInput())).rejects.toThrow("Unauthorized");
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S10-2 (RED): updateContact
+// ---------------------------------------------------------------------------
+
+describe("updateContact (S10-2)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  describe("happy path", () => {
+    it("returns { ok: true } on successful partial update", async () => {
+      setClient({
+        from: vi.fn().mockReturnValue(makeUpdateChain({ data: null, error: null })),
+      });
+
+      const result = await updateContact("contact-uuid", { type: "sponsor" });
+
+      expect(result).toEqual({ ok: true });
+    });
+
+    it("normalizes email to lowercase on update", async () => {
+      const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+      setClient({ from: vi.fn().mockReturnValue({ update: mockUpdate }) });
+
+      await updateContact("contact-uuid", { email: "NEW@EXAMPLE.COM" });
+
+      expect(mockUpdate).toHaveBeenCalledWith(
+        expect.objectContaining({ email: "new@example.com" })
+      );
+    });
+  });
+
+  describe("duplicate email (Postgres 23505)", () => {
+    it("returns user-friendly error when unique constraint fires on email update", async () => {
+      setClient({
+        from: vi.fn().mockReturnValue({
+          update: vi.fn().mockReturnValue({
+            eq: vi.fn().mockResolvedValue({
+              data: null,
+              error: { message: "duplicate key", code: "23505" },
+            }),
+          }),
+        }),
+      });
+
+      const result = await updateContact("contact-uuid", { email: "taken@example.com" });
+
+      expect(result).toMatchObject({ error: "Email already in use by another contact" });
+    });
+  });
+
+  describe("authorization", () => {
+    it("propagates error when requireAdmin throws (non-admin user)", async () => {
+      vi.mocked(adminModule.requireAdmin).mockRejectedValue(new Error("Unauthorized"));
+      setClient({ from: vi.fn() });
+
+      await expect(updateContact("contact-uuid", { type: "donor" })).rejects.toThrow("Unauthorized");
+    });
   });
 });

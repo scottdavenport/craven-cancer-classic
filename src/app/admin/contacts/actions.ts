@@ -3,6 +3,14 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 import type { Contact } from "@/types/database";
+import {
+  deriveFullName,
+  normalizeEmail,
+  isValidEmail,
+  normalizePhone,
+  isValidPhone,
+  isValidZip,
+} from "@/lib/contacts/contact-utils";
 
 type ContactType = "player" | "sponsor" | "donor" | "other";
 
@@ -156,4 +164,127 @@ export async function getTeamsForFilter(): Promise<TeamFilterOption[]> {
 
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+export type ContactInput = {
+  salutation: string | null;
+  first_name: string | null;
+  last_name: string | null;
+  company: string | null;
+  email: string | null;
+  phone: string | null;
+  type: "player" | "sponsor" | "donor" | "other";
+  address1: string | null;
+  address2: string | null;
+  city: string | null;
+  state: string | null;
+  zip: string | null;
+  marketing_consent: boolean;
+  notes: string | null;
+  year_first_seen: number;
+};
+
+export async function createContact(
+  input: ContactInput
+): Promise<{ id: string } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  // Presence check: at least one of first/last/company
+  if (!input.first_name?.trim() && !input.last_name?.trim() && !input.company?.trim()) {
+    return { error: "Contact needs a first/last name or a company" };
+  }
+
+  // Normalize + validate email
+  const email = normalizeEmail(input.email);
+  if (email && !isValidEmail(email)) {
+    return { error: "Invalid email format" };
+  }
+
+  // Normalize + validate phone
+  if (input.phone && !isValidPhone(input.phone)) {
+    return { error: "Invalid phone number" };
+  }
+  const phone = normalizePhone(input.phone);
+
+  // Validate ZIP
+  if (input.zip && !isValidZip(input.zip)) {
+    return { error: "ZIP must be 5 digits or 5+4 (e.g. 28562 or 28562-1234)" };
+  }
+
+  const full_name = deriveFullName(input.first_name, input.last_name, input.company);
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .insert([{ ...input, email, phone, full_name }])
+    .select("id");
+
+  if (error) {
+    if (error.code === "23505") return { error: "Email already in use by another contact" };
+    return { error: error.message };
+  }
+
+  const rows = data as Array<{ id: string }> | null;
+  return { id: (rows?.[0]?.id ?? "") as string };
+}
+
+export async function updateContact(
+  id: string,
+  input: Partial<ContactInput>
+): Promise<{ ok: true } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  let normalizedInput: Partial<ContactInput> & { full_name?: string } = { ...input };
+
+  if ("email" in input) {
+    const email = normalizeEmail(input.email ?? null);
+    if (email && !isValidEmail(email)) return { error: "Invalid email format" };
+    normalizedInput.email = email;
+  }
+
+  if ("phone" in input) {
+    if (input.phone && !isValidPhone(input.phone)) return { error: "Invalid phone number" };
+    normalizedInput.phone = normalizePhone(input.phone ?? null);
+  }
+
+  if ("zip" in input && input.zip && !isValidZip(input.zip)) {
+    return { error: "ZIP must be 5 digits or 5+4 (e.g. 28562 or 28562-1234)" };
+  }
+
+  // If any name field is in the partial update, fetch existing + merge + re-derive full_name
+  const hasNameChange = "first_name" in input || "last_name" in input || "company" in input;
+  if (hasNameChange) {
+    const { data: existing, error: fetchError } = await supabase
+      .from("contacts")
+      .select("first_name, last_name, company")
+      .eq("id", id)
+      .single();
+    if (fetchError) return { error: fetchError.message };
+
+    const merged = {
+      first_name: "first_name" in input ? input.first_name ?? null : existing.first_name,
+      last_name: "last_name" in input ? input.last_name ?? null : existing.last_name,
+      company: "company" in input ? input.company ?? null : existing.company,
+    };
+
+    // Re-check presence against merged state
+    if (!merged.first_name?.trim() && !merged.last_name?.trim() && !merged.company?.trim()) {
+      return { error: "Contact needs a first/last name or a company" };
+    }
+
+    normalizedInput.full_name = deriveFullName(merged.first_name, merged.last_name, merged.company);
+  }
+
+  const { error } = await supabase
+    .from("contacts")
+    .update(normalizedInput)
+    .eq("id", id);
+
+  if (error) {
+    if (error.code === "23505") return { error: "Email already in use by another contact" };
+    return { error: error.message };
+  }
+
+  return { ok: true };
 }

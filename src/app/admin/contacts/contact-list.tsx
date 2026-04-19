@@ -21,9 +21,9 @@ interface ContactListProps {
 }
 
 const TYPE_BADGE_CLASSES: Record<string, string> = {
-  player: "bg-teal-50 text-teal-700",
-  sponsor: "bg-purple-50 text-purple-700",
-  donor: "bg-green-50 text-green-700",
+  player: "bg-brand-muted text-brand",
+  sponsor: "bg-purple-muted text-purple",
+  donor: "bg-success-muted text-success",
   other: "bg-neutral-100 text-neutral-600",
 };
 

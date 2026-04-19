@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { RegistrationForm } from "./registration-form";
 import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
+import { SeekingTeamForm } from "./seeking-team-form";
 
 export const metadata: Metadata = {
   title: "Register Your Team",
@@ -113,13 +114,27 @@ export default async function RegisterPage() {
               </div>
             </div>
           ) : (
-            <RegistrationForm
-              morningCap={eventSettings?.morning_cap ?? 36}
-              afternoonCap={eventSettings?.afternoon_cap ?? 36}
-              morningCount={morningCount}
-              afternoonCount={afternoonCount}
-              registrationFeeCents={registrationFeeCents}
-            />
+            <div className="space-y-10">
+              <RegistrationForm
+                morningCap={eventSettings?.morning_cap ?? 36}
+                afternoonCap={eventSettings?.afternoon_cap ?? 36}
+                morningCount={morningCount}
+                afternoonCount={afternoonCount}
+                registrationFeeCents={registrationFeeCents}
+              />
+
+              {/* Seeking a team section */}
+              <div className="rounded-lg border border-border p-8">
+                <h2 className="font-display text-xl font-semibold text-foreground">
+                  Seeking a Team?
+                </h2>
+                <p className="mt-2 mb-6 text-sm text-muted-foreground">
+                  Don&apos;t have a full foursome? Let us know and we&apos;ll
+                  reach out when we find a team that needs a player.
+                </p>
+                <SeekingTeamForm />
+              </div>
+            </div>
           )}
         </div>
       </section>

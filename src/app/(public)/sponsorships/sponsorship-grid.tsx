@@ -67,7 +67,7 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
                   </div>
                 )}
                 <Button
-                  className={`mt-4 w-full rounded-none bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover ${soldOut ? "pointer-events-none" : ""}`}
+                  className={`mt-4 w-full bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover ${soldOut ? "pointer-events-none" : ""}`}
                   disabled={soldOut}
                   onClick={() =>
                     setSelectedId(selectedId === item.id ? null : item.id)
@@ -195,7 +195,7 @@ function PurchaseForm({
         <Button
           type="submit"
           disabled={loading}
-          className="w-full rounded-none bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover sm:w-auto"
+          className="w-full bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover sm:w-auto"
         >
           {loading ? "Processing..." : "Proceed to Payment"}
         </Button>

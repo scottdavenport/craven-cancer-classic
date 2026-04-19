@@ -28,7 +28,7 @@ export default function Error({
       <div className="flex flex-col sm:flex-row gap-3 items-center">
         <Button
           onClick={reset}
-          className="rounded-none bg-primary px-8 text-[0.8125rem] uppercase tracking-wider text-primary-foreground hover:bg-primary/90 shadow-xs hover:shadow-sm hover:-translate-y-px transition-[background-color,box-shadow,transform] duration-150"
+          className="bg-primary px-8 text-[0.8125rem] uppercase tracking-wider text-primary-foreground hover:bg-primary/90 shadow-xs hover:shadow-sm hover:-translate-y-px transition-[background-color,box-shadow,transform] duration-150"
           size="lg"
         >
           Try Again

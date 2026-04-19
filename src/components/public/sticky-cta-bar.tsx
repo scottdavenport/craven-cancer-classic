@@ -9,14 +9,14 @@ export function StickyCTABar() {
         <LinkButton
           href="/register"
           variant="default"
-          className="flex-1 h-11 rounded-none text-[0.8125rem] uppercase tracking-wider"
+          className="flex-1 h-11 text-[0.8125rem] uppercase tracking-wider"
         >
           Register
         </LinkButton>
         <LinkButton
           href="/donate"
           variant="purple"
-          className="flex-1 h-11 rounded-none text-[0.8125rem] uppercase tracking-wider"
+          className="flex-1 h-11 text-[0.8125rem] uppercase tracking-wider"
         >
           Donate
         </LinkButton>

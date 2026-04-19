@@ -99,7 +99,7 @@ export default async function HomePage() {
                 <LinkButton
                   href="/register"
                   size="lg"
-                  className="rounded-none bg-brand px-8 text-sm uppercase tracking-wider text-white hover:bg-brand-dark"
+                  className="bg-brand px-8 text-sm uppercase tracking-wider text-white hover:bg-brand-dark"
                 >
                   Register Your Team
                 </LinkButton>
@@ -107,7 +107,7 @@ export default async function HomePage() {
                   href="/sponsorships"
                   size="lg"
                   variant="outline"
-                  className="rounded-none border-purple/60 px-8 text-sm uppercase tracking-wider text-purple/80 hover:border-purple hover:bg-purple-muted hover:text-purple"
+                  className="border-purple/60 px-8 text-sm uppercase tracking-wider text-purple/80 hover:border-purple hover:bg-purple-muted hover:text-purple"
                 >
                   Become a Sponsor
                 </LinkButton>
@@ -238,7 +238,7 @@ export default async function HomePage() {
             <LinkButton
               href="/donate"
               size="lg"
-              className="rounded-none bg-purple px-8 text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover"
+              className="bg-purple px-8 text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover"
             >
               Donate Now
             </LinkButton>
@@ -246,7 +246,7 @@ export default async function HomePage() {
               href="/register"
               size="lg"
               variant="outline"
-              className="rounded-none px-8 text-sm uppercase tracking-wider"
+              className="px-8 text-sm uppercase tracking-wider"
             >
               Register to Play
             </LinkButton>

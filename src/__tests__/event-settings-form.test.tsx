@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor, act, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { EventSettingsForm } from "@/app/admin/event/event-settings-form";
 
@@ -207,13 +207,11 @@ describe("EventSettingsForm — client-side validation", () => {
   });
 
   it("description > 2000 chars on blur shows inline length error", async () => {
-    const user = userEvent.setup();
     render(<EventSettingsForm settings={mockSettings} />);
 
     const descInput = screen.getByLabelText(/description/i);
-    await user.clear(descInput);
-    await user.type(descInput, "x".repeat(2001));
-    await user.tab();
+    fireEvent.change(descInput, { target: { value: "x".repeat(2001) } });
+    fireEvent.blur(descInput);
 
     await waitFor(() => {
       expect(screen.getByText(/2000 characters|too long|exceed/i)).toBeInTheDocument();
@@ -236,21 +234,16 @@ describe("EventSettingsForm — client-side validation", () => {
   });
 
   it("end date before start date on blur shows inline date range error", async () => {
-    const user = userEvent.setup();
     render(<EventSettingsForm settings={mockSettings} />);
 
     const startInput = screen.getByLabelText(/start date/i) as HTMLInputElement;
     const endInput = screen.getByLabelText(/end date/i) as HTMLInputElement;
 
-    await user.clear(startInput);
-    await user.type(startInput, "2026-09-18");
-    await user.clear(endInput);
-    await user.type(endInput, "2026-09-17");
-    await user.tab();
+    fireEvent.change(startInput, { target: { value: "2026-09-18" } });
+    fireEvent.change(endInput, { target: { value: "2026-09-17" } });
+    fireEvent.blur(endInput);
 
     await waitFor(() => {
-      // Must be an error element — not just the "End Date" label.
-      // Look for the specific validation message text about date ordering.
       expect(screen.getByText(/on or after|date range|end.*before.*start|start.*before.*end/i)).toBeInTheDocument();
     });
   });

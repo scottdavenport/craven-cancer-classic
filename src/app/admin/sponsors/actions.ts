@@ -5,36 +5,52 @@ import sanitizeHtml from "sanitize-html";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { softDelete } from "@/lib/supabase/soft-delete";
-import { isPossiblePhoneNumber } from "libphonenumber-js/min";
-import {
-  normalizeEmail,
-  normalizePhone,
-  isValidEmail,
-} from "@/lib/contacts/contact-utils";
-
-// Use isPossiblePhoneNumber (length-check only) so 555 test numbers pass
-// while clearly-short strings like "123" are still rejected.
-function isSponsorPhoneValid(raw: string | null): boolean {
-  if (!raw || !raw.trim()) return true;
-  return isPossiblePhoneNumber(raw.trim(), "US");
-}
 import type { Sponsor, SponsorshipItem } from "@/types/database";
 
-export async function getSponsors(): Promise<Sponsor[]> {
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+export type ContactRow = {
+  contact_id: string;
+  role: string;
+  contacts: {
+    id: string;
+    full_name: string;
+    email: string | null;
+  };
+};
+
+// ---------------------------------------------------------------------------
+// getSponsors
+// ---------------------------------------------------------------------------
+
+export async function getSponsors(opts?: { year?: number; is_active?: boolean }): Promise<Sponsor[]> {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
+  const year = opts?.year ?? currentYear;
 
-  const { data, error } = await supabase
-    .from("sponsors_active")
+  // Query sponsors table directly — sponsors_active view uses SELECT * which
+  // pins columns at creation time and won't expose is_active until PR C recreates it.
+  // Soft-deleted rows are excluded by the RLS policy on the sponsors table.
+  let query = supabase
+    .from("sponsors")
     .select("*")
-    .eq("year", currentYear)
-    .order("display_order");
+    .eq("year", year);
+
+  if (opts?.is_active !== undefined) {
+    query = query.eq("is_active", opts.is_active);
+  }
+
+  const { data, error } = await query.order("display_order");
 
   if (error) throw new Error(error.message);
-  // sponsors_active view inherits NOT NULL from underlying sponsors table;
-  // Supabase types views as fully-nullable, so assert here.
   return (data ?? []) as unknown as Sponsor[];
 }
+
+// ---------------------------------------------------------------------------
+// getSponsorshipItems
+// ---------------------------------------------------------------------------
 
 export async function getSponsorshipItems(): Promise<Pick<SponsorshipItem, "id" | "name" | "price_cents" | "year">[]> {
   const supabase = await createClient();
@@ -49,49 +65,130 @@ export async function getSponsorshipItems(): Promise<Pick<SponsorshipItem, "id" 
     .order("price_cents", { ascending: false });
 
   if (error) throw new Error(error.message);
-  // sponsorship_items_active view inherits NOT NULL from underlying table;
-  // Supabase types views as fully-nullable, so assert here.
   return (data ?? []) as unknown as Pick<SponsorshipItem, "id" | "name" | "price_cents" | "year">[];
 }
 
-export async function createSponsor(formData: FormData) {
-  const rawEmail = formData.get("contact_email") as string | null;
-  const rawPhone = formData.get("contact_phone") as string | null;
+// ---------------------------------------------------------------------------
+// getSponsorContacts
+// ---------------------------------------------------------------------------
 
-  if (!isValidEmail(rawEmail)) return { error: "Invalid email format" };
-  if (!isSponsorPhoneValid(rawPhone)) return { error: "Invalid phone number" };
-
+export async function getSponsorContacts(sponsorId: string): Promise<ContactRow[]> {
   await requireAdmin();
   const supabase = await createClient();
 
-  const { error } = await supabase.from("sponsors").insert({
-    tier_id: formData.get("tier_id") as string,
-    name: formData.get("name") as string,
-    website: (formData.get("website") as string) || null,
-    contact_name: (formData.get("contact_name") as string) || null,
-    contact_email: normalizeEmail(rawEmail),
-    contact_phone: normalizePhone(rawPhone),
-    logo_url: (formData.get("logo_url") as string) || null,
-    payment_status: ((formData.get("payment_status") as string) || "pending") as "pending" | "paid" | "comped",
-    amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
-  });
+  const { data, error } = await supabase
+    .from("sponsor_contacts")
+    .select("contact_id, role, contacts(id, full_name, email)")
+    .eq("sponsor_id", sponsorId);
+
+  if (error) throw new Error(error.message);
+  return (data ?? []) as unknown as ContactRow[];
+}
+
+// ---------------------------------------------------------------------------
+// linkSponsorContact
+// ---------------------------------------------------------------------------
+
+export async function linkSponsorContact(
+  sponsorId: string,
+  contactId: string,
+  role: "primary" | "billing" | "other" = "primary"
+): Promise<{ success: true } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("sponsor_contacts")
+    .insert({ sponsor_id: sponsorId, contact_id: contactId, role });
 
   if (error) return { error: error.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// unlinkSponsorContact
+// ---------------------------------------------------------------------------
+
+export async function unlinkSponsorContact(
+  sponsorId: string,
+  contactId: string
+): Promise<{ success: true } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("sponsor_contacts")
+    .delete()
+    .eq("sponsor_id", sponsorId)
+    .eq("contact_id", contactId);
+
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
+// ---------------------------------------------------------------------------
+// createSponsor
+// ---------------------------------------------------------------------------
+
+export async function createSponsor(formData: FormData) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const isActiveRaw = formData.get("is_active") as string | null;
+  const is_active = isActiveRaw === "false" ? false : true;
+
+  const contactIdsRaw = formData.get("contact_ids") as string | null;
+  const contactIds = contactIdsRaw ? contactIdsRaw.split(",").map((s) => s.trim()).filter(Boolean) : [];
+
+  // Pre-generate the id so we can reference it for sponsor_contacts without
+  // needing a .select().single() chain (which isn't supported by test mocks).
+  const sponsorId = crypto.randomUUID();
+
+  const { data: insertResult, error } = await supabase
+    .from("sponsors")
+    .insert({
+      id: sponsorId,
+      tier_id: formData.get("tier_id") as string,
+      name: formData.get("name") as string,
+      website: (formData.get("website") as string) || null,
+      logo_url: (formData.get("logo_url") as string) || null,
+      payment_status: ((formData.get("payment_status") as string) || "pending") as "pending" | "paid" | "comped",
+      amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
+      is_active,
+    });
+
+  // In test mocks insert may return data directly; in production it returns { data: null }
+  // unless .select() is chained. We use the pre-generated sponsorId regardless.
+  void insertResult;
+  if (error) return { error: error.message };
+
+  if (contactIds.length > 0) {
+    const rows = contactIds.map((contact_id) => ({
+      sponsor_id: sponsorId,
+      contact_id,
+      role: "primary",
+    }));
+    const { error: linkError } = await supabase
+      .from("sponsor_contacts")
+      .insert(rows);
+    if (linkError) return { error: linkError.message };
+  }
 
   revalidatePath("/admin/sponsors");
   revalidatePath("/sponsors");
   return { success: true };
 }
 
+// ---------------------------------------------------------------------------
+// updateSponsor
+// ---------------------------------------------------------------------------
+
 export async function updateSponsor(id: string, formData: FormData) {
-  const rawEmail = formData.get("contact_email") as string | null;
-  const rawPhone = formData.get("contact_phone") as string | null;
-
-  if (!isValidEmail(rawEmail)) return { error: "Invalid email format" };
-  if (!isSponsorPhoneValid(rawPhone)) return { error: "Invalid phone number" };
-
   await requireAdmin();
   const supabase = await createClient();
+
+  const isActiveRaw = formData.get("is_active") as string | null;
+  const is_active = isActiveRaw === "false" ? false : true;
 
   const { error } = await supabase
     .from("sponsors")
@@ -99,21 +196,58 @@ export async function updateSponsor(id: string, formData: FormData) {
       tier_id: formData.get("tier_id") as string,
       name: formData.get("name") as string,
       website: (formData.get("website") as string) || null,
-      contact_name: (formData.get("contact_name") as string) || null,
-      contact_email: normalizeEmail(rawEmail),
-      contact_phone: normalizePhone(rawPhone),
       logo_url: (formData.get("logo_url") as string) || null,
       payment_status: ((formData.get("payment_status") as string) || "pending") as "pending" | "paid" | "comped",
       amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
+      is_active,
     })
     .eq("id", id);
 
   if (error) return { error: error.message };
 
+  // Reconcile contacts: read current links, diff against submitted contact_ids
+  const contactIdsRaw = formData.get("contact_ids") as string | null;
+  if (contactIdsRaw !== null) {
+    const submittedIds = contactIdsRaw.split(",").map((s) => s.trim()).filter(Boolean);
+
+    const { data: existing } = await supabase
+      .from("sponsor_contacts")
+      .select("contact_id")
+      .eq("sponsor_id", id);
+
+    const existingIds = (existing ?? []).map((r: { contact_id: string }) => r.contact_id);
+
+    const toAdd = submittedIds.filter((cid) => !existingIds.includes(cid));
+    const toRemove = existingIds.filter((cid) => !submittedIds.includes(cid));
+
+    if (toAdd.length > 0) {
+      const rows = toAdd.map((contact_id) => ({
+        sponsor_id: id,
+        contact_id,
+        role: "primary",
+      }));
+      const { error: addErr } = await supabase.from("sponsor_contacts").insert(rows);
+      if (addErr) return { error: addErr.message };
+    }
+
+    for (const contact_id of toRemove) {
+      const { error: delErr } = await supabase
+        .from("sponsor_contacts")
+        .delete()
+        .eq("sponsor_id", id)
+        .eq("contact_id", contact_id);
+      if (delErr) return { error: delErr.message };
+    }
+  }
+
   revalidatePath("/admin/sponsors");
   revalidatePath("/sponsors");
   return { success: true };
 }
+
+// ---------------------------------------------------------------------------
+// deleteSponsor
+// ---------------------------------------------------------------------------
 
 export async function deleteSponsor(
   id: string
@@ -122,6 +256,10 @@ export async function deleteSponsor(
   const supabase = await createClient();
   return softDelete(supabase, "sponsors", id);
 }
+
+// ---------------------------------------------------------------------------
+// SVG sanitization for logo upload
+// ---------------------------------------------------------------------------
 
 const SVG_ALLOWED_TAGS = [
   "svg", "g", "path", "circle", "rect", "ellipse", "line", "polyline", "polygon",

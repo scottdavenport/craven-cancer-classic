@@ -6,6 +6,9 @@ import { SponsorList } from "@/app/admin/sponsors/sponsor-list";
 import type { Sponsor } from "@/types/database";
 import type { SponsorshipItemOption } from "@/app/admin/sponsors/sponsor-form";
 
+// Extend Sponsor with PR-B fields not yet in generated types
+type SponsorWithStatus = Sponsor & { is_active?: boolean };
+
 // Mock server actions
 vi.mock("@/app/admin/sponsors/actions", () => ({
   createSponsor: vi.fn(),
@@ -47,6 +50,7 @@ function makeSponsor(overrides: Partial<Sponsor> = {}): Sponsor {
     amount_paid_cents: 500000,
     stripe_payment_id: null,
     display_order: 1,
+    is_active: true,
     year: 2026,
     created_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,
@@ -291,5 +295,238 @@ describe("SponsorList", () => {
         expect(mockGetSponsors).toHaveBeenCalledTimes(1);
       });
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S18-B (RED): SponsorList — year filter (#199)
+// ---------------------------------------------------------------------------
+// These tests FAIL until Bolt adds a year filter control to SponsorList.
+// ---------------------------------------------------------------------------
+
+describe("SponsorList — year filter (#199)", () => {
+  const currentYear = new Date().getFullYear();
+
+  it("renders a year filter control (dropdown, select, or combobox)", () => {
+    render(
+      <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
+    );
+    // Bolt may render a <select>, custom Select, or combobox — pin on any year-related control
+    const yearControl =
+      screen.queryByRole("combobox", { name: /year/i }) ??
+      screen.queryByLabelText(/year/i) ??
+      screen.queryByDisplayValue(String(currentYear));
+    expect(yearControl).toBeInTheDocument();
+  });
+
+  it("year filter default value is current year", () => {
+    render(
+      <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
+    );
+    // The current year string should appear somewhere in the year filter area
+    const yearText = screen.queryByDisplayValue(String(currentYear)) ??
+      screen.queryByText(String(currentYear));
+    expect(yearText).toBeInTheDocument();
+  });
+
+  it("changing year triggers getSponsors with the new year", async () => {
+    const user = userEvent.setup();
+    mockGetSponsors.mockResolvedValue([]);
+
+    render(
+      <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
+    );
+
+    // Find the year filter control — try select element first
+    const yearSelect = document.querySelector("select[name=year]") as HTMLSelectElement | null;
+    if (yearSelect) {
+      fireEvent.change(yearSelect, { target: { value: "2025" } });
+    } else {
+      // Try combobox/button pattern
+      const yearCombobox = screen.queryByRole("combobox", { name: /year/i });
+      if (yearCombobox) {
+        await user.click(yearCombobox);
+        const option = screen.queryByRole("option", { name: "2025" });
+        if (option) await user.click(option);
+      }
+    }
+
+    await vi.waitFor(() => {
+      expect(mockGetSponsors).toHaveBeenCalled();
+      // The call should include year: 2025
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const calls = mockGetSponsors.mock.calls as any[][];
+      const yearCall = calls.find((args) => {
+        const arg = args[0] as Record<string, unknown> | undefined;
+        return arg?.year === 2025;
+      });
+      expect(yearCall).toBeDefined();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S18-B (RED): SponsorList — status filter (#199)
+// ---------------------------------------------------------------------------
+// These tests FAIL until Bolt adds a status filter to SponsorList.
+// ---------------------------------------------------------------------------
+
+describe("SponsorList — status filter (#199)", () => {
+  it("renders a status filter with options All / Active / Inactive", () => {
+    render(
+      <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
+    );
+    // All three text options must be present in the filter UI
+    // They may be radio buttons, a select, or a segmented control
+    expect(screen.queryByText(/^all$/i) ?? screen.queryByRole("option", { name: /^all$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/^active$/i) ?? screen.queryByRole("option", { name: /^active$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/^inactive$/i) ?? screen.queryByRole("option", { name: /^inactive$/i })).toBeInTheDocument();
+  });
+
+  it("default status filter is 'All'", () => {
+    render(
+      <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
+    );
+    // "All" should be the initially selected/active option
+    // It may be aria-selected, aria-pressed, or data-state="active"
+    const allOption =
+      screen.queryByRole("radio", { name: /^all$/i }) ??
+      screen.queryByRole("option", { name: /^all$/i });
+
+    if (allOption) {
+      const isSelected =
+        allOption.getAttribute("aria-selected") === "true" ||
+        allOption.getAttribute("aria-checked") === "true" ||
+        (allOption as HTMLInputElement).checked;
+      expect(isSelected).toBe(true);
+    } else {
+      // Fallback: the "All" text is visible (implying it's the current filter label)
+      expect(screen.getByText(/^all$/i)).toBeInTheDocument();
+    }
+  });
+
+  it("selecting 'Active' triggers getSponsors with is_active=true", async () => {
+    const user = userEvent.setup();
+    mockGetSponsors.mockResolvedValue([]);
+
+    render(
+      <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
+    );
+
+    const activeOption =
+      screen.queryByRole("radio", { name: /^active$/i }) ??
+      screen.queryByRole("button", { name: /^active$/i }) ??
+      screen.queryByText(/^active$/i);
+
+    expect(activeOption).toBeInTheDocument();
+    await user.click(activeOption!);
+
+    await vi.waitFor(() => {
+      expect(mockGetSponsors).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const calls = mockGetSponsors.mock.calls as any[][];
+      const activeCall = calls.find((args) => {
+        const arg = args[0] as Record<string, unknown> | undefined;
+        return arg?.is_active === true;
+      });
+      expect(activeCall).toBeDefined();
+    });
+  });
+
+  it("selecting 'Inactive' triggers getSponsors with is_active=false", async () => {
+    const user = userEvent.setup();
+    mockGetSponsors.mockResolvedValue([]);
+
+    render(
+      <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
+    );
+
+    const inactiveOption =
+      screen.queryByRole("radio", { name: /^inactive$/i }) ??
+      screen.queryByRole("button", { name: /^inactive$/i }) ??
+      screen.queryByText(/^inactive$/i);
+
+    expect(inactiveOption).toBeInTheDocument();
+    await user.click(inactiveOption!);
+
+    await vi.waitFor(() => {
+      expect(mockGetSponsors).toHaveBeenCalled();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const calls = mockGetSponsors.mock.calls as any[][];
+      const inactiveCall = calls.find((args) => {
+        const arg = args[0] as Record<string, unknown> | undefined;
+        return arg?.is_active === false;
+      });
+      expect(inactiveCall).toBeDefined();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// S18-B (RED): SponsorList — inactive badge (#199)
+// ---------------------------------------------------------------------------
+// These tests FAIL until Bolt adds is_active=false badge rendering to SponsorList.
+// ---------------------------------------------------------------------------
+
+describe("SponsorList — inactive badge (#199)", () => {
+  function makeSponsorWithStatus(overrides: Partial<SponsorWithStatus> = {}): SponsorWithStatus {
+    return {
+      id: "sponsor-badge-test",
+      name: "Badge Test Corp",
+      tier_id: "tier-gold",
+      contact_name: null,
+      contact_email: null,
+      contact_phone: null,
+      website: null,
+      logo_url: null,
+      payment_status: "paid",
+      amount_paid_cents: 0,
+      stripe_payment_id: null,
+      display_order: 1,
+      year: 2026,
+      created_at: "2026-01-01T00:00:00.000Z",
+      deleted_at: null,
+      deleted_by: null,
+      is_active: true,
+      ...overrides,
+    };
+  }
+
+  it("sponsor row with is_active=false shows 'Inactive' badge in the DOM", () => {
+    const inactiveSponsor = makeSponsorWithStatus({
+      id: "inactive-1",
+      name: "Inactive Corp",
+      is_active: false,
+    });
+
+    render(
+      <SponsorList
+        sponsors={[inactiveSponsor] as Sponsor[]}
+        sponsorshipItems={sponsorshipItems}
+      />
+    );
+
+    expect(
+      screen.getByTestId(`inactive-badge-${inactiveSponsor.id}`)
+    ).toBeInTheDocument();
+  });
+
+  it("sponsor row with is_active=true does NOT show 'Inactive' badge", () => {
+    const activeSponsor = makeSponsorWithStatus({
+      id: "active-1",
+      name: "Active Corp",
+      is_active: true,
+    });
+
+    render(
+      <SponsorList
+        sponsors={[activeSponsor] as Sponsor[]}
+        sponsorshipItems={sponsorshipItems}
+      />
+    );
+
+    expect(
+      screen.queryByTestId(`inactive-badge-${activeSponsor.id}`)
+    ).not.toBeInTheDocument();
   });
 });

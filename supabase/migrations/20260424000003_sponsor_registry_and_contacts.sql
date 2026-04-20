@@ -55,12 +55,19 @@ CREATE INDEX IF NOT EXISTS idx_sponsor_contacts_contact_id ON public.sponsor_con
 -- price via admin UI when ready to accept new purchases.
 -- sort_order 90 and 100 — existing items occupy 10–80.
 
+-- Guarded by NOT EXISTS sub-select instead of ON CONFLICT because sponsorship_items has
+-- no unique (name, year) constraint. Supabase tracks migrations in schema_migrations so
+-- this won't re-run; the guard is belt-and-suspenders in case of manual re-apply.
 INSERT INTO public.sponsorship_items
   (name, description, price_cents, max_quantity, active, year, sort_order)
-VALUES
-  ('Morning Biscuit Sponsor', NULL, 0, NULL, false, 2026, 90),
-  ('Shot of the Day', NULL, 0, NULL, false, 2026, 100)
-ON CONFLICT (name, year) DO NOTHING;
+SELECT * FROM (VALUES
+  ('Morning Biscuit Sponsor'::text, NULL::text, 0::int, NULL::int, false, 2026, 90),
+  ('Shot of the Day'::text, NULL::text, 0::int, NULL::int, false, 2026, 100)
+) AS new_tiers(name, description, price_cents, max_quantity, active, year, sort_order)
+WHERE NOT EXISTS (
+  SELECT 1 FROM public.sponsorship_items existing
+  WHERE existing.name = new_tiers.name AND existing.year = new_tiers.year
+);
 
 -- ========== 4. Backfill denorm contacts → contacts + sponsor_contacts ==========
 

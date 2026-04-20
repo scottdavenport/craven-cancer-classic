@@ -277,7 +277,16 @@ function SponsorForm({
         <div className="space-y-2">
           <Label htmlFor="tier_id">Sponsorship level</Label>
           <input type="hidden" name="tier_id" value={tierId} />
-          <Select value={tierId} onValueChange={(v) => setTierId(v ?? "")}>
+          <Select
+            value={tierId}
+            onValueChange={(v) => setTierId(v ?? "")}
+            items={Object.fromEntries(
+              sponsorshipItems.map((item) => [
+                item.id,
+                `${item.name} — $${(item.price_cents / 100).toLocaleString()}`,
+              ])
+            )}
+          >
             <SelectTrigger id="tier_id" className="w-full h-8">
               <SelectValue placeholder="Select a level" />
             </SelectTrigger>
@@ -327,7 +336,11 @@ function SponsorForm({
         <div className="space-y-2">
           <Label htmlFor="payment_status">Payment Status</Label>
           <input type="hidden" name="payment_status" value={paymentStatus} />
-          <Select value={paymentStatus} onValueChange={(v) => setPaymentStatus(v ?? "pending")}>
+          <Select
+            value={paymentStatus}
+            onValueChange={(v) => setPaymentStatus(v ?? "pending")}
+            items={{ pending: "Pending", paid: "Paid", comped: "Comped" }}
+          >
             <SelectTrigger id="payment_status" className="w-full h-8">
               <SelectValue />
             </SelectTrigger>

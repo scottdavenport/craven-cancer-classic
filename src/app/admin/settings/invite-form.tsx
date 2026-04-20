@@ -102,6 +102,7 @@ export function InviteForm() {
             <Select
               value={role}
               onValueChange={(v) => setRole((v as "admin" | "viewer") ?? "viewer")}
+              items={{ admin: "Admin", viewer: "Viewer" }}
             >
               <SelectTrigger id="invite-role" className="w-full">
                 <SelectValue />

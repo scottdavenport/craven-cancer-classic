@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Check, X, Trash2 } from "lucide-react";
 import { updatePhotoStatus, deletePhoto } from "./actions";
 import type { Photo } from "@/types/database";
@@ -46,6 +47,7 @@ function StatusBadge({ status }: { status: string }) {
 export function PhotoModeration({ photos }: PhotoModerationProps) {
   const [tab, setTab] = useState<FilterTab>("pending");
   const [loading, setLoading] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null);
 
   const filtered =
     tab === "all" ? photos : photos.filter((p) => p.status === tab);
@@ -65,10 +67,10 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
     setLoading(null);
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Permanently delete this photo?")) return;
-    setLoading(id);
-    await deletePhoto(id);
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return;
+    setLoading(deleteTarget.id);
+    await deletePhoto(deleteTarget.id);
     setLoading(null);
   }
 
@@ -186,7 +188,7 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => handleDelete(photo.id)}
+                    onClick={() => setDeleteTarget(photo)}
                     disabled={loading === photo.id}
                     className="ml-auto text-destructive hover:bg-destructive/10 transition-colors duration-150"
                   >
@@ -198,6 +200,15 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Permanently delete this photo?"
+        description="This action cannot be undone. The photo will be removed permanently."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirmed}
+      />
     </div>
   );
 }

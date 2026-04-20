@@ -142,19 +142,33 @@ async function processDownstream(
       return NextResponse.json({ error: "db_update_failed" }, { status: 500 });
     }
 
-    // Auto-create contact from captain
-    const { data: team } = await supabase
-      .from("teams")
-      .select("captain_name, captain_email, captain_phone")
-      .eq("id", metadata.team_id)
+    // Auto-create contact from captain — resolve via team_members → contacts join
+    // (teams.captain_name/email/phone columns have been dropped in S11-2)
+    const { data: captainMember } = await supabase
+      .from("team_members")
+      .select("contacts(full_name, email, phone)")
+      .eq("team_id", metadata.team_id)
+      .eq("role", "captain")
       .single();
 
-    if (team) {
+    if (!captainMember || !captainMember.contacts) {
+      // Defensive: captain row absent in team_members — log and skip upsert
+      console.warn("[stripe-webhook] no captain found in team_members for team", {
+        teamId: metadata.team_id,
+        eventId,
+      });
+    } else if (!captainMember.contacts.email) {
+      // Defensive: captain contact has null email — cannot deduplicate, skip upsert
+      console.warn("[stripe-webhook] captain contact has null email for team", {
+        teamId: metadata.team_id,
+        eventId,
+      });
+    } else {
       const { error: contactUpsertError } = await supabase.from("contacts").upsert(
         {
-          full_name: team.captain_name,
-          email: team.captain_email,
-          phone: team.captain_phone,
+          full_name: captainMember.contacts.full_name,
+          email: captainMember.contacts.email,
+          phone: captainMember.contacts.phone,
           type: "player" as const,
         },
         { onConflict: "email" }

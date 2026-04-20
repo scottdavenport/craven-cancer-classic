@@ -65,6 +65,28 @@ vi.mock("@supabase/supabase-js", () => ({
           upsert: () => mockUpsertResult,
         };
       }
+      if (table === "team_members") {
+        // S11-2: webhook now looks up captain via team_members → contacts join
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                single: () =>
+                  Promise.resolve({
+                    data: {
+                      contacts: {
+                        full_name: "Test Captain",
+                        email: "captain@test.com",
+                        phone: null,
+                      },
+                    },
+                    error: null,
+                  }),
+              }),
+            }),
+          }),
+        };
+      }
       return {
         update: () => ({
           eq: () => mockUpdateResult,

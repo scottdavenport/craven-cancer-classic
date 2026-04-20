@@ -591,9 +591,6 @@ export type Database = {
         Row: {
           amount_paid_cents: number
           captain_contact_id: string | null
-          captain_email: string
-          captain_name: string
-          captain_phone: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
@@ -608,9 +605,6 @@ export type Database = {
         Insert: {
           amount_paid_cents?: number
           captain_contact_id?: string | null
-          captain_email: string
-          captain_name: string
-          captain_phone?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -625,9 +619,6 @@ export type Database = {
         Update: {
           amount_paid_cents?: number
           captain_contact_id?: string | null
-          captain_email?: string
-          captain_name?: string
-          captain_phone?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -893,9 +884,6 @@ export type Database = {
         Row: {
           amount_paid_cents: number | null
           captain_contact_id: string | null
-          captain_email: string | null
-          captain_name: string | null
-          captain_phone: string | null
           created_at: string | null
           deleted_at: string | null
           deleted_by: string | null
@@ -910,9 +898,6 @@ export type Database = {
         Insert: {
           amount_paid_cents?: number | null
           captain_contact_id?: string | null
-          captain_email?: string | null
-          captain_name?: string | null
-          captain_phone?: string | null
           created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
@@ -927,9 +912,6 @@ export type Database = {
         Update: {
           amount_paid_cents?: number | null
           captain_contact_id?: string | null
-          captain_email?: string | null
-          captain_name?: string | null
-          captain_phone?: string | null
           created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null

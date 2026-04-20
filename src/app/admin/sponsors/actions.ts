@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import DOMPurify from "isomorphic-dompurify";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { softDelete } from "@/lib/supabase/soft-delete";
@@ -123,13 +124,11 @@ export async function deleteSponsor(
 }
 
 function sanitizeSvg(text: string): string {
-  // Strip full <script>...</script> blocks
-  let cleaned = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
-  // Strip self-closing <script ... /> tags
-  cleaned = cleaned.replace(/<script\b[^>]*\/?>/gi, "");
-  // Strip on* event handler attributes on any element (on="..." or on='...' or unquoted)
-  cleaned = cleaned.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-  return cleaned;
+  return DOMPurify.sanitize(text, {
+    USE_PROFILES: { svg: true, svgFilters: true },
+    FORBID_TAGS: ["script", "foreignObject", "iframe", "embed", "object"],
+    FORBID_ATTR: ["xlink:href"],
+  });
 }
 
 async function sanitizeSvgIfNeeded(file: File): Promise<File> {

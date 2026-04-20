@@ -14,6 +14,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -71,13 +72,15 @@ const groups = [
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const { state } = useSidebar();
+  const logoSrc = state === "collapsed" ? "/brand/ccc-logo-mark.svg" : "/brand/ccc-logo-full.svg";
 
   return (
     <Sidebar className="bg-neutral-50">
       <SidebarHeader className="border-b border-sidebar-border px-4 py-3">
         <Link href="/admin" className="flex items-center gap-2">
           <Image
-            src="/brand/ccc-logo-full.svg"
+            src={logoSrc}
             alt="CCC"
             width={120}
             height={43}

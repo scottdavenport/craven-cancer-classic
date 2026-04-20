@@ -293,6 +293,53 @@ describe("uploadSponsorLogo", () => {
     expect(uploadedText).not.toContain("alert('x')");
   });
 
+  it("SVG with self-closing <script src=.../> tag: script attribute is stripped", async () => {
+    const svgWithSelfClose = `<svg xmlns="http://www.w3.org/2000/svg"><script src="http://evil.com/x.js"/><rect width="100" height="100"/></svg>`;
+    const mockUpload = vi.fn().mockResolvedValue({ error: null });
+    const mockStorageFrom = vi.fn().mockReturnValue({
+      upload: mockUpload,
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "https://example.com/logos/test.svg" } }),
+      remove: vi.fn(),
+    });
+    setClient({
+      storage: { from: mockStorageFrom },
+    });
+
+    const svgFile = new File([svgWithSelfClose], "logo.svg", { type: "image/svg+xml" });
+    const fd = makeFileFormData(svgFile);
+    const result = await uploadSponsorLogo(fd);
+
+    expect((result as { url: string }).url).toBeTruthy();
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/<script/i);
+    expect(uploadedText).not.toContain("evil.com");
+  });
+
+  it("SVG with on* event handler attribute: onclick removed, <rect> preserved", async () => {
+    const svgWithOnClick = `<svg xmlns="http://www.w3.org/2000/svg"><rect onclick="alert(1)" width="100" height="100"/></svg>`;
+    const mockUpload = vi.fn().mockResolvedValue({ error: null });
+    const mockStorageFrom = vi.fn().mockReturnValue({
+      upload: mockUpload,
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "https://example.com/logos/test.svg" } }),
+      remove: vi.fn(),
+    });
+    setClient({
+      storage: { from: mockStorageFrom },
+    });
+
+    const svgFile = new File([svgWithOnClick], "logo.svg", { type: "image/svg+xml" });
+    const fd = makeFileFormData(svgFile);
+    const result = await uploadSponsorLogo(fd);
+
+    expect((result as { url: string }).url).toBeTruthy();
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/onclick/i);
+    expect(uploadedText).not.toContain("alert(1)");
+    expect(uploadedText).toContain("<rect");
+  });
+
   it("when oldLogoUrl provided, Storage .remove() is called before upload", async () => {
     const mockRemove = vi.fn().mockResolvedValue({ error: null });
     const mockUpload = vi.fn().mockResolvedValue({ error: null });

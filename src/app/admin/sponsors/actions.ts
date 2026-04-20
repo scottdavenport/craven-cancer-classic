@@ -122,10 +122,20 @@ export async function deleteSponsor(
   return softDelete(supabase, "sponsors", id);
 }
 
+function sanitizeSvg(text: string): string {
+  // Strip full <script>...</script> blocks
+  let cleaned = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  // Strip self-closing <script ... /> tags
+  cleaned = cleaned.replace(/<script\b[^>]*\/?>/gi, "");
+  // Strip on* event handler attributes on any element (on="..." or on='...' or unquoted)
+  cleaned = cleaned.replace(/\s+on[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "");
+  return cleaned;
+}
+
 async function sanitizeSvgIfNeeded(file: File): Promise<File> {
   if (file.type !== "image/svg+xml") return file;
   const text = await file.text();
-  const cleaned = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  const cleaned = sanitizeSvg(text);
   return new File([cleaned], file.name, { type: file.type });
 }
 

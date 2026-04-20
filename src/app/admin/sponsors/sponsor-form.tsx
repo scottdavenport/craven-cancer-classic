@@ -59,6 +59,7 @@ export function SponsorForm({
       ? formatPhoneForDisplay(defaultValues.contact_phone)
       : ""
   );
+  const [nameError, setNameError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
@@ -80,14 +81,17 @@ export function SponsorForm({
     e.preventDefault();
 
     const form = e.currentTarget;
+    const nameValue = (form.elements.namedItem("name") as HTMLInputElement)?.value ?? "";
     const emailValue = (form.elements.namedItem("contact_email") as HTMLInputElement)?.value ?? "";
+    const nameValid = nameValue.trim().length > 0;
     const emailValid = isValidEmail(emailValue);
     const phoneValid = isSponsorPhoneValid(phone);
 
+    if (!nameValid) setNameError("Sponsor name is required");
     if (!emailValid) setEmailError("Invalid email format");
     if (!phoneValid) setPhoneError("Invalid phone number");
 
-    if (!emailValid || !phoneValid || fileError) return;
+    if (!nameValid || !emailValid || !phoneValid || fileError) return;
 
     const formData = new FormData(form);
     // Replace raw phone field with current controlled state
@@ -105,7 +109,11 @@ export function SponsorForm({
             name="name"
             defaultValue={defaultValues?.name}
             required
+            onChange={() => setNameError(null)}
           />
+          {nameError && (
+            <p className="text-destructive text-sm">{nameError}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="sf-tier_id">Sponsorship level</Label>

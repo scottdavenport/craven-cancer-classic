@@ -41,9 +41,6 @@ function makeSponsor(overrides: Partial<Sponsor> = {}): Sponsor {
     id: "sponsor-uuid-1",
     name: "Acme Corp",
     tier_id: "tier-gold",
-    contact_name: "Jane Doe",
-    contact_email: "jane@acme.com",
-    contact_phone: null,
     website: "https://acme.com",
     logo_url: null,
     payment_status: "pending",
@@ -68,7 +65,6 @@ const seedSponsors: Sponsor[] = [
     id: "s2",
     name: "Blue Ridge Bank",
     tier_id: "tier-silver",
-    contact_name: "Bob Baker",
     website: "https://blueridgebank.com",
     payment_status: "paid",
     amount_paid_cents: 250000,
@@ -77,7 +73,6 @@ const seedSponsors: Sponsor[] = [
     id: "s3",
     name: "Cedar Lawn Care",
     tier_id: "tier-orphan", // NOT in sponsorshipItems — deleted package
-    contact_name: "Carol Chen",
     website: "https://cedarlawn.com",
     payment_status: "comped",
     amount_paid_cents: 0,
@@ -86,7 +81,6 @@ const seedSponsors: Sponsor[] = [
     id: "s4",
     name: "Delta Dental",
     tier_id: "tier-gold",
-    contact_name: "Dave Diaz",
     website: "https://deltadental.com",
     payment_status: "pending",
     amount_paid_cents: 500000,
@@ -95,7 +89,6 @@ const seedSponsors: Sponsor[] = [
     id: "s1",
     name: "Apex Roofing",
     tier_id: "tier-gold",
-    contact_name: "Alice Anderson",
     website: "https://apexroofing.com",
     payment_status: "pending",
     amount_paid_cents: 500000,
@@ -130,19 +123,6 @@ describe("SponsorList", () => {
       expect(screen.getByText("Apex Roofing")).toBeInTheDocument();
       expect(screen.queryByText("Blue Ridge Bank")).not.toBeInTheDocument();
       expect(screen.queryByText("Cedar Lawn Care")).not.toBeInTheDocument();
-    });
-
-    it("typing in the search input narrows rows by contact_name", async () => {
-      const user = userEvent.setup();
-      render(
-        <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
-      );
-
-      const searchInput = screen.getByPlaceholderText(/search sponsors/i);
-      await user.type(searchInput, "Bob Baker");
-
-      expect(screen.getByText("Blue Ridge Bank")).toBeInTheDocument();
-      expect(screen.queryByText("Apex Roofing")).not.toBeInTheDocument();
     });
 
     it("typing in the search input narrows rows by website", async () => {
@@ -474,9 +454,6 @@ describe("SponsorList — inactive badge (#199)", () => {
       id: "sponsor-badge-test",
       name: "Badge Test Corp",
       tier_id: "tier-gold",
-      contact_name: null,
-      contact_email: null,
-      contact_phone: null,
       website: null,
       logo_url: null,
       payment_status: "paid",

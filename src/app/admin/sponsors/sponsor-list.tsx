@@ -115,7 +115,6 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
           const tierName = s.tier_id ? (tierNameById.get(s.tier_id) ?? "") : "";
           return (
             s.name.toLowerCase().includes(q) ||
-            ((s as Sponsor & { contact_name?: string }).contact_name ?? "").toLowerCase().includes(q) ||
             (s.website ?? "").toLowerCase().includes(q) ||
             tierName.toLowerCase().includes(q)
           );

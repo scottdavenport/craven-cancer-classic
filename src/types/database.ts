@@ -378,9 +378,6 @@ export type Database = {
       sponsors: {
         Row: {
           amount_paid_cents: number
-          contact_email: string | null
-          contact_name: string | null
-          contact_phone: string | null
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
@@ -397,9 +394,6 @@ export type Database = {
         }
         Insert: {
           amount_paid_cents?: number
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -416,9 +410,6 @@ export type Database = {
         }
         Update: {
           amount_paid_cents?: number
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -805,14 +796,12 @@ export type Database = {
       sponsors_active: {
         Row: {
           amount_paid_cents: number | null
-          contact_email: string | null
-          contact_name: string | null
-          contact_phone: string | null
           created_at: string | null
           deleted_at: string | null
           deleted_by: string | null
           display_order: number | null
           id: string | null
+          is_active: boolean | null
           logo_url: string | null
           name: string | null
           payment_status: string | null
@@ -823,14 +812,12 @@ export type Database = {
         }
         Insert: {
           amount_paid_cents?: number | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
           created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           display_order?: number | null
           id?: string | null
+          is_active?: boolean | null
           logo_url?: string | null
           name?: string | null
           payment_status?: string | null
@@ -841,14 +828,12 @@ export type Database = {
         }
         Update: {
           amount_paid_cents?: number | null
-          contact_email?: string | null
-          contact_name?: string | null
-          contact_phone?: string | null
           created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
           display_order?: number | null
           id?: string | null
+          is_active?: boolean | null
           logo_url?: string | null
           name?: string | null
           payment_status?: string | null

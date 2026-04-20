@@ -79,6 +79,29 @@ export async function importScoresFromCSV(csvText: string) {
   return { success: true, count: scores.length };
 }
 
+export async function updateScore(
+  id: string,
+  data: { team_name: string; total_score: number; session: "morning" | "afternoon" | null }
+) {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("scores")
+    .update({
+      team_name: data.team_name,
+      total_score: data.total_score,
+      session: data.session,
+    })
+    .eq("id", id);
+
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/scores");
+  revalidatePath("/leaderboard");
+  return { success: true };
+}
+
 export async function deleteScore(id: string) {
   await requireAdmin();
   const supabase = await createClient();

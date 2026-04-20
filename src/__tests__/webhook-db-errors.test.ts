@@ -192,15 +192,8 @@ describe("S2-2 webhook DB-error handling", () => {
     it("does NOT return 500 when contacts.upsert fails — non-critical path", async () => {
       mockConstructEvent.mockReturnValue(makeRegistrationEvent());
       mockUpdateResult = { data: {}, error: null };
-      // Return a team so the upsert path is exercised
-      mockSelectResult = {
-        data: {
-          captain_name: "Jane Doe",
-          captain_email: "jane@example.com",
-          captain_phone: "555-1234",
-        },
-        error: null,
-      };
+      // Captain is resolved via the team_members mock (S11-2); no mockSelectResult needed here.
+      // The upsert error path is exercised via mockUpsertResult.
       mockUpsertResult = { data: null, error: { message: "unique violation", code: "23505" } };
 
       const response = await callWebhook();

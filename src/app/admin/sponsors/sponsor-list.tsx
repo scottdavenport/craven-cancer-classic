@@ -18,6 +18,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import { createSponsor, updateSponsor, deleteSponsor } from "./actions";
 import type { Sponsor } from "@/types/database";
@@ -39,6 +47,7 @@ export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Sponsor | null>(null);
 
   async function handleCreate(formData: FormData) {
     setError(null);
@@ -76,11 +85,11 @@ export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Are you sure you want to delete this sponsor?")) return;
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return;
     setLoading(true);
     try {
-      const result = await deleteSponsor(id);
+      const result = await deleteSponsor(deleteTarget.id);
       if (result && "error" in result && typeof result.error === "string") {
         setError(result.error);
       }
@@ -208,7 +217,7 @@ export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              onClick={() => handleDelete(sponsor.id)}
+                              onClick={() => setDeleteTarget(sponsor)}
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -224,6 +233,15 @@ export function SponsorList({ sponsors, sponsorshipItems }: SponsorListProps) {
           </div>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete this sponsor?"
+        description="Are you sure you want to delete this sponsor? This action cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirmed}
+      />
     </div>
   );
 }
@@ -241,6 +259,9 @@ function SponsorForm({
   onCancel: () => void;
   sponsorshipItems: SponsorshipItemOption[];
 }) {
+  const [tierId, setTierId] = useState(defaultValues?.tier_id ?? "");
+  const [paymentStatus, setPaymentStatus] = useState(defaultValues?.payment_status ?? "pending");
+
   return (
     <form action={onSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -255,20 +276,19 @@ function SponsorForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="tier_id">Sponsorship level</Label>
-          <select
-            id="tier_id"
-            name="tier_id"
-            required
-            defaultValue={defaultValues?.tier_id ?? ""}
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-          >
-            <option value="" disabled>Select a level</option>
-            {sponsorshipItems.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.name} — ${(item.price_cents / 100).toLocaleString()}
-              </option>
-            ))}
-          </select>
+          <input type="hidden" name="tier_id" value={tierId} />
+          <Select value={tierId} onValueChange={(v) => setTierId(v ?? "")}>
+            <SelectTrigger id="tier_id" className="w-full h-8">
+              <SelectValue placeholder="Select a level" />
+            </SelectTrigger>
+            <SelectContent>
+              {sponsorshipItems.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name} — ${(item.price_cents / 100).toLocaleString()}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="contact_name">Contact Name</Label>
@@ -306,16 +326,17 @@ function SponsorForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="payment_status">Payment Status</Label>
-          <select
-            id="payment_status"
-            name="payment_status"
-            defaultValue={defaultValues?.payment_status ?? "pending"}
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-          >
-            <option value="pending">Pending</option>
-            <option value="paid">Paid</option>
-            <option value="comped">Comped</option>
-          </select>
+          <input type="hidden" name="payment_status" value={paymentStatus} />
+          <Select value={paymentStatus} onValueChange={(v) => setPaymentStatus(v ?? "pending")}>
+            <SelectTrigger id="payment_status" className="w-full h-8">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="comped">Comped</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-2">
           <Label htmlFor="amount_paid">Amount Paid</Label>

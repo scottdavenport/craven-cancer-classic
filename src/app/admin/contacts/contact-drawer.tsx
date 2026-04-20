@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -9,6 +10,7 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ContactForm } from "./contact-form";
 import { createContact, updateContact, deleteContact } from "./actions";
 import type { ContactInput } from "./actions";
@@ -31,19 +33,15 @@ export function ContactDrawer({
   onSuccess,
   onDelete,
 }: ContactDrawerProps) {
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
   const title =
     mode === "create"
       ? "New Contact"
       : `Edit Contact: ${contact?.full_name ?? ""}`;
 
-  async function handleDelete() {
+  async function handleDeleteConfirmed() {
     if (!contact) return;
-    if (
-      !confirm(
-        `Soft-delete ${contact.full_name}? They'll be moved to Trash and hidden from default views. You can restore from Admin → Trash later.`
-      )
-    )
-      return;
     const result = await deleteContact(contact.id);
     if ("error" in result) {
       toast.error(result.error);
@@ -71,38 +69,49 @@ export function ContactDrawer({
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="sm:max-w-[480px] flex flex-col overflow-hidden p-0"
-        showCloseButton={false}
-      >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
-          <SheetTitle>{title}</SheetTitle>
-        </SheetHeader>
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent
+          side="right"
+          className="sm:max-w-[480px] flex flex-col overflow-hidden p-0"
+          showCloseButton={false}
+        >
+          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+            <SheetTitle>{title}</SheetTitle>
+          </SheetHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <ContactForm
-            initial={contact ?? undefined}
-            onSubmit={handleSubmit}
-            onCancel={() => onOpenChange(false)}
-            submitLabel={mode === "create" ? "Create" : "Save"}
-          />
-        </div>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <ContactForm
+              initial={contact ?? undefined}
+              onSubmit={handleSubmit}
+              onCancel={() => onOpenChange(false)}
+              submitLabel={mode === "create" ? "Create" : "Save"}
+            />
+          </div>
 
-        {mode === "edit" && contact && (
-          <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
-            <Button
-              type="button"
-              variant="outline"
-              className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
-              onClick={handleDelete}
-            >
-              Delete contact
-            </Button>
-          </SheetFooter>
-        )}
-      </SheetContent>
-    </Sheet>
+          {mode === "edit" && contact && (
+            <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+              <Button
+                type="button"
+                variant="outline"
+                className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={() => setConfirmOpen(true)}
+              >
+                Delete contact
+              </Button>
+            </SheetFooter>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={`Delete ${contact?.full_name ?? "this contact"}?`}
+        description="They'll be moved to Trash and hidden from default views. You can restore from Admin → Trash later."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirmed}
+      />
+    </>
   );
 }

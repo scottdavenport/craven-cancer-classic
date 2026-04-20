@@ -14,6 +14,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 import {
   createSponsorshipItem,
@@ -35,6 +43,7 @@ export function SponsorshipManager({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SponsorshipItem | null>(null);
 
   const totalRevenue = purchases
     .filter((p) => p.payment_status === "paid")
@@ -76,11 +85,11 @@ export function SponsorshipManager({
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this sponsorship package?")) return;
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return;
     setLoading(true);
     try {
-      const result = await deleteSponsorshipItem(id);
+      const result = await deleteSponsorshipItem(deleteTarget.id);
       if (result && "error" in result && typeof result.error === "string") {
         setError(result.error);
       }
@@ -221,7 +230,7 @@ export function SponsorshipManager({
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              onClick={() => handleDelete(item.id)}
+                              onClick={() => setDeleteTarget(item)}
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
@@ -294,6 +303,15 @@ export function SponsorshipManager({
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete this sponsorship package?"
+        description="This action cannot be undone. The package will be permanently removed."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirmed}
+      />
     </div>
   );
 }
@@ -309,6 +327,10 @@ function ItemForm({
   loading: boolean;
   onCancel: () => void;
 }) {
+  const [active, setActive] = useState(
+    defaultValues?.active !== false ? "true" : "false"
+  );
+
   return (
     <form action={onSubmit} className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
@@ -352,15 +374,16 @@ function ItemForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="item_active">Status</Label>
-          <select
-            id="item_active"
-            name="active"
-            defaultValue={defaultValues?.active !== false ? "true" : "false"}
-            className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-          >
-            <option value="true">Active</option>
-            <option value="false">Inactive</option>
-          </select>
+          <input type="hidden" name="active" value={active} />
+          <Select value={active} onValueChange={(v) => setActive(v ?? "true")}>
+            <SelectTrigger id="item_active" className="h-8 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">Active</SelectItem>
+              <SelectItem value="false">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
       <div className="flex gap-2">

@@ -15,6 +15,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Upload, Trash2 } from "lucide-react";
 import {
   addScore,
@@ -35,6 +43,9 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [session, setSession] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
 
   async function handleAdd(formData: FormData) {
     setError(null);
@@ -45,6 +56,7 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
         setError(result.error);
       } else {
         setShowAdd(false);
+        setSession("");
         setSuccess("Score added");
         setTimeout(() => setSuccess(null), 3000);
       }
@@ -78,18 +90,12 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (!confirm("Delete this score?")) return;
-    await deleteScore(id);
+  async function handleDeleteConfirmed() {
+    if (!deleteTarget) return;
+    await deleteScore(deleteTarget);
   }
 
-  async function handleDeleteAll() {
-    if (
-      !confirm(
-        "Delete ALL scores for this year? This cannot be undone."
-      )
-    )
-      return;
+  async function handleDeleteAllConfirmed() {
     setLoading(true);
     const result = await deleteAllScores();
     if (result && "error" in result && typeof result.error === "string") {
@@ -129,7 +135,7 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
           <Button
             size="sm"
             variant="ghost"
-            onClick={handleDeleteAll}
+            onClick={() => setConfirmDeleteAll(true)}
             className="ml-auto text-destructive hover:text-destructive hover:bg-destructive/10"
           >
             <Trash2 className="mr-1 h-4 w-4" />
@@ -162,15 +168,17 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="score_session">Session</Label>
-                  <select
-                    id="score_session"
-                    name="session"
-                    className="h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm"
-                  >
-                    <option value="">N/A</option>
-                    <option value="morning">Morning</option>
-                    <option value="afternoon">Afternoon</option>
-                  </select>
+                  <input type="hidden" name="session" value={session} />
+                  <Select value={session} onValueChange={(v) => setSession(v ?? "")}>
+                    <SelectTrigger id="score_session" className="h-8 w-full">
+                      <SelectValue placeholder="N/A" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="">N/A</SelectItem>
+                      <SelectItem value="morning">Morning</SelectItem>
+                      <SelectItem value="afternoon">Afternoon</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -282,7 +290,7 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
                     <Button
                       variant="ghost"
                       size="icon-sm"
-                      onClick={() => handleDelete(score.id)}
+                      onClick={() => setDeleteTarget(score.id)}
                       className="text-destructive hover:text-destructive hover:bg-destructive/10"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -294,6 +302,24 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
           </TableBody>
         </Table>
       </div>
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        title="Delete this score?"
+        description="This score will be permanently removed."
+        confirmLabel="Delete"
+        onConfirm={handleDeleteConfirmed}
+      />
+
+      <ConfirmDialog
+        open={confirmDeleteAll}
+        onOpenChange={setConfirmDeleteAll}
+        title="Delete ALL scores for this year?"
+        description="This cannot be undone. All scores for the current year will be permanently removed."
+        confirmLabel="Delete All"
+        onConfirm={handleDeleteAllConfirmed}
+      />
     </div>
   );
 }

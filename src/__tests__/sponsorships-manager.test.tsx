@@ -156,7 +156,7 @@ describe("SponsorshipManager", () => {
     it("each package row renders its active_sponsor_count in the Sponsors column cell", () => {
       const items = [
         makeItem({ id: "tier-1", name: "Gold", active_sponsor_count: 3 }),
-        makeItem({ id: "tier-2", name: "Silver", active_sponsor_count: 1 }),
+        makeItem({ id: "tier-2", name: "Silver", active_sponsor_count: 2 }),
       ];
 
       render(<SponsorshipManager items={items} purchases={NO_PURCHASES} />);
@@ -170,7 +170,7 @@ describe("SponsorshipManager", () => {
       expect(silverRow).toBeDefined();
 
       expect(within(goldRow!).getByText("3")).toBeInTheDocument();
-      expect(within(silverRow!).getByText("1")).toBeInTheDocument();
+      expect(within(silverRow!).getByText("2")).toBeInTheDocument();
     });
 
     it('a package with active_sponsor_count: 0 renders the literal "0" (not hidden)', () => {

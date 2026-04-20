@@ -393,7 +393,25 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
   const [player4, setPlayer4] = useState<ContactSearchResult | null>(initialContact("player", 4));
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [anyInlineOpen, setAnyInlineOpen] = useState(false);
+  // Set of slot IDs currently showing an inline create-contact form.
+  // Using a Set instead of a boolean prevents a race: if two inline forms were
+  // open simultaneously, closing the first would not prematurely clear the gate.
+  const [inlineOpenSlots, setInlineOpenSlots] = useState<Set<string>>(new Set());
+  const anyInlineOpen = inlineOpenSlots.size > 0;
+
+  function makeInlineHandler(slotId: string) {
+    return (open: boolean) => {
+      setInlineOpenSlots((prev) => {
+        const next = new Set(prev);
+        if (open) {
+          next.add(slotId);
+        } else {
+          next.delete(slotId);
+        }
+        return next;
+      });
+    };
+  }
 
   // All selected contact IDs (for exclusion in other pickers)
   const allSelected = [captain, player2, player3, player4]
@@ -480,7 +498,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         value={captain}
         onChange={setCaptain}
         exclude={excludeFor(captain)}
-        onInlineOpenChange={setAnyInlineOpen}
+        onInlineOpenChange={makeInlineHandler("captain")}
       />
 
       {/* Player 2 */}
@@ -489,7 +507,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         value={player2}
         onChange={setPlayer2}
         exclude={excludeFor(player2)}
-        onInlineOpenChange={setAnyInlineOpen}
+        onInlineOpenChange={makeInlineHandler("player2")}
       />
 
       {/* Player 3 */}
@@ -498,7 +516,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         value={player3}
         onChange={setPlayer3}
         exclude={excludeFor(player3)}
-        onInlineOpenChange={setAnyInlineOpen}
+        onInlineOpenChange={makeInlineHandler("player3")}
       />
 
       {/* Player 4 */}
@@ -507,7 +525,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         value={player4}
         onChange={setPlayer4}
         exclude={excludeFor(player4)}
-        onInlineOpenChange={setAnyInlineOpen}
+        onInlineOpenChange={makeInlineHandler("player4")}
       />
 
       {error && (

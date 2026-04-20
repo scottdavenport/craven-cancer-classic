@@ -19,9 +19,9 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus } from "lucide-react";
 import { markTeamPaid, deleteTeam, getScoreCount } from "./actions";
-import { TeamForm } from "./team-form";
+import { TeamDrawer } from "./team-drawer";
 import type { TeamWithMembers } from "./actions";
 
 // ---------------------------------------------------------------------------
@@ -141,7 +141,7 @@ interface DeleteTeamDialogProps {
   onDeleted: () => void;
 }
 
-function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: DeleteTeamDialogProps) {
+export function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: DeleteTeamDialogProps) {
   const [confirmText, setConfirmText] = useState("");
   const [scoreCount, setScoreCount] = useState<number | null>(null);
   const [pending, startTransition] = useTransition();
@@ -283,29 +283,25 @@ interface TeamListProps {
   defaultFeeDollars: number;
 }
 
-type ModalState =
-  | { type: "none" }
-  | { type: "new" }
-  | { type: "edit"; team: TeamWithMembers };
+type DrawerState = {
+  open: boolean;
+  mode: "create" | "edit";
+  team: TeamWithMembers | null;
+};
 
 export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListProps) {
   const [teams, setTeams] = useState<TeamWithMembers[]>(initialTeams);
-  const [modal, setModal] = useState<ModalState>({ type: "none" });
+  const [drawer, setDrawer] = useState<DrawerState>({ open: false, mode: "create", team: null });
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
-  const [deletingTeam, setDeletingTeam] = useState<TeamWithMembers | null>(null);
 
   // After a mutation we refresh by reloading the page (server component pattern)
-  function handleFormSuccess() {
-    setModal({ type: "none" });
+  function handleDrawerSuccess() {
+    setDrawer((d) => ({ ...d, open: false }));
     window.location.reload();
   }
 
   function handleMarkPaidDone() {
     setMarkingPaidId(null);
-    window.location.reload();
-  }
-
-  function handleDeleted() {
     window.location.reload();
   }
 
@@ -326,7 +322,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
         <p className="text-[0.8125rem] text-muted-foreground">
           {teams.length} team{teams.length !== 1 ? "s" : ""}
         </p>
-        <Button size="sm" onClick={() => setModal({ type: "new" })}>
+        <Button size="sm" onClick={() => setDrawer({ open: true, mode: "create", team: null })}>
           <Plus className="size-4" />
           New Team
         </Button>
@@ -426,7 +422,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setModal({ type: "edit", team })}
+                          onClick={() => setDrawer({ open: true, mode: "edit", team })}
                         >
                           Edit
                         </Button>
@@ -443,14 +439,6 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
                             Mark Paid
                           </Button>
                         )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10 border-destructive/30"
-                          onClick={() => setDeletingTeam(team)}
-                        >
-                          <Trash2 className="size-3.5" />
-                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -475,37 +463,13 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
         </Table>
       </div>
 
-      {/* New / Edit modal */}
-      <Dialog
-        open={modal.type !== "none"}
-        onOpenChange={(open) => {
-          if (!open) setModal({ type: "none" });
-        }}
-      >
-        <DialogContent className="sm:max-w-lg overflow-y-auto max-h-[90vh]">
-          <DialogHeader>
-            <DialogTitle>
-              {modal.type === "edit" ? `Edit: ${modal.team.team_name}` : "New Team"}
-            </DialogTitle>
-          </DialogHeader>
-          <TeamForm
-            team={modal.type === "edit" ? modal.team : null}
-            onSuccess={handleFormSuccess}
-            onCancel={() => setModal({ type: "none" })}
-          />
-          <DialogFooter />
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete confirm dialog */}
-      {deletingTeam && (
-        <DeleteTeamDialog
-          team={deletingTeam}
-          open={deletingTeam !== null}
-          onOpenChange={(open) => { if (!open) setDeletingTeam(null); }}
-          onDeleted={handleDeleted}
-        />
-      )}
+      <TeamDrawer
+        open={drawer.open}
+        mode={drawer.mode}
+        team={drawer.team}
+        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
+        onSuccess={handleDrawerSuccess}
+      />
     </div>
   );
 }

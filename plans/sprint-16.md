@@ -6,6 +6,22 @@ Main HEAD at plan time: `81a94a4`
 
 ---
 
+## Decisions locked (Forge + Scott, 2026-04-20)
+
+1. **Logo mark extraction — Bolt first.** The full SVG has 6 paths: 4 emblem (3 teal swoops `#9fbfc7` / `#05a5c0` / `#5797a6` + center "C" with golf-ball detail) + 2 wordmark. No gradients, no clipping masks, no cross-path refs. Mechanical extraction: drop paths 5-6, crop viewBox from `0 0 2637 942` to approximately `0 0 942 942` (square, covers the emblem). If visual QA fails at 16px (favicon) or 32px, escalate to Pixel as a follow-up pass — do not block PR A merge on visual tuning.
+
+2. **Revenue card display format — `$12,345`** (dollars rounded, thousands separator, no cents). `amount_paid_cents` summed from `sponsors_active`, divided by 100, formatted as `toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 })`. Spec asserts this exact format.
+
+3. **Bottom `LinkButton` shortcuts removed in PR B.** The existing `Manage Registrations` / `Upload Scores` buttons below the stat grid are superseded by clickable cards. Remove them cleanly.
+
+4. **Teams and Registrations are the same concept** (S11 rename). Do NOT add both cards. The existing Registrations card stays (now with real count from `teams_active` filtered by current year); #164's "Teams card" is not added as a duplicate.
+
+5. **Current-year filter on teams count** — `teams.year` column exists and is indexed (confirmed via migration grep). Apply `eq("year", currentYear)`.
+
+6. **Favicon swap — Bolt picks between `src/app/icon.svg` (static) or `src/app/icon.tsx` (dynamic route)** based on what the Next.js App Router setup uses elsewhere. Prefer static `icon.svg` unless there's a reason to generate dynamically.
+
+---
+
 ## Issues in scope
 
 | # | Title | Priority | Size |

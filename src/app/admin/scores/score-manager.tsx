@@ -1,12 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,118 +13,93 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Upload, Trash2 } from "lucide-react";
-import {
-  addScore,
-  importScoresFromCSV,
-  deleteScore,
-  deleteAllScores,
-} from "./actions";
+import { importScoresFromCSV, deleteAllScores } from "./actions";
+import { ScoreDrawer } from "./score-drawer";
 import type { Score } from "@/types/database";
 
 interface ScoreManagerProps {
   scores: Score[];
 }
 
-export function ScoreManager({ scores }: ScoreManagerProps) {
-  const [showAdd, setShowAdd] = useState(false);
+type DrawerState = {
+  open: boolean;
+  mode: "create" | "edit";
+  score: Score | null;
+};
+
+export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
+  const [scores, setScores] = useState<Score[]>(initialScores);
   const [showCSV, setShowCSV] = useState(false);
   const [csvText, setCsvText] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [session, setSession] = useState("");
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [drawer, setDrawer] = useState<DrawerState>({
+    open: false,
+    mode: "create",
+    score: null,
+  });
 
-  async function handleAdd(formData: FormData) {
-    setError(null);
-    setLoading(true);
-    try {
-      const result = await addScore(formData);
-      if (result && "error" in result && typeof result.error === "string") {
-        setError(result.error);
-      } else {
-        setShowAdd(false);
-        setSession("");
-        setSuccess("Score added");
-        setTimeout(() => setSuccess(null), 3000);
-      }
-    } catch (err) {
-      console.error('[ScoreManager] addScore failed:', err);
-      setError("Failed to add score");
-    } finally {
-      setLoading(false);
-    }
+  // Re-fetch is handled by revalidatePath server-side; we close drawer + refresh
+  // via router.refresh() — but since ScoreManager receives scores as a prop from
+  // the server component, we refresh the page to pull fresh data after mutations.
+  // For now success just refreshes via window.location (simple, reliable).
+  function handleSuccess() {
+    window.location.reload();
   }
 
   async function handleCSVImport() {
     if (!csvText.trim()) return;
-    setError(null);
     setLoading(true);
     try {
       const result = await importScoresFromCSV(csvText);
       if (result && "error" in result && typeof result.error === "string") {
-        setError(result.error);
+        toast.error(result.error);
       } else if (result && "count" in result) {
         setShowCSV(false);
         setCsvText("");
-        setSuccess(`Imported ${result.count} scores`);
-        setTimeout(() => setSuccess(null), 3000);
+        toast.success(`Imported ${result.count} scores`);
+        handleSuccess();
       }
     } catch (err) {
-      console.error('[ScoreManager] importScoresFromCSV failed:', err);
-      setError("Failed to import CSV");
+      console.error("[ScoreManager] importScoresFromCSV failed:", err);
+      toast.error("Failed to import CSV");
     } finally {
       setLoading(false);
     }
   }
 
-  async function handleDeleteConfirmed() {
-    if (!deleteTarget) return;
-    await deleteScore(deleteTarget);
-  }
-
   async function handleDeleteAllConfirmed() {
     setLoading(true);
-    const result = await deleteAllScores();
-    if (result && "error" in result && typeof result.error === "string") {
-      setError(result.error);
+    try {
+      const result = await deleteAllScores();
+      if (result && "error" in result && typeof result.error === "string") {
+        toast.error(result.error);
+      } else {
+        toast.success("All scores cleared");
+        handleSuccess();
+      }
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="rounded-md bg-destructive/10 text-destructive border border-destructive/20 p-3 text-sm">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="rounded-md bg-success-muted text-success border border-success/20 p-3 text-sm">
-          {success}
-        </div>
-      )}
-
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
-        <Button size="sm" onClick={() => { setShowAdd(!showAdd); setShowCSV(false); }}>
+        <Button
+          size="sm"
+          onClick={() => setDrawer({ open: true, mode: "create", score: null })}
+        >
           <Plus className="mr-1 h-4 w-4" />
           Add Score
         </Button>
         <Button
           size="sm"
           variant="outline"
-          onClick={() => { setShowCSV(!showCSV); setShowAdd(false); }}
+          onClick={() => setShowCSV(!showCSV)}
         >
           <Upload className="mr-1 h-4 w-4" />
           Import CSV
@@ -143,65 +116,6 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
           </Button>
         )}
       </div>
-
-      {/* Add form */}
-      {showAdd && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Score</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form action={handleAdd} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="score_team">Team Name</Label>
-                  <Input id="score_team" name="team_name" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="score_total">Total Score</Label>
-                  <Input
-                    id="score_total"
-                    name="total_score"
-                    type="number"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="score_session">Session</Label>
-                  <input type="hidden" name="session" value={session} />
-                  <Select
-                    value={session}
-                    onValueChange={(v) => setSession(v ?? "")}
-                    items={{ "": "N/A", morning: "Morning", afternoon: "Afternoon" }}
-                  >
-                    <SelectTrigger id="score_session" className="h-8 w-full">
-                      <SelectValue placeholder="N/A" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">N/A</SelectItem>
-                      <SelectItem value="morning">Morning</SelectItem>
-                      <SelectItem value="afternoon">Afternoon</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button type="submit" size="sm" disabled={loading}>
-                  {loading ? "Saving..." : "Add"}
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowAdd(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* CSV import */}
       {showCSV && (
@@ -247,14 +161,13 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
               <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Session</TableHead>
               <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground text-right">Score</TableHead>
               <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Source</TableHead>
-              <TableHead className="w-16" />
             </TableRow>
           </TableHeader>
           <TableBody>
             {scores.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={5}
                   className="text-center text-muted-foreground"
                 >
                   No scores yet
@@ -262,7 +175,11 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
               </TableRow>
             ) : (
               scores.map((score, i) => (
-                <TableRow key={score.id}>
+                <TableRow
+                  key={score.id}
+                  className="cursor-pointer hover:bg-neutral-50/50 transition-colors duration-100"
+                  onClick={() => setDrawer({ open: true, mode: "edit", score })}
+                >
                   <TableCell className="font-mono tabular-nums lining-nums text-muted-foreground">
                     {i + 1}
                   </TableCell>
@@ -283,22 +200,10 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={
-                        score.source === "csv" ? "secondary" : "outline"
-                      }
+                      variant={score.source === "csv" ? "secondary" : "outline"}
                     >
                       {score.source}
                     </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      onClick={() => setDeleteTarget(score.id)}
-                      className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))
@@ -307,13 +212,12 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
         </Table>
       </div>
 
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-        title="Delete this score?"
-        description="This score will be permanently removed."
-        confirmLabel="Delete"
-        onConfirm={handleDeleteConfirmed}
+      <ScoreDrawer
+        open={drawer.open}
+        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
+        mode={drawer.mode}
+        score={drawer.score}
+        onSuccess={handleSuccess}
       />
 
       <ConfirmDialog

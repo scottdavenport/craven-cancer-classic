@@ -11,18 +11,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { isPossiblePhoneNumber } from "libphonenumber-js/min";
-import {
-  normalizePhone,
-  formatPhoneForDisplay,
-  isValidEmail,
-} from "@/lib/contacts/contact-utils";
-
-// Use isPossiblePhoneNumber so 555-area test numbers pass while "123" is rejected.
-function isSponsorPhoneValid(raw: string): boolean {
-  if (!raw.trim()) return true;
-  return isPossiblePhoneNumber(raw.trim(), "US");
-}
+import { ContactTypeaheadMulti } from "@/components/admin/contact-typeahead";
+import type { ContactPickResult } from "@/components/admin/contact-typeahead";
 import type { Sponsor } from "@/types/database";
 
 export interface SponsorshipItemOption {
@@ -33,7 +23,8 @@ export interface SponsorshipItemOption {
 }
 
 interface SponsorFormProps {
-  defaultValues?: Partial<Sponsor>;
+  defaultValues?: Partial<Sponsor> & { contact_ids?: string[] };
+  contacts?: ContactPickResult[];
   sponsorshipItems: SponsorshipItemOption[];
   onSubmit: (formData: FormData) => void | Promise<void>;
   onCancel: () => void;
@@ -44,6 +35,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 export function SponsorForm({
   defaultValues,
+  contacts = [],
   sponsorshipItems,
   onSubmit,
   onCancel,
@@ -53,15 +45,18 @@ export function SponsorForm({
   const [paymentStatus, setPaymentStatus] = useState(
     defaultValues?.payment_status ?? "pending"
   );
-
-  const [phone, setPhone] = useState(
-    defaultValues?.contact_phone
-      ? formatPhoneForDisplay(defaultValues.contact_phone)
-      : ""
+  const [isActive, setIsActive] = useState(
+    // default to true unless explicitly set to false
+    defaultValues?.is_active !== false
   );
+
+  // Pre-populate contact picker from passed contacts prop + defaultValues.contact_ids
+  const initialContacts: ContactPickResult[] = (defaultValues?.contact_ids ?? [])
+    .map((id) => contacts.find((c) => c.id === id))
+    .filter((c): c is ContactPickResult => !!c);
+
+  const [selectedContacts, setSelectedContacts] = useState<ContactPickResult[]>(initialContacts);
   const [nameError, setNameError] = useState<string | null>(null);
-  const [phoneError, setPhoneError] = useState<string | null>(null);
-  const [emailError, setEmailError] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
@@ -82,20 +77,18 @@ export function SponsorForm({
 
     const form = e.currentTarget;
     const nameValue = (form.elements.namedItem("name") as HTMLInputElement)?.value ?? "";
-    const emailValue = (form.elements.namedItem("contact_email") as HTMLInputElement)?.value ?? "";
     const nameValid = nameValue.trim().length > 0;
-    const emailValid = isValidEmail(emailValue);
-    const phoneValid = isSponsorPhoneValid(phone);
 
     if (!nameValid) setNameError("Sponsor name is required");
-    if (!emailValid) setEmailError("Invalid email format");
-    if (!phoneValid) setPhoneError("Invalid phone number");
-
-    if (!nameValid || !emailValid || !phoneValid || fileError) return;
+    if (!nameValid || fileError) return;
 
     const formData = new FormData(form);
-    // Replace raw phone field with current controlled state
-    formData.set("contact_phone", phone);
+    // Inject controlled fields not covered by native form serialization
+    formData.set("is_active", String(isActive));
+    formData.set(
+      "contact_ids",
+      selectedContacts.map((c) => c.id).join(",")
+    );
     onSubmit(formData);
   }
 
@@ -141,60 +134,6 @@ export function SponsorForm({
           </Select>
         </div>
         <div className="space-y-2">
-          <Label htmlFor="sf-contact_name">Contact Name</Label>
-          <Input
-            id="sf-contact_name"
-            name="contact_name"
-            defaultValue={defaultValues?.contact_name ?? ""}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="sf-contact_email">Contact Email</Label>
-          <Input
-            id="sf-contact_email"
-            name="contact_email"
-            type="text"
-            defaultValue={defaultValues?.contact_email ?? ""}
-            onChange={() => setEmailError(null)}
-          />
-          {emailError && (
-            <p className="text-destructive text-sm">{emailError}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="sf-contact_phone">Contact Phone</Label>
-          <Input
-            id="sf-contact_phone"
-            name="contact_phone"
-            value={phone}
-            onChange={(e) => {
-              setPhone(e.target.value);
-              setPhoneError(null);
-            }}
-            onBlur={() => {
-              if (!phone) return;
-              if (!isSponsorPhoneValid(phone)) {
-                setPhoneError("Invalid phone number");
-                return;
-              }
-              const normalized = normalizePhone(phone);
-              setPhone(formatPhoneForDisplay(normalized ?? phone));
-            }}
-          />
-          {phoneError && (
-            <p className="text-destructive text-sm">{phoneError}</p>
-          )}
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="sf-website">Website</Label>
-          <Input
-            id="sf-website"
-            name="website"
-            type="url"
-            defaultValue={defaultValues?.website ?? ""}
-          />
-        </div>
-        <div className="space-y-2">
           <Label htmlFor="sf-payment_status">Payment Status</Label>
           <input type="hidden" name="payment_status" value={paymentStatus} />
           <Select
@@ -224,6 +163,40 @@ export function SponsorForm({
                 ? defaultValues.amount_paid_cents / 100
                 : 0
             }
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="sf-website">Website</Label>
+          <Input
+            id="sf-website"
+            name="website"
+            type="url"
+            defaultValue={defaultValues?.website ?? ""}
+          />
+        </div>
+        <div className="flex items-center gap-3 pt-6">
+          {/* is_active toggle — checkbox driven by controlled state; hidden input carries the value */}
+          <input type="hidden" name="is_active" value={String(isActive)} />
+          <input
+            id="sf-is_active"
+            type="checkbox"
+            role="switch"
+            aria-checked={isActive}
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="h-4 w-4 cursor-pointer accent-teal-600"
+            aria-label="Active"
+          />
+          <Label htmlFor="sf-is_active" className="cursor-pointer select-none">
+            Active
+          </Label>
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label>Contacts</Label>
+          <ContactTypeaheadMulti
+            label="Search contacts"
+            value={selectedContacts}
+            onChange={setSelectedContacts}
           />
         </div>
         <div className="space-y-2 sm:col-span-2">

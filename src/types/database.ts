@@ -336,6 +336,45 @@ export type Database = {
           },
         ]
       }
+      sponsor_contacts: {
+        Row: {
+          id: string
+          sponsor_id: string
+          contact_id: string
+          role: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          sponsor_id: string
+          contact_id: string
+          role?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          sponsor_id?: string
+          contact_id?: string
+          role?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sponsor_contacts_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "sponsors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsor_contacts_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sponsors: {
         Row: {
           amount_paid_cents: number
@@ -347,6 +386,7 @@ export type Database = {
           deleted_by: string | null
           display_order: number
           id: string
+          is_active: boolean
           logo_url: string | null
           name: string
           payment_status: string
@@ -365,6 +405,7 @@ export type Database = {
           deleted_by?: string | null
           display_order?: number
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           name: string
           payment_status?: string
@@ -383,6 +424,7 @@ export type Database = {
           deleted_by?: string | null
           display_order?: number
           id?: string
+          is_active?: boolean
           logo_url?: string | null
           name?: string
           payment_status?: string
@@ -1112,5 +1154,6 @@ export type SponsorshipPurchase = Database["public"]["Tables"]["sponsorship_purc
 export type Photo = Database["public"]["Tables"]["photos"]["Row"];
 export type Score = Database["public"]["Tables"]["scores"]["Row"];
 export type Contact = Database["public"]["Tables"]["contacts"]["Row"];
+export type SponsorContact = Database["public"]["Tables"]["sponsor_contacts"]["Row"];
 export type EmailLog = Database["public"]["Tables"]["email_log"]["Row"];
 export type Invitation = Database["public"]["Tables"]["invitations"]["Row"];

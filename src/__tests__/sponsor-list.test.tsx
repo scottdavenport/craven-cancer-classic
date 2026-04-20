@@ -50,6 +50,7 @@ function makeSponsor(overrides: Partial<Sponsor> = {}): Sponsor {
     amount_paid_cents: 500000,
     stripe_payment_id: null,
     display_order: 1,
+    is_active: true,
     year: 2026,
     created_at: "2026-01-01T00:00:00.000Z",
     deleted_at: null,

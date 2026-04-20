@@ -41,11 +41,8 @@ import {
   updateSponsor,
   uploadSponsorLogo,
   getSponsors,
-  // @ts-expect-error — S18-B: these exports don't exist yet; Bolt adds them in PR B
   getSponsorContacts,
-  // @ts-expect-error — S18-B: these exports don't exist yet; Bolt adds them in PR B
   linkSponsorContact,
-  // @ts-expect-error — S18-B: these exports don't exist yet; Bolt adds them in PR B
   unlinkSponsorContact,
 } from "@/app/admin/sponsors/actions";
 
@@ -94,164 +91,10 @@ beforeEach(() => {
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
 });
 
-// ---------------------------------------------------------------------------
-// createSponsor
-// ---------------------------------------------------------------------------
-
-describe("createSponsor", () => {
-  it("normalizes email: stores lowercased + trimmed value", async () => {
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-    setClient({
-      from: vi.fn().mockReturnValue({ insert: mockInsert }),
-    });
-
-    const fd = makeFormData({
-      name: "Acme Corp",
-      tier_id: "tier-uuid",
-      contact_email: "  JANE@example.com  ",
-      contact_phone: "",
-      payment_status: "pending",
-      amount_paid: "0",
-    });
-    const result = await createSponsor(fd);
-
-    expect(result).toEqual({ success: true });
-    expect(mockInsert).toHaveBeenCalledTimes(1);
-    const insertArg = mockInsert.mock.calls[0][0] as Record<string, unknown>;
-    expect(insertArg.contact_email).toBe("jane@example.com");
-  });
-
-  it("normalizes phone: stores E.164 format", async () => {
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-    setClient({
-      from: vi.fn().mockReturnValue({ insert: mockInsert }),
-    });
-
-    const fd = makeFormData({
-      name: "Phone Corp",
-      tier_id: "tier-uuid",
-      contact_email: "",
-      contact_phone: "(555) 123-4567",
-      payment_status: "pending",
-      amount_paid: "0",
-    });
-    const result = await createSponsor(fd);
-
-    expect(result).toEqual({ success: true });
-    const insertArg = mockInsert.mock.calls[0][0] as Record<string, unknown>;
-    expect(insertArg.contact_phone).toBe("+15551234567");
-  });
-
-  it("invalid email returns {error} and does NOT call insert", async () => {
-    const mockInsert = vi.fn();
-    setClient({
-      from: vi.fn().mockReturnValue({ insert: mockInsert }),
-    });
-
-    const fd = makeFormData({
-      name: "Bad Email Corp",
-      tier_id: "tier-uuid",
-      contact_email: "not-an-email",
-      contact_phone: "",
-      payment_status: "pending",
-      amount_paid: "0",
-    });
-    const result = await createSponsor(fd);
-
-    expect((result as { error: string }).error).toMatch(/invalid email/i);
-    expect(mockInsert).not.toHaveBeenCalled();
-  });
-
-  it("invalid phone returns {error} and does NOT call insert", async () => {
-    const mockInsert = vi.fn();
-    setClient({
-      from: vi.fn().mockReturnValue({ insert: mockInsert }),
-    });
-
-    const fd = makeFormData({
-      name: "Bad Phone Corp",
-      tier_id: "tier-uuid",
-      contact_email: "",
-      contact_phone: "123",
-      payment_status: "pending",
-      amount_paid: "0",
-    });
-    const result = await createSponsor(fd);
-
-    expect((result as { error: string }).error).toMatch(/invalid phone/i);
-    expect(mockInsert).not.toHaveBeenCalled();
-  });
-
-  it("empty contact_email and empty contact_phone inserts both as null", async () => {
-    const mockInsert = vi.fn().mockResolvedValue({ error: null });
-    setClient({
-      from: vi.fn().mockReturnValue({ insert: mockInsert }),
-    });
-
-    const fd = makeFormData({
-      name: "Null Fields Corp",
-      tier_id: "tier-uuid",
-      contact_email: "",
-      contact_phone: "",
-      payment_status: "pending",
-      amount_paid: "0",
-    });
-    const result = await createSponsor(fd);
-
-    expect(result).toEqual({ success: true });
-    const insertArg = mockInsert.mock.calls[0][0] as Record<string, unknown>;
-    expect(insertArg.contact_email).toBeNull();
-    expect(insertArg.contact_phone).toBeNull();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// updateSponsor
-// ---------------------------------------------------------------------------
-
-describe("updateSponsor", () => {
-  it("happy path: normalizes email and stores correctly", async () => {
-    const mockEq = vi.fn().mockResolvedValue({ error: null });
-    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
-    setClient({
-      from: vi.fn().mockReturnValue({ update: mockUpdate }),
-    });
-
-    const fd = makeFormData({
-      name: "Updated Corp",
-      tier_id: "tier-uuid",
-      contact_email: "  UPDATED@example.com  ",
-      contact_phone: "",
-      payment_status: "paid",
-      amount_paid: "500",
-    });
-    const result = await updateSponsor("sponsor-uuid", fd);
-
-    expect(result).toEqual({ success: true });
-    const updateArg = mockUpdate.mock.calls[0][0] as Record<string, unknown>;
-    expect(updateArg.contact_email).toBe("updated@example.com");
-  });
-
-  it("invalid email returns {error} and does NOT call update", async () => {
-    const mockUpdate = vi.fn();
-    setClient({
-      from: vi.fn().mockReturnValue({ update: mockUpdate }),
-    });
-
-    const fd = makeFormData({
-      name: "Bad Email Update Corp",
-      tier_id: "tier-uuid",
-      contact_email: "bad-email-format",
-      contact_phone: "",
-      payment_status: "pending",
-      amount_paid: "0",
-    });
-    const result = await updateSponsor("sponsor-uuid", fd);
-
-    expect((result as { error: string }).error).toMatch(/invalid email/i);
-    expect(mockUpdate).not.toHaveBeenCalled();
-  });
-});
+// deprecated: PR B removes contact_name/email/phone fields from createSponsor and updateSponsor;
+// the old S15 "createSponsor" and "updateSponsor" describe blocks asserting those fields
+// are normalized and stored have been removed. They are replaced by the S18-B describe blocks
+// below which assert those fields are NOT written to the DB.
 
 // ---------------------------------------------------------------------------
 // uploadSponsorLogo

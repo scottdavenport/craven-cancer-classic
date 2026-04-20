@@ -54,96 +54,9 @@ beforeEach(() => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Validation
-// ---------------------------------------------------------------------------
-
-describe("SponsorForm — validation", () => {
-  it("invalid email renders inline error and does NOT call submit handler", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
-    render(<SponsorForm {...makeProps({ onSubmit })} />);
-
-    const emailInput = screen.getByLabelText(/contact email/i);
-    await user.clear(emailInput);
-    await user.type(emailInput, "not-an-email");
-
-    await user.click(screen.getByRole("button", { name: /create/i }));
-
-    expect(screen.getByText(/invalid email/i)).toBeInTheDocument();
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("invalid phone renders inline error and does NOT call submit handler", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
-    render(<SponsorForm {...makeProps({ onSubmit })} />);
-
-    const phoneInput = screen.getByLabelText(/contact phone/i);
-    await user.clear(phoneInput);
-    await user.type(phoneInput, "123");
-
-    await user.click(screen.getByRole("button", { name: /create/i }));
-
-    expect(screen.getByText(/invalid phone/i)).toBeInTheDocument();
-    expect(onSubmit).not.toHaveBeenCalled();
-  });
-
-  it("valid email AND valid phone calls submit handler exactly once", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
-    render(<SponsorForm {...makeProps({ onSubmit })} />);
-
-    const nameInput = screen.getByLabelText(/sponsor name/i);
-    await user.type(nameInput, "Acme Corp");
-
-    const emailInput = screen.getByLabelText(/contact email/i);
-    await user.clear(emailInput);
-    await user.type(emailInput, "jane@example.com");
-
-    const phoneInput = screen.getByLabelText(/contact phone/i);
-    await user.clear(phoneInput);
-    await user.type(phoneInput, "2025551234");
-
-    await user.click(screen.getByRole("button", { name: /create/i }));
-
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(screen.queryByText(/invalid email/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/invalid phone/i)).not.toBeInTheDocument();
-  });
-
-  it("empty email AND empty phone calls submit handler (both optional)", async () => {
-    const user = userEvent.setup();
-    const onSubmit = vi.fn();
-    render(<SponsorForm {...makeProps({ onSubmit })} />);
-
-    // Fill required sponsor name, leave email + phone empty
-    const nameInput = screen.getByLabelText(/sponsor name/i);
-    await user.type(nameInput, "Empty Contact Corp");
-
-    const emailInput = screen.getByLabelText(/contact email/i);
-    await user.clear(emailInput);
-
-    const phoneInput = screen.getByLabelText(/contact phone/i);
-    await user.clear(phoneInput);
-
-    await user.click(screen.getByRole("button", { name: /create/i }));
-
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-  });
-
-  it("phone blur with valid input reformats to national display format", async () => {
-    const user = userEvent.setup();
-    render(<SponsorForm {...makeProps()} />);
-
-    const phoneInput = screen.getByLabelText(/contact phone/i);
-    await user.type(phoneInput, "5551234567");
-    await user.tab(); // trigger blur
-
-    // National format: "(555) 123-4567"
-    expect((phoneInput as HTMLInputElement).value).toBe("(555) 123-4567");
-  });
-});
+// deprecated: PR B removes contact_name/email/contact_phone inputs from SponsorForm;
+// these S15 inline-validation tests are removed — replaced by contact picker asserted
+// in the S18-B "contact_* inputs REMOVED" and "contact picker" describe blocks below.
 
 // ---------------------------------------------------------------------------
 // Logo upload
@@ -318,11 +231,10 @@ describe("SponsorForm — contact picker (#199)", () => {
       <SponsorForm
         {...makeProps({
           defaultValues: {
-            // @ts-expect-error — contact_ids not yet in Sponsor type (added in PR B)
             contact_ids: ["contact-uuid-1"],
           },
           contacts: [
-            { id: "contact-uuid-1", full_name: "Jane Doe", email: "jane@example.com" },
+            { id: "contact-uuid-1", full_name: "Jane Doe", email: "jane@example.com", company: null },
           ],
         })}
       />

@@ -97,6 +97,7 @@ describe("database types", () => {
       | "photos"
       | "profiles"
       | "scores"
+      | "sponsor_contacts"
       | "sponsors"
       | "sponsorship_items"
       | "sponsorship_purchases"
@@ -110,7 +111,7 @@ describe("database types", () => {
     const _check: _ExhaustiveCheck = true;
     void _check;
 
-    // Runtime check: array must list all 13 tables
+    // Runtime check: array must list all 14 tables
     const tables: KnownTables[] = [
       "contacts",
       "email_log",
@@ -119,6 +120,7 @@ describe("database types", () => {
       "photos",
       "profiles",
       "scores",
+      "sponsor_contacts",
       "sponsors",
       "sponsorship_items",
       "sponsorship_purchases",
@@ -126,7 +128,7 @@ describe("database types", () => {
       "team_members",
       "teams",
     ];
-    expect(tables).toHaveLength(13);
+    expect(tables).toHaveLength(14);
   });
 
   it("Insert types make required fields mandatory and optional fields optional", () => {

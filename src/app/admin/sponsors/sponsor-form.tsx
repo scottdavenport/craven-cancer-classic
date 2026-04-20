@@ -11,6 +11,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { isPossiblePhoneNumber } from "libphonenumber-js/min";
+import {
+  normalizePhone,
+  formatPhoneForDisplay,
+  isValidEmail,
+} from "@/lib/contacts/contact-utils";
+
+// Use isPossiblePhoneNumber so 555-area test numbers pass while "123" is rejected.
+function isSponsorPhoneValid(raw: string): boolean {
+  if (!raw.trim()) return true;
+  return isPossiblePhoneNumber(raw.trim(), "US");
+}
 import type { Sponsor } from "@/types/database";
 
 export interface SponsorshipItemOption {
@@ -28,6 +40,8 @@ interface SponsorFormProps {
   loading: boolean;
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 export function SponsorForm({
   defaultValues,
   sponsorshipItems,
@@ -40,8 +54,49 @@ export function SponsorForm({
     defaultValues?.payment_status ?? "pending"
   );
 
+  const [phone, setPhone] = useState(
+    defaultValues?.contact_phone
+      ? formatPhoneForDisplay(defaultValues.contact_phone)
+      : ""
+  );
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [fileError, setFileError] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    setFileError(null);
+    setPreviewUrl(null);
+    if (!file) return;
+    if (file.size > MAX_FILE_SIZE) {
+      setFileError("File too large (max 5MB)");
+      return;
+    }
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+
+    const form = e.currentTarget;
+    const emailValue = (form.elements.namedItem("contact_email") as HTMLInputElement)?.value ?? "";
+    const emailValid = isValidEmail(emailValue);
+    const phoneValid = isSponsorPhoneValid(phone);
+
+    if (!emailValid) setEmailError("Invalid email format");
+    if (!phoneValid) setPhoneError("Invalid phone number");
+
+    if (!emailValid || !phoneValid || fileError) return;
+
+    const formData = new FormData(form);
+    // Replace raw phone field with current controlled state
+    formData.set("contact_phone", phone);
+    onSubmit(formData);
+  }
+
   return (
-    <form action={onSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} noValidate className="space-y-4">
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="sf-name">Sponsor Name</Label>
@@ -90,17 +145,37 @@ export function SponsorForm({
           <Input
             id="sf-contact_email"
             name="contact_email"
-            type="email"
+            type="text"
             defaultValue={defaultValues?.contact_email ?? ""}
+            onChange={() => setEmailError(null)}
           />
+          {emailError && (
+            <p className="text-destructive text-sm">{emailError}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="sf-contact_phone">Contact Phone</Label>
           <Input
             id="sf-contact_phone"
             name="contact_phone"
-            defaultValue={defaultValues?.contact_phone ?? ""}
+            value={phone}
+            onChange={(e) => {
+              setPhone(e.target.value);
+              setPhoneError(null);
+            }}
+            onBlur={() => {
+              if (!phone) return;
+              if (!isSponsorPhoneValid(phone)) {
+                setPhoneError("Invalid phone number");
+                return;
+              }
+              const normalized = normalizePhone(phone);
+              setPhone(formatPhoneForDisplay(normalized ?? phone));
+            }}
           />
+          {phoneError && (
+            <p className="text-destructive text-sm">{phoneError}</p>
+          )}
         </div>
         <div className="space-y-2">
           <Label htmlFor="sf-website">Website</Label>
@@ -142,6 +217,26 @@ export function SponsorForm({
                 : 0
             }
           />
+        </div>
+        <div className="space-y-2 sm:col-span-2">
+          <Label htmlFor="sf-logo">Logo</Label>
+          <input
+            id="sf-logo"
+            name="logo"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/svg+xml"
+            onChange={handleFileChange}
+          />
+          {fileError && (
+            <p className="text-destructive text-sm">{fileError}</p>
+          )}
+          {previewUrl && (
+            <img
+              src={previewUrl}
+              alt="Logo preview"
+              className="mt-2 h-16 w-auto object-contain"
+            />
+          )}
         </div>
       </div>
 

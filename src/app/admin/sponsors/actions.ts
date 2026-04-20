@@ -4,6 +4,19 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { softDelete } from "@/lib/supabase/soft-delete";
+import { isPossiblePhoneNumber } from "libphonenumber-js/min";
+import {
+  normalizeEmail,
+  normalizePhone,
+  isValidEmail,
+} from "@/lib/contacts/contact-utils";
+
+// Use isPossiblePhoneNumber (length-check only) so 555 test numbers pass
+// while clearly-short strings like "123" are still rejected.
+function isSponsorPhoneValid(raw: string | null): boolean {
+  if (!raw || !raw.trim()) return true;
+  return isPossiblePhoneNumber(raw.trim(), "US");
+}
 import type { Sponsor, SponsorshipItem } from "@/types/database";
 
 export async function getSponsors(): Promise<Sponsor[]> {
@@ -41,6 +54,12 @@ export async function getSponsorshipItems(): Promise<Pick<SponsorshipItem, "id" 
 }
 
 export async function createSponsor(formData: FormData) {
+  const rawEmail = formData.get("contact_email") as string | null;
+  const rawPhone = formData.get("contact_phone") as string | null;
+
+  if (!isValidEmail(rawEmail)) return { error: "Invalid email format" };
+  if (!isSponsorPhoneValid(rawPhone)) return { error: "Invalid phone number" };
+
   await requireAdmin();
   const supabase = await createClient();
 
@@ -49,8 +68,8 @@ export async function createSponsor(formData: FormData) {
     name: formData.get("name") as string,
     website: (formData.get("website") as string) || null,
     contact_name: (formData.get("contact_name") as string) || null,
-    contact_email: (formData.get("contact_email") as string) || null,
-    contact_phone: (formData.get("contact_phone") as string) || null,
+    contact_email: normalizeEmail(rawEmail),
+    contact_phone: normalizePhone(rawPhone),
     logo_url: (formData.get("logo_url") as string) || null,
     payment_status: ((formData.get("payment_status") as string) || "pending") as "pending" | "paid" | "comped",
     amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
@@ -64,6 +83,12 @@ export async function createSponsor(formData: FormData) {
 }
 
 export async function updateSponsor(id: string, formData: FormData) {
+  const rawEmail = formData.get("contact_email") as string | null;
+  const rawPhone = formData.get("contact_phone") as string | null;
+
+  if (!isValidEmail(rawEmail)) return { error: "Invalid email format" };
+  if (!isSponsorPhoneValid(rawPhone)) return { error: "Invalid phone number" };
+
   await requireAdmin();
   const supabase = await createClient();
 
@@ -74,8 +99,8 @@ export async function updateSponsor(id: string, formData: FormData) {
       name: formData.get("name") as string,
       website: (formData.get("website") as string) || null,
       contact_name: (formData.get("contact_name") as string) || null,
-      contact_email: (formData.get("contact_email") as string) || null,
-      contact_phone: (formData.get("contact_phone") as string) || null,
+      contact_email: normalizeEmail(rawEmail),
+      contact_phone: normalizePhone(rawPhone),
       logo_url: (formData.get("logo_url") as string) || null,
       payment_status: ((formData.get("payment_status") as string) || "pending") as "pending" | "paid" | "comped",
       amount_paid_cents: Math.round((parseFloat(formData.get("amount_paid") as string) || 0) * 100),
@@ -97,19 +122,38 @@ export async function deleteSponsor(
   return softDelete(supabase, "sponsors", id);
 }
 
+async function sanitizeSvgIfNeeded(file: File): Promise<File> {
+  if (file.type !== "image/svg+xml") return file;
+  const text = await file.text();
+  const cleaned = text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+  return new File([cleaned], file.name, { type: file.type });
+}
+
 export async function uploadSponsorLogo(formData: FormData) {
   await requireAdmin();
-  const supabase = await createClient();
 
   const file = formData.get("file") as File;
   if (!file || file.size === 0) return { error: "No file provided" };
 
+  if (file.size > 5 * 1024 * 1024) return { error: "File too large (max 5MB)" };
+
+  const supabase = await createClient();
+
+  const oldLogoUrl = formData.get("oldLogoUrl") as string | null;
+  if (oldLogoUrl) {
+    const oldFileName = oldLogoUrl.split("/").pop();
+    if (oldFileName) {
+      await supabase.storage.from("logos").remove([oldFileName]);
+    }
+  }
+
+  const sanitized = await sanitizeSvgIfNeeded(file);
   const ext = file.name.split(".").pop();
   const fileName = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
 
   const { error } = await supabase.storage
     .from("logos")
-    .upload(fileName, file);
+    .upload(fileName, sanitized);
 
   if (error) return { error: error.message };
 

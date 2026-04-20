@@ -340,6 +340,68 @@ describe("uploadSponsorLogo", () => {
     expect(uploadedText).toContain("<rect");
   });
 
+  it("SVG with <foreignObject>: foreignObject element stripped", async () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><foreignObject><iframe src="http://evil.com"></iframe></foreignObject><rect width="100" height="100"/></svg>`;
+    const mockUpload = vi.fn().mockResolvedValue({ error: null });
+    const mockStorageFrom = vi.fn().mockReturnValue({
+      upload: mockUpload,
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "https://example.com/logos/test.svg" } }),
+      remove: vi.fn(),
+    });
+    setClient({ storage: { from: mockStorageFrom } });
+
+    const svgFile = new File([svg], "logo.svg", { type: "image/svg+xml" });
+    const result = await uploadSponsorLogo(makeFileFormData(svgFile));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/foreignobject/i);
+    expect(uploadedText).not.toMatch(/iframe/i);
+    expect(uploadedText).not.toContain("evil.com");
+    expect(uploadedText).toContain("<rect");
+  });
+
+  it("SVG with <a href='javascript:...'>: javascript: href stripped, element preserved or link defanged", async () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg"><a href="javascript:alert(1)"><rect width="100" height="100"/></a></svg>`;
+    const mockUpload = vi.fn().mockResolvedValue({ error: null });
+    const mockStorageFrom = vi.fn().mockReturnValue({
+      upload: mockUpload,
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "https://example.com/logos/test.svg" } }),
+      remove: vi.fn(),
+    });
+    setClient({ storage: { from: mockStorageFrom } });
+
+    const svgFile = new File([svg], "logo.svg", { type: "image/svg+xml" });
+    const result = await uploadSponsorLogo(makeFileFormData(svgFile));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/javascript:/i);
+    expect(uploadedText).not.toContain("alert(1)");
+  });
+
+  it("SVG with <use xlink:href='data:...'>: external reference stripped", async () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"><use xlink:href="http://evil.com/payload.svg#x"/><rect width="100" height="100"/></svg>`;
+    const mockUpload = vi.fn().mockResolvedValue({ error: null });
+    const mockStorageFrom = vi.fn().mockReturnValue({
+      upload: mockUpload,
+      getPublicUrl: vi.fn().mockReturnValue({ data: { publicUrl: "https://example.com/logos/test.svg" } }),
+      remove: vi.fn(),
+    });
+    setClient({ storage: { from: mockStorageFrom } });
+
+    const svgFile = new File([svg], "logo.svg", { type: "image/svg+xml" });
+    const result = await uploadSponsorLogo(makeFileFormData(svgFile));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/xlink:href/i);
+    expect(uploadedText).not.toContain("evil.com");
+  });
+
   it("when oldLogoUrl provided, Storage .remove() is called before upload", async () => {
     const mockRemove = vi.fn().mockResolvedValue({ error: null });
     const mockUpload = vi.fn().mockResolvedValue({ error: null });

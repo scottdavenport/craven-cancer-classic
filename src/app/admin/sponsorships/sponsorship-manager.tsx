@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -11,41 +11,113 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Plus, Pencil } from "lucide-react";
+import { toast } from "sonner";
 import { SponsorshipDrawer } from "./sponsorship-drawer";
-import type { SponsorshipItem, SponsorshipPurchase } from "@/types/database";
+import {
+  getSponsorshipItems,
+  getLinkedSponsorNames,
+  deleteSponsorshipItem,
+  type SponsorshipItemWithCount,
+} from "./actions";
+import type { SponsorshipPurchase } from "@/types/database";
 
 interface SponsorshipManagerProps {
-  items: SponsorshipItem[];
+  items: SponsorshipItemWithCount[];
   purchases: SponsorshipPurchase[];
 }
 
 type DrawerState = {
   open: boolean;
   mode: "create" | "edit";
-  sponsorship: SponsorshipItem | null;
+  sponsorship: SponsorshipItemWithCount | null;
+};
+
+type CascadeDialogState = {
+  open: boolean;
+  item: SponsorshipItemWithCount | null;
+  names: string[];
+  loading: boolean;
 };
 
 export function SponsorshipManager({
-  items,
+  items: initialItems,
   purchases,
 }: SponsorshipManagerProps) {
+  const [items, setItems] = useState<SponsorshipItemWithCount[]>(initialItems);
+  const [isPending, startTransition] = useTransition();
   const [drawer, setDrawer] = useState<DrawerState>({
     open: false,
     mode: "create",
     sponsorship: null,
   });
+  const [cascadeDialog, setCascadeDialog] = useState<CascadeDialogState>({
+    open: false,
+    item: null,
+    names: [],
+    loading: false,
+  });
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [pendingDeleteItem, setPendingDeleteItem] = useState<SponsorshipItemWithCount | null>(null);
 
   const totalRevenue = purchases
     .filter((p) => p.payment_status === "paid")
     .reduce((sum, p) => sum + p.amount_paid_cents, 0);
 
+  function refetch() {
+    startTransition(async () => {
+      try {
+        const fresh = await getSponsorshipItems();
+        setItems(fresh);
+      } catch (err) {
+        console.error("[SponsorshipManager] refetch failed:", err);
+      }
+    });
+  }
+
   function handleDrawerSuccess() {
-    window.location.reload();
+    refetch();
+  }
+
+  async function handleDeleteRequest(item: SponsorshipItemWithCount) {
+    if (item.active_sponsor_count > 0) {
+      // Fetch sponsor names for cascade warning
+      setCascadeDialog({ open: false, item, names: [], loading: true });
+      try {
+        const names = await getLinkedSponsorNames(item.id);
+        setCascadeDialog({ open: true, item, names, loading: false });
+      } catch (err) {
+        console.error("[SponsorshipManager] getLinkedSponsorNames failed:", err);
+        setCascadeDialog({ open: false, item: null, names: [], loading: false });
+      }
+    } else {
+      // Normal delete confirm — no cascade warning
+      setPendingDeleteItem(item);
+      setConfirmOpen(true);
+    }
+  }
+
+  function buildCascadeDescription(names: string[], count: number): string {
+    if (names.length === 0) return "";
+    const maxShow = 3;
+    const shown = names.slice(0, maxShow);
+    const remaining = count - maxShow;
+    const nameList = shown.join(", ");
+    if (remaining > 0) {
+      return `${count} sponsors are linked to this package: ${nameList}, … and ${remaining} more. They'll show '(deleted package)' until you reassign them. Continue?`;
+    }
+    return `${count} sponsors are linked to this package: ${nameList}. They'll show '(deleted package)' until you reassign them. Continue?`;
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" style={{ opacity: isPending ? 0.6 : 1 }}>
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="shadow-sm border border-border/60">
@@ -90,6 +162,7 @@ export function SponsorshipManager({
                   <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Name</TableHead>
                   <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Price</TableHead>
                   <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sold</TableHead>
+                  <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sponsors</TableHead>
                   <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Max</TableHead>
                   <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
                   <TableHead className="w-16" />
@@ -99,7 +172,7 @@ export function SponsorshipManager({
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={6}
+                      colSpan={7}
                       className="text-center text-muted-foreground"
                     >
                       No sponsorship packages yet
@@ -136,6 +209,9 @@ export function SponsorshipManager({
                         }`}
                       >
                         {item.sold_count}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums lining-nums text-muted-foreground">
+                        {item.active_sponsor_count}
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums lining-nums text-muted-foreground">
                         {item.max_quantity ?? "∞"}
@@ -241,8 +317,98 @@ export function SponsorshipManager({
         mode={drawer.mode}
         sponsorship={drawer.sponsorship}
         onSubmit={handleDrawerSuccess}
-        onDelete={handleDrawerSuccess}
+        onDeleteRequest={handleDeleteRequest}
       />
+
+      {/* Normal delete confirm dialog (zero linked sponsors) */}
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              {`Delete "${pendingDeleteItem?.name ?? "this package"}"?`}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This action cannot be undone. The package will be permanently removed.
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                if (!pendingDeleteItem) return;
+                const result = await deleteSponsorshipItem(pendingDeleteItem.id);
+                if ("error" in result) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success("Package deleted");
+                setConfirmOpen(false);
+                setDrawer((d) => ({ ...d, open: false }));
+                refetch();
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cascade warning dialog (linked sponsors exist) */}
+      <Dialog
+        open={cascadeDialog.open}
+        onOpenChange={(open) =>
+          setCascadeDialog((d) => ({ ...d, open }))
+        }
+      >
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              {`Delete "${cascadeDialog.item?.name ?? "this package"}"?`}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {buildCascadeDescription(
+              cascadeDialog.names,
+              cascadeDialog.item?.active_sponsor_count ?? cascadeDialog.names.length
+            )}
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCascadeDialog((d) => ({ ...d, open: false }))}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={async () => {
+                if (!cascadeDialog.item) return;
+                const result = await deleteSponsorshipItem(cascadeDialog.item.id);
+                if ("error" in result) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success("Package deleted");
+                setCascadeDialog((d) => ({ ...d, open: false }));
+                setDrawer((d) => ({ ...d, open: false }));
+                refetch();
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

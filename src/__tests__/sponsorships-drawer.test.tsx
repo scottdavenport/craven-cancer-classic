@@ -58,13 +58,16 @@ Object.defineProperty(window, "location", {
 
 import { SponsorshipManager } from "@/app/admin/sponsorships/sponsorship-manager";
 import { SponsorshipDrawer } from "@/app/admin/sponsorships/sponsorship-drawer";
-import type { SponsorshipItem, SponsorshipPurchase } from "@/types/database";
+import type { SponsorshipPurchase } from "@/types/database";
+import type { SponsorshipItemWithCount } from "@/app/admin/sponsorships/actions";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeItem(overrides: Partial<SponsorshipItem> = {}): SponsorshipItem {
+function makeItem(
+  overrides: Partial<SponsorshipItemWithCount> = {}
+): SponsorshipItemWithCount {
   return {
     id: "item-1",
     name: "Gold Package",
@@ -79,6 +82,7 @@ function makeItem(overrides: Partial<SponsorshipItem> = {}): SponsorshipItem {
     deleted_by: null,
     sort_order: 1,
     year: 2026,
+    active_sponsor_count: 0,
     ...overrides,
   };
 }

@@ -6,20 +6,50 @@ import { requireAdmin } from "@/lib/supabase/admin";
 import { softDelete } from "@/lib/supabase/soft-delete";
 import type { SponsorshipItem } from "@/types/database";
 
-export async function getSponsorshipItems(): Promise<SponsorshipItem[]> {
+export type SponsorshipItemWithCount = SponsorshipItem & { active_sponsor_count: number };
+
+export async function getSponsorshipItems(): Promise<SponsorshipItemWithCount[]> {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
-  const { data, error } = await supabase
-    .from("sponsorship_items_active")
-    .select("*")
-    .eq("year", currentYear)
-    .order("price_cents", { ascending: false });
+  const [itemsRes, sponsorsRes] = await Promise.all([
+    supabase
+      .from("sponsorship_items_active")
+      .select("*")
+      .eq("year", currentYear)
+      .order("price_cents", { ascending: false }),
+    supabase
+      .from("sponsors_active")
+      .select("tier_id")
+      .eq("year", currentYear),
+  ]);
 
-  if (error) throw new Error(error.message);
+  if (itemsRes.error) throw new Error(itemsRes.error.message);
+  if (sponsorsRes.error) throw new Error(sponsorsRes.error.message);
+
+  const countByTier = new Map<string, number>();
+  (sponsorsRes.data ?? []).forEach((s) => {
+    if (s.tier_id) countByTier.set(s.tier_id, (countByTier.get(s.tier_id) ?? 0) + 1);
+  });
+
   // sponsorship_items_active view inherits NOT NULL from underlying table;
   // Supabase types views as fully-nullable, so assert here.
-  return (data ?? []) as unknown as SponsorshipItem[];
+  return ((itemsRes.data ?? []) as unknown as SponsorshipItem[]).map((item) => ({
+    ...item,
+    active_sponsor_count: countByTier.get(item.id) ?? 0,
+  }));
+}
+
+export async function getLinkedSponsorNames(tierId: string): Promise<string[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("sponsors_active")
+    .select("name")
+    .eq("tier_id", tierId)
+    .order("name", { ascending: true });
+
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((s) => s.name as string);
 }
 
 export async function getSponsorshipPurchases() {

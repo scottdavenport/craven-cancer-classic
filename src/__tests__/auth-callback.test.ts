@@ -28,12 +28,12 @@ beforeEach(() => {
 });
 
 describe("GET /auth/callback — next param validation (open redirect prevention)", () => {
-  it("redirects to /admin/registrations when next=/admin/registrations", async () => {
-    const req = makeRequest({ next: "/admin/registrations" });
+  it("redirects to /admin/teams when next=/admin/teams", async () => {
+    const req = makeRequest({ next: "/admin/teams" });
     const res = await GET(req);
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe(
-      "https://example.com/admin/registrations"
+      "https://example.com/admin/teams"
     );
   });
 
@@ -78,7 +78,7 @@ describe("GET /auth/callback — next param validation (open redirect prevention
     mockExchangeCodeForSession.mockResolvedValue({
       error: { message: "invalid code" },
     });
-    const req = makeRequest({ next: "/admin/registrations" });
+    const req = makeRequest({ next: "/admin/teams" });
     const res = await GET(req);
     expect(res.status).toBe(307);
     expect(res.headers.get("location")).toBe(
@@ -146,13 +146,13 @@ describe("GET /auth/callback — S2-7 gap coverage", () => {
       expect(res.headers.get("location")).toBe("https://example.com/admin");
     });
 
-    it("accepts a deep valid path like /admin/registrations/123", async () => {
-      const req = makeRequest({ next: "/admin/registrations/123" });
+    it("accepts a deep valid path like /admin/teams/123", async () => {
+      const req = makeRequest({ next: "/admin/teams/123" });
       const res = await GET(req);
 
       expect(res.status).toBe(307);
       expect(res.headers.get("location")).toBe(
-        "https://example.com/admin/registrations/123"
+        "https://example.com/admin/teams/123"
       );
     });
   });

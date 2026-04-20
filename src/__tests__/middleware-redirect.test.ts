@@ -72,7 +72,7 @@ describe("S3-6 middleware redirect — no redirectTo param", () => {
     it("does NOT include any searchParams on the login redirect URL", async () => {
       mockGetUser.mockResolvedValue({ data: { user: null }, error: null });
 
-      const response = await callMiddleware("/admin/registrations");
+      const response = await callMiddleware("/admin/teams");
 
       const location = response.headers.get("location") ?? "";
       const redirectUrl = new URL(location, "http://localhost");

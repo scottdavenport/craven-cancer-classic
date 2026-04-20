@@ -430,3 +430,145 @@ describe("uploadSponsorLogo", () => {
     expect(removeOrder).toBeLessThan(uploadOrder);
   });
 });
+
+// ---------------------------------------------------------------------------
+// uploadSponsorLogo — MIME-spoof defense (#188)
+// ---------------------------------------------------------------------------
+// These tests encode the RED-phase contract for content-sniff SVG detection.
+// All 5 tests FAIL until Bolt implements content-sniff in sanitizeSvgIfNeeded:
+//   if (file.type !== "image/svg+xml") return file;   ← current (MIME-only gate)
+//   → replace with: sniff first 1KB bytes for SVG markers, sanitize if found.
+// ---------------------------------------------------------------------------
+
+describe("uploadSponsorLogo — MIME-spoof defense (#188)", () => {
+  // Helper: builds mock storage client with a capturable upload spy
+  function makeStorageMock() {
+    const mockUpload = vi.fn().mockResolvedValue({ error: null });
+    const mockStorageFrom = vi.fn().mockReturnValue({
+      upload: mockUpload,
+      remove: vi.fn().mockResolvedValue({ error: null }),
+      getPublicUrl: vi.fn().mockReturnValue({
+        data: { publicUrl: "https://example.com/logos/test.svg" },
+      }),
+    });
+    setClient({ storage: { from: mockStorageFrom } });
+    return mockUpload;
+  }
+
+  it("SVG content + image/png MIME: sanitized (script stripped) and uploaded as svg+xml", async () => {
+    // A malicious SVG disguised as a PNG — must be sniffed by content, not MIME.
+    const svgPayload = `<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script><rect width="100" height="100"/></svg>`;
+    const mockUpload = makeStorageMock();
+
+    const spoofedFile = new File([svgPayload], "logo.png", { type: "image/png" });
+    const result = await uploadSponsorLogo(makeFileFormData(spoofedFile));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+
+    // Uploaded blob must be script-free
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/<script/i);
+    expect(uploadedText).not.toContain("alert(1)");
+
+    // MIME type should be corrected to svg+xml after content-sniff
+    if (uploadedFile instanceof File) {
+      expect(uploadedFile.type).toBe("image/svg+xml");
+    }
+  });
+
+  it("SVG content + application/octet-stream MIME: sanitized (script stripped)", async () => {
+    // Same attack vector, different MIME disguise.
+    const svgPayload = `<svg xmlns="http://www.w3.org/2000/svg"><script>steal(document.cookie)</script><circle r="50"/></svg>`;
+    const mockUpload = makeStorageMock();
+
+    const spoofedFile = new File([svgPayload], "logo.bin", {
+      type: "application/octet-stream",
+    });
+    const result = await uploadSponsorLogo(makeFileFormData(spoofedFile));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/<script/i);
+    expect(uploadedText).not.toContain("steal(");
+
+    if (uploadedFile instanceof File) {
+      expect(uploadedFile.type).toBe("image/svg+xml");
+    }
+  });
+
+  it("XML-prolog SVG + image/png MIME: sanitized (script stripped)", async () => {
+    // SVGs often start with an XML declaration before <svg>. Content sniff must handle this.
+    const svgPayload = `<?xml version="1.0" encoding="UTF-8"?>\n<svg xmlns="http://www.w3.org/2000/svg"><script>evil()</script><rect width="50" height="50"/></svg>`;
+    const mockUpload = makeStorageMock();
+
+    const spoofedFile = new File([svgPayload], "logo.png", { type: "image/png" });
+    const result = await uploadSponsorLogo(makeFileFormData(spoofedFile));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/<script/i);
+    expect(uploadedText).not.toContain("evil()");
+
+    if (uploadedFile instanceof File) {
+      expect(uploadedFile.type).toBe("image/svg+xml");
+    }
+  });
+
+  it("real PNG bytes + image/png MIME: passes through byte-identical (not sanitized)", async () => {
+    // PNG magic bytes: \x89PNG\r\n\x1a\n — real image, must not be mangled.
+    // Using a minimal 8-byte PNG magic header + some padding bytes.
+    const pngMagic = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    const pngPadding = new Uint8Array(20).fill(0xff); // 20 bytes of binary-like data
+    const pngBytes = new Uint8Array(pngMagic.length + pngPadding.length);
+    pngBytes.set(pngMagic, 0);
+    pngBytes.set(pngPadding, pngMagic.length);
+
+    const mockUpload = makeStorageMock();
+
+    const realPng = new File([pngBytes], "logo.png", { type: "image/png" });
+    const result = await uploadSponsorLogo(makeFileFormData(realPng));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+
+    // Byte length must be preserved unchanged (no sanitization transformation)
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedByteLength =
+      uploadedFile instanceof Blob ? uploadedFile.size : String(uploadedFile).length;
+    expect(uploadedByteLength).toBe(pngBytes.byteLength);
+
+    // First 8 bytes must still be the PNG magic header
+    if (uploadedFile instanceof Blob) {
+      const uploadedBuf = await uploadedFile.arrayBuffer();
+      const uploadedBytes = new Uint8Array(uploadedBuf);
+      pngMagic.forEach((byte, i) => {
+        expect(uploadedBytes[i]).toBe(byte);
+      });
+    }
+  });
+
+  it("legitimate image/svg+xml file with <script>: still sanitized (regression guard)", async () => {
+    // Ensure the existing MIME-based path isn't accidentally broken by the content-sniff refactor.
+    const svgPayload = `<svg xmlns="http://www.w3.org/2000/svg"><script>xss()</script><rect width="100" height="100"/></svg>`;
+    const mockUpload = makeStorageMock();
+
+    const svgFile = new File([svgPayload], "logo.svg", { type: "image/svg+xml" });
+    const result = await uploadSponsorLogo(makeFileFormData(svgFile));
+
+    expect((result as { url: string }).url).toBeTruthy();
+    expect(mockUpload).toHaveBeenCalledTimes(1);
+
+    const uploadedFile = mockUpload.mock.calls[0][1] as File | Blob | string;
+    const uploadedText = uploadedFile instanceof Blob ? await uploadedFile.text() : String(uploadedFile);
+    expect(uploadedText).not.toMatch(/<script/i);
+    expect(uploadedText).not.toContain("xss()");
+  });
+});

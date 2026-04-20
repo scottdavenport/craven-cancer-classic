@@ -84,6 +84,9 @@ export async function updateScore(
   data: { team_name: string; total_score: number; session: "morning" | "afternoon" | null }
 ) {
   await requireAdmin();
+  if (!Number.isFinite(data.total_score) || data.total_score < 0 || data.total_score > 200) {
+    return { error: "Invalid total score" };
+  }
   const supabase = await createClient();
 
   const { error } = await supabase

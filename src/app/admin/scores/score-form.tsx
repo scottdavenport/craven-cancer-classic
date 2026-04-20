@@ -105,6 +105,7 @@ export function ScoreForm({
           value={session}
           onValueChange={(v) => setSession(v ?? "")}
           disabled={loading}
+          items={{ "": "N/A", morning: "Morning", afternoon: "Afternoon" }}
         >
           <SelectTrigger id="sf-session" className="w-full">
             <SelectValue placeholder="N/A" />

@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -92,16 +99,18 @@ export function InviteForm() {
 
           <div className="space-y-2">
             <Label htmlFor="invite-role">Role</Label>
-            <select
-              id="invite-role"
-              name="role"
+            <Select
               value={role}
-              onChange={(e) => setRole(e.target.value as "admin" | "viewer")}
-              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              onValueChange={(v) => setRole((v as "admin" | "viewer") ?? "viewer")}
             >
-              <option value="admin">Admin</option>
-              <option value="viewer">Viewer</option>
-            </select>
+              <SelectTrigger id="invite-role" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="admin">Admin</SelectItem>
+                <SelectItem value="viewer">Viewer</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button type="submit" size="sm" disabled={loading}>

@@ -131,11 +131,17 @@ function sanitizeSvg(text: string): string {
   });
 }
 
+async function isSvgContent(file: File): Promise<boolean> {
+  if (file.type === "image/svg+xml") return true;
+  const head = await file.slice(0, 1024).text();
+  return /<svg\b/i.test(head);
+}
+
 async function sanitizeSvgIfNeeded(file: File): Promise<File> {
-  if (file.type !== "image/svg+xml") return file;
+  if (!(await isSvgContent(file))) return file;
   const text = await file.text();
   const cleaned = sanitizeSvg(text);
-  return new File([cleaned], file.name, { type: file.type });
+  return new File([cleaned], file.name, { type: "image/svg+xml" });
 }
 
 export async function uploadSponsorLogo(formData: FormData) {

@@ -41,6 +41,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 import * as serverModule from "@/lib/supabase/server";
+import * as adminModule from "@/lib/supabase/admin";
 
 import { getDashboardStats } from "@/app/admin/dashboard-actions";
 
@@ -215,6 +216,18 @@ describe("getDashboardStats — returns all 6 stats", () => {
     expect(typeof result.pending_photos).toBe("number");
     expect(typeof result.contacts).toBe("number");
     expect(typeof result.scores).toBe("number");
+  });
+
+  it("calls requireAdmin before any DB query (authorization gate)", async () => {
+    const { client, spies } = buildSuccessClient({});
+    setClient(client);
+
+    await getDashboardStats();
+
+    expect(adminModule.requireAdmin).toHaveBeenCalled();
+    const requireAdminOrder = vi.mocked(adminModule.requireAdmin).mock.invocationCallOrder[0];
+    const firstFromOrder = spies.mockFrom.mock.invocationCallOrder[0];
+    expect(requireAdminOrder).toBeLessThan(firstFromOrder);
   });
 
   it("registrations comes from teams_active (correct table queried)", async () => {

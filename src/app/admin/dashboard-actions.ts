@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/supabase/admin";
 
 export interface DashboardStats {
   registrations: number;
@@ -12,6 +13,7 @@ export interface DashboardStats {
 }
 
 export async function getDashboardStats(): Promise<DashboardStats> {
+  await requireAdmin();
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 

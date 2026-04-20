@@ -375,7 +375,11 @@ function ItemForm({
         <div className="space-y-2">
           <Label htmlFor="item_active">Status</Label>
           <input type="hidden" name="active" value={active} />
-          <Select value={active} onValueChange={(v) => setActive(v ?? "true")}>
+          <Select
+            value={active}
+            onValueChange={(v) => setActive(v ?? "true")}
+            items={{ true: "Active", false: "Inactive" }}
+          >
             <SelectTrigger id="item_active" className="h-8 w-full">
               <SelectValue />
             </SelectTrigger>

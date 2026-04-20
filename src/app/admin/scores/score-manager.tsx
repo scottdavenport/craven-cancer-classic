@@ -169,7 +169,11 @@ export function ScoreManager({ scores }: ScoreManagerProps) {
                 <div className="space-y-2">
                   <Label htmlFor="score_session">Session</Label>
                   <input type="hidden" name="session" value={session} />
-                  <Select value={session} onValueChange={(v) => setSession(v ?? "")}>
+                  <Select
+                    value={session}
+                    onValueChange={(v) => setSession(v ?? "")}
+                    items={{ "": "N/A", morning: "Morning", afternoon: "Afternoon" }}
+                  >
                     <SelectTrigger id="score_session" className="h-8 w-full">
                       <SelectValue placeholder="N/A" />
                     </SelectTrigger>

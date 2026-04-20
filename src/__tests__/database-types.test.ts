@@ -54,9 +54,6 @@ describe("database types", () => {
     const team: Team = {
       id: "uuid",
       team_name: "The Hackers",
-      captain_name: "John Doe",
-      captain_email: "john@test.com",
-      captain_phone: null,
       captain_contact_id: null,
       session: "morning",
       payment_status: "pending",
@@ -135,10 +132,9 @@ describe("database types", () => {
   it("Insert types make required fields mandatory and optional fields optional", () => {
     type TeamInsert = Database["public"]["Tables"]["teams"]["Insert"];
     // These are the required fields for inserting a team
+    // (captain_name/email/phone columns dropped in S11-2 — use captain_contact_id instead)
     const insert: TeamInsert = {
       team_name: "Test Team",
-      captain_name: "Captain",
-      captain_email: "cap@test.com",
       session: "afternoon",
     };
     expect(insert.team_name).toBe("Test Team");

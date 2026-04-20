@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import DOMPurify from "isomorphic-dompurify";
+import sanitizeHtml from "sanitize-html";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 import { softDelete } from "@/lib/supabase/soft-delete";
@@ -123,11 +123,47 @@ export async function deleteSponsor(
   return softDelete(supabase, "sponsors", id);
 }
 
+const SVG_ALLOWED_TAGS = [
+  "svg", "g", "path", "circle", "rect", "ellipse", "line", "polyline", "polygon",
+  "text", "tspan", "textPath", "defs", "linearGradient", "radialGradient", "stop",
+  "symbol", "use", "mask", "clipPath", "pattern", "title", "desc",
+  "filter", "feBlend", "feColorMatrix", "feComponentTransfer", "feComposite",
+  "feConvolveMatrix", "feDiffuseLighting", "feDisplacementMap", "feFlood",
+  "feGaussianBlur", "feImage", "feMerge", "feMergeNode", "feMorphology",
+  "feOffset", "feSpecularLighting", "feTile", "feTurbulence", "feFuncR",
+  "feFuncG", "feFuncB", "feFuncA", "feDistantLight", "fePointLight", "feSpotLight",
+];
+
+const SVG_ALLOWED_ATTRS: Record<string, string[]> = {
+  "*": [
+    "id", "class", "style",
+    "fill", "fill-rule", "fill-opacity", "stroke", "stroke-width", "stroke-linecap",
+    "stroke-linejoin", "stroke-opacity", "stroke-dasharray", "stroke-dashoffset",
+    "stroke-miterlimit", "opacity", "transform", "color",
+    "x", "y", "width", "height", "cx", "cy", "r", "rx", "ry", "d",
+    "x1", "y1", "x2", "y2", "points", "viewBox", "preserveAspectRatio",
+    "version", "xmlns", "xmlns:xlink",
+    "offset", "stop-color", "stop-opacity", "gradientUnits", "gradientTransform",
+    "spreadMethod", "fx", "fy",
+    "clip-path", "clip-rule", "mask",
+    "text-anchor", "font-family", "font-size", "font-weight", "font-style",
+    "dx", "dy", "dominant-baseline", "alignment-baseline",
+    "result", "in", "in2", "values", "type", "mode", "stdDeviation", "order",
+    "k1", "k2", "k3", "k4", "operator", "radius", "surfaceScale", "diffuseConstant",
+    "specularConstant", "specularExponent", "kernelMatrix", "divisor", "bias",
+    "targetX", "targetY", "edgeMode", "kernelUnitLength", "preserveAlpha",
+    "elevation", "azimuth", "z", "pointsAtX", "pointsAtY", "pointsAtZ",
+    "limitingConeAngle", "baseFrequency", "numOctaves", "seed", "stitchTiles",
+  ],
+};
+
 function sanitizeSvg(text: string): string {
-  return DOMPurify.sanitize(text, {
-    USE_PROFILES: { svg: true, svgFilters: true },
-    FORBID_TAGS: ["script", "foreignObject", "iframe", "embed", "object"],
-    FORBID_ATTR: ["xlink:href"],
+  return sanitizeHtml(text, {
+    allowedTags: SVG_ALLOWED_TAGS,
+    allowedAttributes: SVG_ALLOWED_ATTRS,
+    allowedSchemes: ["data"],
+    allowedSchemesByTag: {},
+    parser: { lowerCaseTags: false, lowerCaseAttributeNames: false },
   });
 }
 

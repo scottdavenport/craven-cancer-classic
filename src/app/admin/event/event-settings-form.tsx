@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,70 +16,100 @@ interface EventSettingsFormProps {
 }
 
 export function EventSettingsForm({ settings }: EventSettingsFormProps) {
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
   const [registrationOpen, setRegistrationOpen] = useState(
     settings?.registration_open ?? false
   );
 
-  async function handleSubmit(formData: FormData) {
-    setError(null);
-    setSuccess(false);
-    setLoading(true);
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [descriptionError, setDescriptionError] = useState<string | null>(null);
+  const [feeError, setFeeError] = useState<string | null>(null);
+  const [dateRangeError, setDateRangeError] = useState<string | null>(null);
 
+  function validateName(value: string): string | null {
+    const trimmed = value.trim();
+    if (!trimmed) return "Tournament name is required";
+    if (trimmed.length > 100) return "Name must be 100 characters or fewer";
+    return null;
+  }
+
+  function validateDescription(value: string): string | null {
+    if (value.trim().length > 2000) return "Description must be 2000 characters or fewer";
+    return null;
+  }
+
+  function validateFee(value: string): string | null {
+    const parsed = parseFloat(value);
+    if (isNaN(parsed) || parsed < 0) return "Invalid registration fee";
+    return null;
+  }
+
+  function validateDateRange(startValue: string, endValue: string): string | null {
+    if (startValue && endValue && endValue < startValue) {
+      return "End date must be on or after start date";
+    }
+    return null;
+  }
+
+  function hasAnyError(): boolean {
+    return !!(nameError || descriptionError || feeError || dateRangeError);
+  }
+
+  function handleSubmit(formData: FormData) {
     if (registrationOpen) {
       formData.set("registration_open", "on");
     } else {
       formData.delete("registration_open");
     }
 
-    try {
+    const nameVal = (formData.get("name") as string) ?? "";
+    const descVal = (formData.get("description") as string) ?? "";
+    const feeVal = (formData.get("registration_fee") as string) ?? "";
+    const startVal = (formData.get("tournament_start_date") as string) ?? "";
+    const endVal = (formData.get("tournament_end_date") as string) ?? "";
+
+    const nameErr = validateName(nameVal);
+    const descErr = validateDescription(descVal);
+    const feeErr = validateFee(feeVal);
+    const dateErr = validateDateRange(startVal, endVal);
+
+    setNameError(nameErr);
+    setDescriptionError(descErr);
+    setFeeError(feeErr);
+    setDateRangeError(dateErr);
+
+    if (nameErr || descErr || feeErr || dateErr) return;
+
+    startTransition(async () => {
       const result = await updateEventSettings(formData);
-      if (result && "error" in result && typeof result.error === "string") {
-        setError(result.error);
+      if (result?.error !== undefined) {
+        toast.error(result.error || "Failed to save");
       } else {
-        setSuccess(true);
-        setTimeout(() => setSuccess(false), 3000);
+        toast.success("Event settings saved");
       }
-    } catch (err) {
-      console.error('[EventSettingsForm] updateEventSettings failed:', err);
-      setError("Failed to update settings");
-    } finally {
-      setLoading(false);
-    }
+    });
   }
 
   return (
-    <form action={handleSubmit} className="space-y-6">
-      {error && (
-        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="rounded-md bg-success-muted p-3 text-sm text-success border border-success/20">
-          Settings updated successfully
-        </div>
-      )}
-
+    <form action={handleSubmit} noValidate className="space-y-6">
       <Card>
         <CardHeader>
           <CardTitle>Tournament Details</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <fieldset className="space-y-4">
-            <legend className="font-sans text-[0.75rem] uppercase tracking-[0.15em] text-muted-foreground/70 mb-4">
-              Event Details
-            </legend>
             <div className="space-y-2">
               <Label htmlFor="name">Tournament Name</Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={settings?.name ?? "Craven Cancer Classic"}
-                required
+                onBlur={(e) => setNameError(validateName(e.target.value))}
+                onChange={() => setNameError(null)}
               />
+              {nameError && (
+                <p className="text-destructive text-sm">{nameError}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -88,7 +119,12 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                 name="description"
                 rows={3}
                 defaultValue={settings?.description ?? ""}
+                onBlur={(e) => setDescriptionError(validateDescription(e.target.value))}
+                onChange={() => setDescriptionError(null)}
               />
+              {descriptionError && (
+                <p className="text-destructive text-sm">{descriptionError}</p>
+              )}
             </div>
           </fieldset>
         </CardContent>
@@ -100,9 +136,6 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <fieldset className="space-y-4">
-            <legend className="font-sans text-[0.75rem] uppercase tracking-[0.15em] text-muted-foreground/70 mb-4">
-              Dates &amp; Venue
-            </legend>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="tournament_start_date">Start Date</Label>
@@ -111,6 +144,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                   name="tournament_start_date"
                   type="date"
                   defaultValue={settings?.tournament_start_date ?? ""}
+                  onChange={() => setDateRangeError(null)}
                 />
               </div>
               <div className="space-y-2">
@@ -120,9 +154,19 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                   name="tournament_end_date"
                   type="date"
                   defaultValue={settings?.tournament_end_date ?? ""}
+                  onBlur={(e) => {
+                    const form = e.target.form;
+                    if (!form) return;
+                    const startEl = form.elements.namedItem("tournament_start_date") as HTMLInputElement | null;
+                    setDateRangeError(validateDateRange(startEl?.value ?? "", e.target.value));
+                  }}
+                  onChange={() => setDateRangeError(null)}
                 />
               </div>
             </div>
+            {dateRangeError && (
+              <p className="text-destructive text-sm">{dateRangeError}</p>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="venue_name">Venue Name</Label>
@@ -143,9 +187,6 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <fieldset className="space-y-4">
-            <legend className="font-sans text-[0.75rem] uppercase tracking-[0.15em] text-muted-foreground/70 mb-4">
-              Registration
-            </legend>
             <div className="flex items-center justify-between">
               <div>
                 <Label htmlFor="registration_open">Registration Open</Label>
@@ -167,15 +208,19 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                 name="registration_fee"
                 type="number"
                 step="0.01"
-                min="0"
                 defaultValue={
                   settings?.registration_fee_cents != null
                     ? (settings.registration_fee_cents / 100).toFixed(2)
                     : "700.00"
                 }
+                onBlur={(e) => setFeeError(validateFee(e.target.value))}
+                onChange={() => setFeeError(null)}
               />
+              {feeError && (
+                <p className="text-destructive text-sm">{feeError}</p>
+              )}
               <p className="mt-1 font-sans text-[0.75rem] text-muted-foreground">
-                Per-team fee shown on the public registration page.
+                Amount shown on the public registration page per team.
               </p>
             </div>
 
@@ -187,7 +232,6 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                   name="morning_cap"
                   type="number"
                   defaultValue={settings?.morning_cap ?? 36}
-                  min={1}
                 />
               </div>
               <div className="space-y-2">
@@ -197,7 +241,6 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                   name="afternoon_cap"
                   type="number"
                   defaultValue={settings?.afternoon_cap ?? 36}
-                  min={1}
                 />
               </div>
             </div>
@@ -205,8 +248,8 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         </CardContent>
       </Card>
 
-      <Button type="submit" size="lg" disabled={loading}>
-        {loading ? "Saving..." : "Save Settings"}
+      <Button type="submit" size="lg" disabled={isPending}>
+        {isPending ? "Saving..." : "Save Settings"}
       </Button>
     </form>
   );

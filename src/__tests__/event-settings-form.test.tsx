@@ -230,7 +230,8 @@ describe("EventSettingsForm — client-side validation", () => {
     await user.tab();
 
     await waitFor(() => {
-      expect(screen.getByText(/fee|negative|invalid/i)).toBeInTheDocument();
+      // selector:'p' prevents false-positive match on the <label>Registration Fee (USD)</label> element
+      expect(screen.getByText(/fee|negative|invalid/i, { selector: "p" })).toBeInTheDocument();
     });
   });
 
@@ -265,8 +266,9 @@ describe("EventSettingsForm — client-side validation", () => {
     await user.tab();
 
     // Wait for the inline error to appear (fee-specific error, no label ambiguity)
+    // selector:'p' prevents false-positive match on the <label>Registration Fee (USD)</label> element
     await waitFor(() => {
-      expect(screen.getByText(/fee|negative|invalid/i)).toBeInTheDocument();
+      expect(screen.getByText(/fee|negative|invalid/i, { selector: "p" })).toBeInTheDocument();
     });
 
     // Now attempt to submit

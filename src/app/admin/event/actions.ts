@@ -23,31 +23,52 @@ export async function getEventSettings() {
 }
 
 export async function updateEventSettings(formData: FormData) {
-  await requireAdmin();
+  try {
+    await requireAdmin();
+  } catch (_err) {
+    return { error: "Unauthorized" };
+  }
+
+  const name = (formData.get("name") as string ?? "").trim();
+  if (!name) return { error: "Tournament name is required" };
+  if (name.length > 100) return { error: "Name must be 100 characters or fewer" };
+
+  const description = (formData.get("description") as string ?? "").trim();
+  if (description.length > 2000) return { error: "Description must be 2000 characters or fewer" };
+
+  const feeRaw = formData.get("registration_fee") as string;
+  const feeDollars = parseFloat(feeRaw);
+  if (isNaN(feeDollars) || feeDollars < 0) return { error: "Invalid registration fee" };
+
+  const morningCapRaw = formData.get("morning_cap") as string;
+  const morningCap = parseInt(morningCapRaw, 10);
+  if (isNaN(morningCap) || morningCap <= 0) return { error: "Morning cap must be positive" };
+
+  const afternoonCapRaw = formData.get("afternoon_cap") as string;
+  const afternoonCap = parseInt(afternoonCapRaw, 10);
+  if (isNaN(afternoonCap) || afternoonCap <= 0) return { error: "Afternoon cap must be positive" };
+
+  const startStr = (formData.get("tournament_start_date") as string) || null;
+  const endStr = (formData.get("tournament_end_date") as string) || null;
+  if (startStr && endStr && endStr < startStr) {
+    return { error: "End date must be on or after start date" };
+  }
+
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
-  const registrationFeeDollars = parseFloat(
-    formData.get("registration_fee") as string
-  );
-  const registrationFeeCents =
-    isNaN(registrationFeeDollars) || registrationFeeDollars < 0
-      ? 70000
-      : Math.round(registrationFeeDollars * 100);
-
   const updates: Database["public"]["Tables"]["event_settings"]["Update"] = {
-    name: formData.get("name") as string,
-    description: formData.get("description") as string,
-    morning_cap: parseInt(formData.get("morning_cap") as string) || 36,
-    afternoon_cap: parseInt(formData.get("afternoon_cap") as string) || 36,
+    name,
+    description,
+    morning_cap: morningCap,
+    afternoon_cap: afternoonCap,
     registration_open: formData.get("registration_open") === "on",
-    registration_fee_cents: registrationFeeCents,
-    tournament_start_date: (formData.get("tournament_start_date") as string) || null,
-    tournament_end_date: (formData.get("tournament_end_date") as string) || null,
+    registration_fee_cents: Math.round(feeDollars * 100),
+    tournament_start_date: startStr,
+    tournament_end_date: endStr,
     venue_name: (formData.get("venue_name") as string) || null,
   };
 
-  // Check if settings exist for this year
   const { data: existing } = await supabase
     .from("event_settings")
     .select("id")

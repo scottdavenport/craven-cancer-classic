@@ -19,7 +19,6 @@ import {
   Calendar,
   Award,
   Users,
-  UsersRound,
   ShoppingBag,
   Camera,
   Trophy,
@@ -35,8 +34,7 @@ const menuItems = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { label: "Event", href: "/admin/event", icon: Calendar },
   { label: "Sponsors", href: "/admin/sponsors", icon: Award },
-  { label: "Registrations", href: "/admin/registrations", icon: Users },
-  { label: "Teams", href: "/admin/teams", icon: UsersRound },
+  { label: "Registrations", href: "/admin/teams", icon: Users },
   { label: "Sponsorships", href: "/admin/sponsorships", icon: ShoppingBag },
   { label: "Photos", href: "/admin/photos", icon: Camera },
   { label: "Scores", href: "/admin/scores", icon: Trophy },
@@ -65,7 +63,7 @@ export function AdminSidebar() {
               const isActive =
                 item.href === "/admin"
                   ? pathname === "/admin"
-                  : pathname.startsWith(item.href);
+                  : pathname === item.href || pathname.startsWith(item.href + "/");
               return (
                 <SidebarMenuItem key={item.href}>
                   <SidebarMenuButton

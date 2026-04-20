@@ -79,7 +79,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        <LinkButton href="/admin/registrations" variant="outline" size="sm">
+        <LinkButton href="/admin/teams" variant="outline" size="sm">
           Manage Registrations
         </LinkButton>
         <LinkButton href="/admin/scores" variant="outline" size="sm">

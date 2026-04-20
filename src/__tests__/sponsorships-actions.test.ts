@@ -42,7 +42,6 @@ vi.mock("@/lib/supabase/soft-delete", () => ({
 import * as serverModule from "@/lib/supabase/server";
 import {
   getSponsorshipItems,
-  // @ts-expect-error — getLinkedSponsorNames does not exist yet (RED phase)
   getLinkedSponsorNames,
 } from "@/app/admin/sponsorships/actions";
 

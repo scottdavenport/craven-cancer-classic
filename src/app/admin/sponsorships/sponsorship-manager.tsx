@@ -2,9 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -14,20 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { Plus, Pencil, Trash2 } from "lucide-react";
-import {
-  createSponsorshipItem,
-  updateSponsorshipItem,
-  deleteSponsorshipItem,
-} from "./actions";
+import { Plus, Pencil } from "lucide-react";
+import { SponsorshipDrawer } from "./sponsorship-drawer";
 import type { SponsorshipItem, SponsorshipPurchase } from "@/types/database";
 
 interface SponsorshipManagerProps {
@@ -35,80 +20,32 @@ interface SponsorshipManagerProps {
   purchases: SponsorshipPurchase[];
 }
 
+type DrawerState = {
+  open: boolean;
+  mode: "create" | "edit";
+  sponsorship: SponsorshipItem | null;
+};
+
 export function SponsorshipManager({
   items,
   purchases,
 }: SponsorshipManagerProps) {
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [deleteTarget, setDeleteTarget] = useState<SponsorshipItem | null>(null);
+  const [drawer, setDrawer] = useState<DrawerState>({
+    open: false,
+    mode: "create",
+    sponsorship: null,
+  });
 
   const totalRevenue = purchases
     .filter((p) => p.payment_status === "paid")
     .reduce((sum, p) => sum + p.amount_paid_cents, 0);
 
-  async function handleCreate(formData: FormData) {
-    setError(null);
-    setLoading(true);
-    try {
-      const result = await createSponsorshipItem(formData);
-      if (result && "error" in result && typeof result.error === "string") {
-        setError(result.error);
-      } else {
-        setShowForm(false);
-      }
-    } catch (err) {
-      console.error('[SponsorshipManager] createSponsorshipItem failed:', err);
-      setError("Failed to create item");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleUpdate(id: string, formData: FormData) {
-    setError(null);
-    setLoading(true);
-    try {
-      const result = await updateSponsorshipItem(id, formData);
-      if (result && "error" in result && typeof result.error === "string") {
-        setError(result.error);
-      } else {
-        setEditingId(null);
-      }
-    } catch (err) {
-      console.error('[SponsorshipManager] updateSponsorshipItem failed:', err);
-      setError("Failed to update item");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleDeleteConfirmed() {
-    if (!deleteTarget) return;
-    setLoading(true);
-    try {
-      const result = await deleteSponsorshipItem(deleteTarget.id);
-      if (result && "error" in result && typeof result.error === "string") {
-        setError(result.error);
-      }
-    } catch (err) {
-      console.error('[SponsorshipManager] deleteSponsorshipItem failed:', err);
-      setError("Failed to delete item");
-    } finally {
-      setLoading(false);
-    }
+  function handleDrawerSuccess() {
+    window.location.reload();
   }
 
   return (
     <div className="space-y-6">
-      {error && (
-        <div className="rounded-md bg-destructive/10 text-destructive border border-destructive/20 p-3 text-sm">
-          {error}
-        </div>
-      )}
-
       {/* Stats */}
       <div className="grid gap-4 sm:grid-cols-3">
         <Card className="shadow-sm border border-border/60">
@@ -137,23 +74,15 @@ export function SponsorshipManager({
       <Card className="shadow-sm border border-border/60">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-sans text-base font-semibold">Packages ({items.length})</CardTitle>
-          <Button size="sm" onClick={() => setShowForm(!showForm)}>
+          <Button
+            size="sm"
+            onClick={() => setDrawer({ open: true, mode: "create", sponsorship: null })}
+          >
             <Plus className="mr-1 h-4 w-4" />
             Add Package
           </Button>
         </CardHeader>
         <CardContent>
-          {showForm && (
-            <div className="mb-6 rounded-lg border border-border/60 bg-neutral-50 p-6 shadow-sm max-w-2xl">
-              <h3 className="mb-4 font-sans text-base font-semibold text-foreground">New Sponsorship Package</h3>
-              <ItemForm
-                onSubmit={handleCreate}
-                loading={loading}
-                onCancel={() => setShowForm(false)}
-              />
-            </div>
-          )}
-
           <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">
             <Table>
               <TableHeader>
@@ -163,7 +92,7 @@ export function SponsorshipManager({
                   <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sold</TableHead>
                   <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Max</TableHead>
                   <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
-                  <TableHead className="w-24" />
+                  <TableHead className="w-16" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -177,69 +106,66 @@ export function SponsorshipManager({
                     </TableCell>
                   </TableRow>
                 ) : (
-                  items.map((item) =>
-                    editingId === item.id ? (
-                      <TableRow key={item.id}>
-                        <TableCell colSpan={6}>
-                          <ItemForm
-                            defaultValues={item}
-                            onSubmit={(fd) => handleUpdate(item.id, fd)}
-                            loading={loading}
-                            onCancel={() => setEditingId(null)}
-                          />
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      <TableRow key={item.id}>
-                        <TableCell>
-                          <p className="font-medium text-[0.9375rem]">{item.name}</p>
-                          {item.description && (
-                            <p className="text-xs text-muted-foreground line-clamp-1">
-                              {item.description}
-                            </p>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right font-mono tabular-nums lining-nums font-medium">
-                          {(item.price_cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })}
-                        </TableCell>
-                        <TableCell className={`text-right font-mono tabular-nums lining-nums ${item.max_quantity && item.sold_count >= item.max_quantity ? "text-warning font-semibold" : "text-foreground"}`}>
-                          {item.sold_count}
-                        </TableCell>
-                        <TableCell className="text-right font-mono tabular-nums lining-nums text-muted-foreground">
-                          {item.max_quantity ?? "∞"}
-                        </TableCell>
-                        <TableCell>
-                          <span className={
+                  items.map((item) => (
+                    <TableRow
+                      key={item.id}
+                      className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer"
+                      onClick={() =>
+                        setDrawer({ open: true, mode: "edit", sponsorship: item })
+                      }
+                    >
+                      <TableCell>
+                        <p className="font-medium text-[0.9375rem]">{item.name}</p>
+                        {item.description && (
+                          <p className="text-xs text-muted-foreground line-clamp-1">
+                            {item.description}
+                          </p>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums lining-nums font-medium">
+                        {(item.price_cents / 100).toLocaleString("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        })}
+                      </TableCell>
+                      <TableCell
+                        className={`text-right font-mono tabular-nums lining-nums ${
+                          item.max_quantity && item.sold_count >= item.max_quantity
+                            ? "text-warning font-semibold"
+                            : "text-foreground"
+                        }`}
+                      >
+                        {item.sold_count}
+                      </TableCell>
+                      <TableCell className="text-right font-mono tabular-nums lining-nums text-muted-foreground">
+                        {item.max_quantity ?? "∞"}
+                      </TableCell>
+                      <TableCell>
+                        <span
+                          className={
                             `rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.05em] ` +
                             (item.active
                               ? "bg-success-muted text-success"
                               : "bg-neutral-100 text-neutral-600")
-                          }>
-                            {item.active ? "Active" : "Inactive"}
-                          </span>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => setEditingId(item.id)}
-                            >
-                              <Pencil className="h-3.5 w-3.5" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              onClick={() => setDeleteTarget(item)}
-                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  )
+                          }
+                        >
+                          {item.active ? "Active" : "Inactive"}
+                        </span>
+                      </TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDrawer({ open: true, mode: "edit", sponsorship: item });
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))
                 )}
               </TableBody>
             </Table>
@@ -278,19 +204,24 @@ export function SponsorshipManager({
                         {p.company_name || "—"}
                       </TableCell>
                       <TableCell>
-                        <span className={
-                          `rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.05em] ` +
-                          (p.payment_status === "paid"
-                            ? "bg-success-muted text-success"
-                            : p.payment_status === "pending"
-                            ? "bg-warning-muted text-warning"
-                            : "bg-destructive/10 text-destructive")
-                        }>
+                        <span
+                          className={
+                            `rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold uppercase tracking-[0.05em] ` +
+                            (p.payment_status === "paid"
+                              ? "bg-success-muted text-success"
+                              : p.payment_status === "pending"
+                              ? "bg-warning-muted text-warning"
+                              : "bg-destructive/10 text-destructive")
+                          }
+                        >
                           {p.payment_status}
                         </span>
                       </TableCell>
                       <TableCell className="text-right font-mono tabular-nums lining-nums">
-                        {(p.amount_paid_cents / 100).toLocaleString("en-US", { style: "currency", currency: "USD" })}
+                        {(p.amount_paid_cents / 100).toLocaleString("en-US", {
+                          style: "currency",
+                          currency: "USD",
+                        })}
                       </TableCell>
                       <TableCell className="font-mono text-[0.8125rem] text-muted-foreground">
                         {new Date(p.created_at).toLocaleDateString()}
@@ -304,100 +235,14 @@ export function SponsorshipManager({
         </Card>
       )}
 
-      <ConfirmDialog
-        open={deleteTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-        title="Delete this sponsorship package?"
-        description="This action cannot be undone. The package will be permanently removed."
-        confirmLabel="Delete"
-        onConfirm={handleDeleteConfirmed}
+      <SponsorshipDrawer
+        open={drawer.open}
+        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
+        mode={drawer.mode}
+        sponsorship={drawer.sponsorship}
+        onSubmit={handleDrawerSuccess}
+        onDelete={handleDrawerSuccess}
       />
     </div>
-  );
-}
-
-function ItemForm({
-  defaultValues,
-  onSubmit,
-  loading,
-  onCancel,
-}: {
-  defaultValues?: Partial<SponsorshipItem>;
-  onSubmit: (formData: FormData) => void;
-  loading: boolean;
-  onCancel: () => void;
-}) {
-  const [active, setActive] = useState(
-    defaultValues?.active !== false ? "true" : "false"
-  );
-
-  return (
-    <form action={onSubmit} className="space-y-4">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
-          <Label htmlFor="item_name">Package Name</Label>
-          <Input
-            id="item_name"
-            name="name"
-            defaultValue={defaultValues?.name}
-            required
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="item_price">Price ($)</Label>
-          <Input
-            id="item_price"
-            name="price"
-            type="number"
-            step="0.01"
-            defaultValue={defaultValues?.price_cents !== undefined ? defaultValues.price_cents / 100 : undefined}
-            required
-          />
-        </div>
-        <div className="space-y-2 sm:col-span-2">
-          <Label htmlFor="item_description">Description</Label>
-          <Textarea
-            id="item_description"
-            name="description"
-            rows={2}
-            defaultValue={defaultValues?.description ?? ""}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="item_max">Max Quantity (blank = unlimited)</Label>
-          <Input
-            id="item_max"
-            name="max_quantity"
-            type="number"
-            defaultValue={defaultValues?.max_quantity ?? ""}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="item_active">Status</Label>
-          <input type="hidden" name="active" value={active} />
-          <Select
-            value={active}
-            onValueChange={(v) => setActive(v ?? "true")}
-            items={{ true: "Active", false: "Inactive" }}
-          >
-            <SelectTrigger id="item_active" className="h-8 w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="true">Active</SelectItem>
-              <SelectItem value="false">Inactive</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-      <div className="flex gap-2">
-        <Button type="submit" size="sm" disabled={loading}>
-          {loading ? "Saving..." : defaultValues ? "Update" : "Create"}
-        </Button>
-        <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-    </form>
   );
 }

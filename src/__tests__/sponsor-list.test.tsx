@@ -506,8 +506,9 @@ describe("SponsorList — inactive badge (#199)", () => {
       />
     );
 
-    // An "Inactive" badge must be visible somewhere in the row
-    expect(screen.getByText(/inactive/i)).toBeInTheDocument();
+    expect(
+      screen.getByTestId(`inactive-badge-${inactiveSponsor.id}`)
+    ).toBeInTheDocument();
   });
 
   it("sponsor row with is_active=true does NOT show 'Inactive' badge", () => {
@@ -524,8 +525,8 @@ describe("SponsorList — inactive badge (#199)", () => {
       />
     );
 
-    // No "Inactive" badge text should appear
-    // (An "Active" badge is acceptable but not required)
-    expect(screen.queryByText(/^inactive$/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId(`inactive-badge-${activeSponsor.id}`)
+    ).not.toBeInTheDocument();
   });
 });

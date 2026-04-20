@@ -199,12 +199,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
         </select>
 
         {/* Status filter */}
-        {/* sr-only option anchors so queryByRole("option") resolves without
-            emitting text nodes that would collide with the Inactive row badge */}
-        <span role="option" aria-label="All" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }} />
-        <span role="option" aria-label="Active" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }} />
-        <span role="option" aria-label="Inactive" style={{ position: "absolute", width: 1, height: 1, overflow: "hidden", clip: "rect(0,0,0,0)", whiteSpace: "nowrap" }} />
-        <div role="group" aria-label="Status filter" className="flex gap-1 rounded-md border border-input overflow-hidden">
+        <div role="radiogroup" aria-label="Status filter" className="flex gap-1 rounded-md border border-input overflow-hidden">
           {(["all", "active", "inactive"] as StatusFilter[]).map((s) => {
             const label = s === "all" ? "All" : s === "active" ? "Active" : "Inactive";
             return (
@@ -215,14 +210,16 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                 aria-label={label}
                 aria-checked={statusFilter === s}
                 onClick={() => handleStatusChange(s)}
-                data-label={label}
+                data-testid={`status-filter-${s}`}
                 className={
-                  `px-3 py-1 text-sm capitalize transition-colors before:content-[attr(data-label)] ` +
+                  `px-3 py-1 text-sm capitalize transition-colors ` +
                   (statusFilter === s
                     ? "bg-teal-600 text-white"
                     : "bg-background text-foreground hover:bg-neutral-100")
                 }
-              />
+              >
+                {label}
+              </button>
             );
           })}
         </div>
@@ -290,18 +287,14 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                         }
                       >
                         <TableCell className="font-medium text-[0.9375rem]">
-                          {/* Wrap name in span so the TD has no direct text nodes —
-                              prevents getByText from matching the TD itself when name
-                              contains a word that also appears in the Inactive badge */}
-                          <span>{sponsor.name}</span>
+                          {sponsor.name}
                           {inactive && (
-                            // Badge text lives in CSS content so getByText won't find
-                            // a separate text node — only the name span is text-matched.
                             <span
-                              aria-label="Inactive"
-                              data-label="Inactive"
-                              className="ml-2 rounded-sm px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] bg-neutral-200 text-neutral-500 before:content-[attr(data-label)]"
-                            />
+                              data-testid={`inactive-badge-${sponsor.id}`}
+                              className="ml-2 rounded-sm px-1.5 py-0.5 text-[0.6rem] font-semibold uppercase tracking-[0.05em] bg-neutral-200 text-neutral-500"
+                            >
+                              Inactive
+                            </span>
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">

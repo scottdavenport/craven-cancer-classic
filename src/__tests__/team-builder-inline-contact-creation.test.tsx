@@ -20,7 +20,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // ---------------------------------------------------------------------------
@@ -375,13 +375,19 @@ describe("ContactTypeahead — submit inline form creates contact and auto-selec
   });
 
   it("does NOT call createContact if submission has validation errors", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderNewTeamForm();
 
-    await typeQueryAndWaitForSearch(user, "captain", "");
-    // If query is blank, the CTA should not appear (nothing to create)
+    // Simulate typing then clearing the captain search input — blank query must not
+    // produce a Create CTA, so createContact should never be reachable.
+    // user.type("") is invalid in user-event v14+; use fireEvent.change to set an
+    // empty value directly, which matches what happens when the user clears the field.
+    const inputs = screen.getAllByPlaceholderText(/search by name or email/i);
+    const captainInput = inputs[SLOT_INDEX["captain"]];
+    fireEvent.change(captainInput, { target: { value: "" } });
     await vi.advanceTimersByTimeAsync(300);
 
+    // No CTA should appear for a blank query
+    expect(screen.queryByRole("button", { name: /create/i })).not.toBeInTheDocument();
     expect(contactsActions.createContact).not.toHaveBeenCalled();
   });
 });

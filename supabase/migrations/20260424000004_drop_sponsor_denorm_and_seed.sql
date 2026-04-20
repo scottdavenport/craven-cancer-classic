@@ -57,11 +57,13 @@ CREATE OR REPLACE VIEW public.sponsors_active AS
 -- Squarespace CDN — per Scott's ask, imported as-is. Admin will rename the
 -- "(— rename)" placeholders via the sponsor drawer UI post-import.
 --
--- Tier mapping (exact names from sponsorship_items table):
---   'Champion Sponsor' ($5k) → Champion-tier rows
---   'Eagle Sponsor' ($2.5k) → Eagle-tier rows
---   'Morning Biscuit Sponsor' → added in PR B (active=false, price=0)
---   'Shot of the Day' → added in PR B (active=false, price=0)
+-- Tier mapping — tier names verified against PRODUCTION state via service-key
+-- REST query on 2026-04-20 (NOT against catalog_consolidation migration source
+-- which contains different names; prod is the authoritative state):
+--   'Champion' ($5k) → 4 Champion-tier rows
+--   'Eagle' ($2.5k) → 5 Eagle-tier rows
+--   'Morning Biscuit Sponsor' → 1 row (tier added in PR A, active=false)
+--   'Shot of the Day' → 4 rows (tier added in PR A, active=false)
 --
 -- All rows: year=2026, is_active=true, payment_status='pending', amount_paid_cents=0.
 -- display_order incrementing by tier.
@@ -83,16 +85,16 @@ SELECT
   s.display_order
 FROM (VALUES
   -- Champion Sponsor ($5k)
-  ('Champion Sponsor', 'Carolina East Health', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1629596078630-4PR6HEVF8B1XEM10T28E/carolinaeast-feature.jpeg', 1),
-  ('Champion Sponsor', 'Fuel Market', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/23606448-6e61-4bff-b952-c09be947ee00/Fuel-Market-Metallic-Oval-logo.jpg', 2),
-  ('Champion Sponsor', '(Champion Sponsor — rename)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/7594871b-3bfd-44fb-b4aa-31b21219b4a9/CCC+Personal+Oct+20+2022+%283%29.png', 3),
-  ('Champion Sponsor', '(Champion Sponsor — rename)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464442940-8OE4O73NVS2V24HYRD0P/CCC+Personal-4.png', 4),
+  ('Champion', 'Carolina East Health', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1629596078630-4PR6HEVF8B1XEM10T28E/carolinaeast-feature.jpeg', 1),
+  ('Champion', 'Fuel Market', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/23606448-6e61-4bff-b952-c09be947ee00/Fuel-Market-Metallic-Oval-logo.jpg', 2),
+  ('Champion', '(Champion Sponsor — rename)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/7594871b-3bfd-44fb-b4aa-31b21219b4a9/CCC+Personal+Oct+20+2022+%283%29.png', 3),
+  ('Champion', '(Champion Sponsor — rename)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464442940-8OE4O73NVS2V24HYRD0P/CCC+Personal-4.png', 4),
   -- Eagle Sponsor ($2.5k)
-  ('Eagle Sponsor', 'Sports Connection', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694463378634-V0OPBPQC2V0EC7LTY1AS/sportsconnection.png', 1),
-  ('Eagle Sponsor', 'Chick-fil-A', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1662990372442-P51HLP0LPA5Q9ZHG6JF5/Chick-fil-A+White+Script+Logo+on+PMS+186+Large_master.jpg', 2),
-  ('Eagle Sponsor', 'BSH', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464031909-4HREHIUBP20JXWBB34LA/BSH_logo.jpg', 3),
-  ('Eagle Sponsor', '(Eagle Sponsor — rename, was SMDonation)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1663090374158-A90ZZQNXFBTWC4HY90Y1/SMDonation.png', 4),
-  ('Eagle Sponsor', '(Eagle Sponsor — rename, was screenshot upload)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1755631057671-U5M01FJBCM76YW03ISOF/Screenshot+2025-08-19+at+3.17.28%E2%80%AFPM.png', 5),
+  ('Eagle', 'Sports Connection', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694463378634-V0OPBPQC2V0EC7LTY1AS/sportsconnection.png', 1),
+  ('Eagle', 'Chick-fil-A', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1662990372442-P51HLP0LPA5Q9ZHG6JF5/Chick-fil-A+White+Script+Logo+on+PMS+186+Large_master.jpg', 2),
+  ('Eagle', 'BSH', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464031909-4HREHIUBP20JXWBB34LA/BSH_logo.jpg', 3),
+  ('Eagle', '(Eagle Sponsor — rename, was SMDonation)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1663090374158-A90ZZQNXFBTWC4HY90Y1/SMDonation.png', 4),
+  ('Eagle', '(Eagle Sponsor — rename, was screenshot upload)', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1755631057671-U5M01FJBCM76YW03ISOF/Screenshot+2025-08-19+at+3.17.28%E2%80%AFPM.png', 5),
   -- Morning Biscuit Sponsor
   ('Morning Biscuit Sponsor', 'TIC', 'https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1696454556511-C6KTZ9OFF0UIPZ9OAZQ6/TIC_Logo_PNG.png', 1),
   -- Shot of the Day

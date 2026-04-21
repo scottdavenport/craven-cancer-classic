@@ -84,7 +84,7 @@ export function InviteForm() {
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="invite-email">Email</Label>
             <Input
               id="invite-email"
@@ -97,7 +97,7 @@ export function InviteForm() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="invite-role">Role</Label>
             <Select
               value={role}

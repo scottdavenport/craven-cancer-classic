@@ -192,16 +192,13 @@ describe("EventSettingsForm — client-side validation", () => {
   });
 
   it("name > 100 chars on blur shows inline length error", async () => {
-    const user = userEvent.setup();
     render(<EventSettingsForm settings={mockSettings} />);
 
     const nameInput = screen.getByLabelText(/tournament name/i);
-    await user.clear(nameInput);
-    await user.type(nameInput, "x".repeat(101));
-    await user.tab();
+    fireEvent.change(nameInput, { target: { value: "x".repeat(101) } });
+    fireEvent.blur(nameInput);
 
     await waitFor(() => {
-      // Error must mention the 100-char limit or "too long" — not just any element with "name"
       expect(screen.getByText(/100 characters|too long|exceed/i)).toBeInTheDocument();
     });
   });

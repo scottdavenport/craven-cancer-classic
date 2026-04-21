@@ -55,15 +55,19 @@ function LogoContent({ sponsor, tierSize }: { sponsor: Sponsor; tierSize: TierSi
     compact: "max-h-12",
   }[tierSize];
 
+  const alignRight = tierSize === "eagle";
+  const wrapperAlign = alignRight ? "items-end text-right" : "items-start text-left";
+  const imgAlign = alignRight ? "object-right" : "object-left";
+
   return (
-    <div className="flex flex-col items-start gap-3 w-full">
+    <div className={cn("flex flex-col gap-3 w-full", wrapperAlign)}>
       <Image
         src={sponsor.logo_url!}
         alt={sponsor.name}
         data-testid={`sponsor-logo-${sponsor.id}`}
         width={320}
         height={96}
-        className={cn("object-contain object-left w-auto", maxH)}
+        className={cn("object-contain w-auto", imgAlign, maxH)}
       />
       <p
         aria-hidden="true"

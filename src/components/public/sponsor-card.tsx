@@ -3,206 +3,193 @@ import type { JSX } from "react";
 
 export type TierSize = "champion" | "eagle" | "standard" | "compact";
 
+interface Sponsor {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  website: string | null;
+}
+
 interface SponsorCardProps {
-  sponsor: {
-    id: string;
-    name: string;
-    logo_url: string | null;
-    website: string | null;
-  };
+  sponsor: Sponsor;
   tierSize: TierSize;
 }
 
-function PatronChampion({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): JSX.Element {
-  const initial = sponsor.name.split(" ")[0]?.[0]?.toUpperCase() ?? "";
-  return (
-    <div className="group relative bg-cream grain-overlay rounded-lg border border-border/60 border-l-4 border-l-brand p-6 overflow-hidden transition-shadow hover:shadow-md">
-      {initial && (
-        <span
-          data-testid="patron-drop-initial"
-          aria-hidden="true"
-          style={{ fontVariationSettings: "'opsz' 144", fontWeight: 300 }}
-          className="font-display italic text-[56px] sm:text-[80px] leading-none text-brand group-hover:text-brand-dark transition-colors duration-150 float-left mr-3 mt-1"
-        >
-          {initial}
-        </span>
-      )}
-      <div>
-        <span
-          style={{ fontVariationSettings: "'opsz' 144", fontWeight: 500 }}
-          className="font-display text-[22px] sm:text-[28px] leading-tight text-foreground block"
-        >
-          {sponsor.name}
-        </span>
-        <span
-          data-testid="patron-subline"
-          aria-hidden="true"
-          style={{ fontVariationSettings: "'opsz' 9", fontVariant: "small-caps" }}
-          className="font-display italic text-[11px] text-muted-foreground block mt-1"
-        >
-          Est. 2010 · Champion Patron
-        </span>
-      </div>
-      <span
-        data-testid="patron-fleuron"
-        aria-hidden="true"
-        style={{ fontVariationSettings: "'opsz' 9" }}
-        className="font-display absolute bottom-0 right-0 p-4 text-[16px] text-brand-muted"
+interface CardWrapperProps {
+  sponsor: Sponsor;
+  children: React.ReactNode;
+  className: string;
+  "data-testid": string;
+}
+
+function cn(...classes: (string | false | null | undefined)[]): string {
+  return classes.filter(Boolean).join(" ");
+}
+
+function CardWrapper({ sponsor, children, className, "data-testid": testId }: CardWrapperProps): JSX.Element {
+  if (sponsor.website) {
+    return (
+      <a
+        href={sponsor.website}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+        data-testid={testId}
       >
-        ❦
-      </span>
+        {children}
+      </a>
+    );
+  }
+  return (
+    <div className={className} data-testid={testId}>
+      {children}
     </div>
   );
 }
 
-function PatronEagle({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): JSX.Element {
-  return (
-    <div className="group relative bg-cream grain-overlay rounded-md border border-border/60 p-5 transition-shadow hover:shadow-sm">
-      <div aria-hidden="true" className="mb-4">
-        <div className="h-px bg-brand-muted" />
-        <div className="h-px bg-brand-muted mt-0.5" />
-      </div>
-      <div className="flex items-baseline gap-2">
-        <span
-          data-testid="patron-ornament"
-          aria-hidden="true"
-          style={{ fontVariationSettings: "'opsz' 9" }}
-          className="font-display text-[13px] sm:text-[14px] text-brand group-hover:text-brand-dark transition-colors duration-150"
-        >
-          ❧
-        </span>
-        <span
-          style={{ fontVariationSettings: "'opsz' 72", fontWeight: 400 }}
-          className="font-display text-[18px] sm:text-[20px] leading-snug text-foreground"
-        >
-          {sponsor.name}
-        </span>
-      </div>
-    </div>
-  );
-}
+function LogoContent({ sponsor, tierSize }: { sponsor: Sponsor; tierSize: TierSize }): JSX.Element {
+  const maxH = {
+    champion: "max-h-24",
+    eagle: "max-h-[72px]",
+    standard: "max-h-14",
+    compact: "max-h-12",
+  }[tierSize];
 
-function PatronStandard({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): JSX.Element {
+  const alignRight = tierSize === "eagle";
+  const wrapperAlign = alignRight ? "items-end text-right" : "items-start text-left";
+  const imgAlign = alignRight ? "object-right" : "object-left";
+
   return (
-    <div className="bg-cream rounded-md border border-border/60 p-5 transition-shadow hover:shadow-xs group">
-      <div
-        data-testid="patron-rule"
-        aria-hidden="true"
-        className="h-px w-6 bg-brand mb-3 transition-[width] duration-200 group-hover:w-10 group-hover:bg-brand-dark"
+    <div className={cn("flex flex-col gap-3 w-full", wrapperAlign)}>
+      <Image
+        src={sponsor.logo_url!}
+        alt={sponsor.name}
+        data-testid={`sponsor-logo-${sponsor.id}`}
+        width={320}
+        height={96}
+        className={cn("object-contain w-auto", imgAlign, maxH)}
       />
+      <p
+        aria-hidden="true"
+        style={{ letterSpacing: "0.15em" }}
+        className="font-sans text-[0.6875rem] uppercase text-muted-foreground/70"
+      >
+        {sponsor.name}
+      </p>
+    </div>
+  );
+}
+
+function PatronContent({ sponsor, tierSize }: { sponsor: Sponsor; tierSize: TierSize }): JSX.Element {
+  const nameStyles: React.CSSProperties = {
+    champion: { fontVariationSettings: "'opsz' 72", fontWeight: "500" },
+    eagle: { fontVariationSettings: "'opsz' 36", fontWeight: "400", fontStyle: "italic" },
+    standard: { fontVariationSettings: "'opsz' 36", fontWeight: "400" },
+    compact: { fontVariationSettings: "'opsz' 9", fontWeight: "400" },
+  }[tierSize];
+
+  const nameClass = {
+    champion: "font-display text-[28px] sm:text-[36px] leading-tight text-foreground",
+    eagle: "font-display italic text-[20px] sm:text-[24px] leading-snug text-foreground",
+    standard: "font-display text-[16px] leading-normal text-foreground",
+    compact: "font-display text-[13px] leading-snug text-foreground",
+  }[tierSize];
+
+  return (
+    <div className="flex flex-col items-start gap-2 w-full text-left">
       <span
-        style={{ fontVariationSettings: "'opsz' 36", fontWeight: 400 }}
-        className="font-display text-[15px] sm:text-[16px] leading-normal text-foreground block"
+        data-testid="patron-name"
+        style={nameStyles}
+        className={nameClass}
       >
         {sponsor.name}
       </span>
-    </div>
-  );
-}
-
-function PatronCompact({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): JSX.Element {
-  return (
-    <div className="bg-cream rounded-md border border-border/60 p-3 min-h-[5rem] flex items-center transition-shadow hover:shadow-xs">
-      <div
-        data-testid="patron-accent-wrapper"
-        className="border-l-2 border-brand/40 pl-3 hover:border-brand/80 transition-colors"
-      >
+      {tierSize === "champion" && (
         <span
-          style={{ fontVariationSettings: "'opsz' 9", fontWeight: 400 }}
-          className="font-display text-[13px] leading-snug text-foreground"
+          data-testid="patron-subline"
+          aria-hidden="true"
+          style={{ letterSpacing: "0.2em" }}
+          className="font-sans text-[0.625rem] font-medium uppercase text-muted-foreground"
         >
-          {sponsor.name}
+          Est. 2010 · Champion Patron
         </span>
-      </div>
+      )}
     </div>
   );
 }
 
-function PatronCard({
-  sponsor,
-  tierSize,
-}: SponsorCardProps): JSX.Element {
-  let content: JSX.Element;
-  if (tierSize === "champion") {
-    content = <PatronChampion sponsor={sponsor} />;
-  } else if (tierSize === "eagle") {
-    content = <PatronEagle sponsor={sponsor} />;
-  } else if (tierSize === "standard") {
-    content = <PatronStandard sponsor={sponsor} />;
-  } else {
-    content = <PatronCompact sponsor={sponsor} />;
-  }
-
-  if (sponsor.website) {
-    return (
-      <a
-        href={sponsor.website}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-testid={`sponsor-card-text-${sponsor.id}`}
-        className="block"
-      >
-        {content}
-      </a>
-    );
-  }
-  return (
-    <div data-testid={`sponsor-card-text-${sponsor.id}`}>
-      {content}
-    </div>
-  );
-}
+const TIER_STRIP_CONFIG = {
+  champion: { bg: "bg-brand", text: "text-white", label: "CHAMPION SPONSOR" },
+  eagle: { bg: "bg-brand-muted", text: "text-brand", label: "EAGLE SPONSOR" },
+  standard: null,
+  compact: null,
+} as const;
 
 export function SponsorCard({ sponsor, tierSize }: SponsorCardProps): JSX.Element {
-  const logoHeight = {
-    champion: "h-24",
-    eagle: "h-[72px]",
-    standard: "h-14",
-    compact: "h-12",
-  }[tierSize];
+  const tierStripConfig = TIER_STRIP_CONFIG[tierSize];
+  const showDoubleRule = tierSize === "champion" || tierSize === "eagle";
 
-  const logoCardBase = {
-    champion: "border-l-4 border-brand bg-cream p-6 rounded-lg border border-border/60",
-    eagle: "border border-border/60 bg-white p-5 rounded-md",
-    standard: "border border-border/60 bg-white p-5 rounded-md",
-    compact: "border border-border/60 bg-white p-3 rounded-md min-h-[5rem]",
-  }[tierSize];
-
-  if (!sponsor.logo_url) {
-    return <PatronCard sponsor={sponsor} tierSize={tierSize} />;
-  }
-
-  const cardClass = `flex flex-col items-center gap-3 ${logoCardBase} transition-shadow hover:shadow-sm`;
-
-  const logoContent = (
-    <div className={`relative ${logoHeight} w-full`}>
-      <Image
-        src={sponsor.logo_url}
-        alt={sponsor.name}
-        data-testid={`sponsor-logo-${sponsor.id}`}
-        fill
-        sizes="(max-width: 640px) 50vw, 33vw"
-        className="object-contain"
-      />
-    </div>
+  const cardClasses = cn(
+    "relative bg-cream grain-overlay rounded-md border border-border/60",
+    tierSize === "champion" && "border-t-2 border-t-brand",
+    tierSize === "eagle" && "border-t border-t-brand",
+    tierSize === "compact" && "border-l-2 border-brand/30",
+    "transition-shadow hover:shadow-sm"
   );
 
-  if (sponsor.website) {
-    return (
-      <a
-        href={sponsor.website}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-testid={`sponsor-card-logo-${sponsor.id}`}
-        className={cardClass}
-      >
-        {logoContent}
-      </a>
-    );
-  }
   return (
-    <div data-testid={`sponsor-card-logo-${sponsor.id}`} className={cardClass}>
-      {logoContent}
-    </div>
+    <CardWrapper
+      sponsor={sponsor}
+      className={cardClasses}
+      data-testid={`sponsor-card-${sponsor.id}`}
+    >
+      {tierStripConfig && (
+        <div
+          data-testid="tier-strip"
+          className={cn(
+            "flex items-center justify-center gap-3 px-4 py-2",
+            tierStripConfig.bg,
+            tierStripConfig.text
+          )}
+        >
+          <span
+            data-testid="tier-strip-diamond-left"
+            aria-hidden="true"
+            style={{ color: "var(--accent-gold)" }}
+            className="text-sm"
+          >
+            ◆
+          </span>
+          <span
+            data-testid="tier-strip-label"
+            style={{ letterSpacing: "0.2em" }}
+            className="font-sans text-[0.6875rem] font-semibold uppercase"
+          >
+            {tierStripConfig.label}
+          </span>
+          <span
+            data-testid="tier-strip-diamond-right"
+            aria-hidden="true"
+            style={{ color: "var(--accent-gold)" }}
+            className="text-sm"
+          >
+            ◆
+          </span>
+        </div>
+      )}
+      {showDoubleRule && (
+        <div data-testid="double-rule" aria-hidden="true">
+          <div className="h-px bg-brand" />
+          <div className="h-px bg-brand-muted mt-0.5" />
+        </div>
+      )}
+      <div className="p-5 flex items-start">
+        {sponsor.logo_url ? (
+          <LogoContent sponsor={sponsor} tierSize={tierSize} />
+        ) : (
+          <PatronContent sponsor={sponsor} tierSize={tierSize} />
+        )}
+      </div>
+    </CardWrapper>
   );
 }

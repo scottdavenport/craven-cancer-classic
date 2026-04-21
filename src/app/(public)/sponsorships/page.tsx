@@ -18,6 +18,7 @@ async function getSponsorshipItems() {
     .select("*")
     .eq("year", currentYear)
     .eq("active", true)
+    .is("deleted_at", null)
     .order("price_cents", { ascending: false });
 
   return data ?? [];

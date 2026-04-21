@@ -19,6 +19,23 @@ import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi, beforeAll } from "vitest";
 
+// Mock next/image — jsdom can't resolve Next Image optimization pipeline.
+// Matches the pattern in src/app/(public)/__tests__/sponsors-page.test.tsx.
+vi.mock("next/image", () => ({
+  default: ({
+    src,
+    alt,
+    ...props
+  }: {
+    src: string;
+    alt: string;
+    [key: string]: unknown;
+  }) => (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={src} alt={alt} {...props} />
+  ),
+}));
+
 // ---------------------------------------------------------------------------
 // Lazy component resolution
 // We use a module-level ref populated in beforeAll so vitest can

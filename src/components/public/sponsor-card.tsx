@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { JSX } from "react";
 
 export type TierSize = "champion" | "eagle" | "standard" | "compact";
@@ -75,12 +76,13 @@ export function SponsorCard({ sponsor, tierSize }: SponsorCardProps): JSX.Elemen
   const logoContent = (
     <>
       <div className={`relative ${logoHeight} w-full`}>
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={sponsor.logo_url}
           alt={sponsor.name}
           data-testid={`sponsor-logo-${sponsor.id}`}
-          className="object-contain w-full h-full"
+          fill
+          sizes="(max-width: 640px) 50vw, 33vw"
+          className="object-contain"
         />
       </div>
       {tierSize !== "compact" && (

@@ -25,6 +25,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { getSponsors } from "./actions";
 import { SponsorDrawer } from "./sponsor-drawer";
@@ -48,7 +55,7 @@ type StatusFilter = "all" | "active" | "inactive";
 
 const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, comped: 2 };
 
-function LogoCell({ logoUrl }: { logoUrl: string | null }) {
+function LogoCell({ logoUrl, sponsorName }: { logoUrl: string | null; sponsorName: string }) {
   const [errored, setErrored] = useState(false);
 
   if (!logoUrl || errored) {
@@ -62,13 +69,37 @@ function LogoCell({ logoUrl }: { logoUrl: string | null }) {
   }
 
   return (
-    <img
-      src={logoUrl}
-      alt="Sponsor logo"
-      loading="lazy"
-      className="w-8 h-8 object-contain rounded"
-      onError={() => setErrored(true)}
-    />
+    <Dialog>
+      <DialogTrigger
+        data-testid="logo-thumbnail-trigger"
+        onClick={(e) => e.stopPropagation()}
+        aria-label={`View ${sponsorName} logo`}
+        className="rounded hover:ring-2 hover:ring-primary/40 focus-visible:outline-hidden focus-visible:ring-2 focus-visible:ring-primary"
+      >
+        <img
+          src={logoUrl}
+          alt={`${sponsorName} logo`}
+          loading="lazy"
+          className="w-8 h-8 object-contain rounded"
+          onError={() => setErrored(true)}
+        />
+      </DialogTrigger>
+      <DialogContent
+        className="sm:max-w-md"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <DialogHeader>
+          <DialogTitle>{sponsorName} logo</DialogTitle>
+        </DialogHeader>
+        <div className="flex items-center justify-center rounded-md border border-border/60 bg-neutral-50 p-4">
+          <img
+            src={logoUrl}
+            alt={`${sponsorName} logo`}
+            className="max-h-[360px] w-auto object-contain"
+          />
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -324,7 +355,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                         }
                       >
                         <TableCell className="w-10">
-                          <LogoCell logoUrl={sponsor.logo_url ?? null} />
+                          <LogoCell logoUrl={sponsor.logo_url ?? null} sponsorName={sponsor.name} />
                         </TableCell>
                         <TableCell className="font-medium text-[0.9375rem]">
                           {sponsor.name}

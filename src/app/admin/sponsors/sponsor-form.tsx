@@ -57,20 +57,22 @@ export function SponsorForm({
 
   const [selectedContacts, setSelectedContacts] = useState<ContactPickResult[]>(initialContacts);
   const [nameError, setNameError] = useState<string | null>(null);
+  const savedLogoUrl = defaultValues?.logo_url ?? null;
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(savedLogoUrl);
 
   function handleLogoChange(file: File | null) {
     setFileError(null);
-    setPreviewUrl(null);
     if (!file) {
       setLogoFile(null);
+      setPreviewUrl(savedLogoUrl);
       return;
     }
     if (file.size > MAX_FILE_SIZE) {
       setFileError("File too large (max 5MB)");
       setLogoFile(null);
+      setPreviewUrl(savedLogoUrl);
       return;
     }
     setLogoFile(file);

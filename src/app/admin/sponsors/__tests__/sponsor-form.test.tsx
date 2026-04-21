@@ -289,4 +289,46 @@ describe("SponsorForm — PR B changes", () => {
       expect(helperText).toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // TEST 10: Drawer preview for existing sponsor logo — #213
+  // -------------------------------------------------------------------------
+  describe("Drawer preview for existing logo (#213)", () => {
+    const defaultValuesWithLogo = {
+      name: "Acme Corp",
+      tier_id: "tier-gold",
+      logo_url: "/logos/acme.svg",
+      payment_status: "pending" as const,
+      amount_paid_cents: 0,
+      is_active: true,
+    };
+
+    it("renders the saved logo as preview when editing a sponsor with logo_url", () => {
+      const { container } = renderForm({ defaultValues: defaultValuesWithLogo });
+      const previewImg = container.querySelector('img[alt="Logo preview"]') as HTMLImageElement | null;
+      expect(previewImg).toBeInTheDocument();
+      expect(previewImg?.getAttribute("src")).toBe("/logos/acme.svg");
+    });
+
+    it("preview reverts to the saved logo when a picked file is cleared", () => {
+      const { container } = renderForm({ defaultValues: defaultValuesWithLogo });
+      const hiddenInput = screen.getByTestId("file-upload-hidden-input") as HTMLInputElement;
+
+      const file = new File(["<svg/>"], "new-logo.svg", { type: "image/svg+xml" });
+      Object.defineProperty(hiddenInput, "files", { value: [file], configurable: true });
+      fireEvent.change(hiddenInput);
+
+      Object.defineProperty(hiddenInput, "files", { value: [], configurable: true });
+      fireEvent.change(hiddenInput);
+
+      const previewImg = container.querySelector('img[alt="Logo preview"]') as HTMLImageElement | null;
+      expect(previewImg?.getAttribute("src")).toBe("/logos/acme.svg");
+    });
+
+    it("renders NO preview when creating a new sponsor with no logo", () => {
+      const { container } = renderForm();
+      const previewImg = container.querySelector('img[alt="Logo preview"]');
+      expect(previewImg).not.toBeInTheDocument();
+    });
+  });
 });

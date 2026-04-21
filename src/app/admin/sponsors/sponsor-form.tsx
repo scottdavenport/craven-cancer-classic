@@ -32,6 +32,7 @@ interface SponsorFormProps {
   onSubmit: (formData: FormData) => void | Promise<void>;
   onCancel: () => void;
   loading: boolean;
+  disabled?: boolean;
 }
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -44,6 +45,7 @@ export function SponsorForm({
   onSubmit,
   onCancel,
   loading,
+  disabled,
 }: SponsorFormProps) {
   const [tierId, setTierId] = useState(defaultValues?.tier_id ?? "");
   const [paymentStatus, setPaymentStatus] = useState(
@@ -241,7 +243,7 @@ export function SponsorForm({
       </div>
 
       <div className="flex gap-2">
-        <Button type="submit" disabled={loading}>
+        <Button type="submit" disabled={disabled || loading}>
           {loading ? "Saving..." : defaultValues ? "Update" : "Create"}
         </Button>
         <Button

@@ -144,6 +144,7 @@ export function SponsorDrawer({
               onSubmit={handleSubmit}
               onCancel={() => onOpenChange(false)}
               loading={loading}
+              disabled={mode === "edit" && !contactsLoaded}
             />
           </div>
 

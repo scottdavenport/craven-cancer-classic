@@ -12,6 +12,7 @@
 
 import React from "react";
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SponsorList } from "../sponsor-list";
 import type { SponsorshipItemOption } from "../sponsor-form";
@@ -280,6 +281,42 @@ describe("SponsorList — PR B changes", () => {
     it("does not render AdminEmptyState when sponsors are present", () => {
       renderList([makeSponsor()]);
       expect(screen.queryByTestId("admin-empty-state")).not.toBeInTheDocument();
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // TEST 7: Logo thumbnail clickable (lightbox) — #213
+  // -------------------------------------------------------------------------
+  describe("Logo thumbnail lightbox (#213)", () => {
+    it("thumbnail renders inside a clickable DialogTrigger", () => {
+      const sponsor = makeSponsor({ logo_url: "/logos/acme.svg", name: "Acme Corp" });
+      renderList([sponsor]);
+      const trigger = screen.getByTestId("logo-thumbnail-trigger");
+      expect(trigger).toBeInTheDocument();
+      expect(trigger.getAttribute("aria-label")).toMatch(/acme corp/i);
+    });
+
+    it("opens a dialog with the larger logo on click", async () => {
+      const user = userEvent.setup();
+      const sponsor = makeSponsor({ logo_url: "/logos/acme.svg", name: "Acme Corp" });
+      renderList([sponsor]);
+
+      await user.click(screen.getByTestId("logo-thumbnail-trigger"));
+
+      const dialogTitle = await screen.findByText(/acme corp logo/i);
+      expect(dialogTitle).toBeInTheDocument();
+    });
+
+    it("thumbnail click does not propagate to the row edit handler", async () => {
+      const user = userEvent.setup();
+      const sponsor = makeSponsor({ logo_url: "/logos/acme.svg", name: "Acme Corp" });
+      renderList([sponsor]);
+
+      await user.click(screen.getByTestId("logo-thumbnail-trigger"));
+
+      // Drawer for editing has a specific title structure; the row click handler opens it.
+      // Assert that it did NOT open by checking no "Edit Sponsor" heading appeared.
+      expect(screen.queryByRole("heading", { name: /edit sponsor/i })).not.toBeInTheDocument();
     });
   });
 });

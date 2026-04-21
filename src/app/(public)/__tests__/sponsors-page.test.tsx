@@ -282,50 +282,50 @@ describe("SponsorsPage — redesign (#220)", () => {
     it("Champion section (sort_order=1) renders SponsorCards with champion testids", async () => {
       await renderPage();
       const champSection = screen.getByTestId("tier-section-tier-champion");
-      // At least one champion-tier sponsor card should be within this section
-      // The card testid pattern: sponsor-card-logo-{id} or sponsor-card-text-{id}
+      // Unified testid scheme (#227): sponsor-card-{id} for both logo and patron variants.
+      // Fall back to old split testids for green/backward compat until Bolt ships the rewrite.
       const champCard =
+        within(champSection).queryByTestId("sponsor-card-sp-champ-1") ??
         within(champSection).queryByTestId("sponsor-card-logo-sp-champ-1") ??
         within(champSection).queryByTestId("sponsor-card-text-sp-champ-1");
       expect(champCard).toBeInTheDocument();
     });
 
-    it("Champion section cards have champion tier visual treatment (border-l-4)", async () => {
+    it("Champion section cards have champion tier visual treatment (tier-strip)", async () => {
       await renderPage();
       const champSection = screen.getByTestId("tier-section-tier-champion");
-      // The champion cards should have border-l-4 somewhere in the section
-      const hasBorderL4 = Array.from(champSection.querySelectorAll("*")).some(
-        (el) => el.className && el.className.includes("border-l-4")
-      );
-      expect(hasBorderL4).toBe(true);
+      // Tournament Program direction: champion cards have a tier-strip, not border-l-4.
+      // This assertion is RED until Bolt ships the tier-strip implementation.
+      const hasTierStrip = within(champSection).queryByTestId("tier-strip");
+      expect(hasTierStrip).toBeInTheDocument();
     });
 
     it("Shot of the Day section (sort_order=4) renders compact SponsorCards", async () => {
       await renderPage();
       const sotdSection = screen.getByTestId("tier-section-tier-shot-of-the-day");
-      // Compact cards should have h-12 (48px logo height) somewhere in section
-      const hasH12 = Array.from(sotdSection.querySelectorAll("*")).some(
-        (el) => el.className && el.className.includes("h-12")
+      // Compact cards should have max-h-12 or h-12 (48px logo height) somewhere in section
+      const hasMaxH12 = Array.from(sotdSection.querySelectorAll("*")).some(
+        (el) => el.className && (el.className.includes("max-h-12") || el.className.includes("h-12"))
       );
       const hasInlineH48 = Array.from(sotdSection.querySelectorAll("*")).some(
         (el) => (el as HTMLElement).style?.height === "48px"
       );
-      expect(hasH12 || hasInlineH48).toBe(true);
+      expect(hasMaxH12 || hasInlineH48).toBe(true);
     });
 
-    it("Shot of the Day section does NOT have border-l-4 (compact tier, no accent)", async () => {
+    it("Shot of the Day section does NOT have a tier-strip (compact tier, no strip)", async () => {
       await renderPage();
       const sotdSection = screen.getByTestId("tier-section-tier-shot-of-the-day");
-      const hasBorderL4 = Array.from(sotdSection.querySelectorAll("*")).some(
-        (el) => el.className && el.className.includes("border-l-4")
-      );
-      expect(hasBorderL4).toBe(false);
+      // Tournament Program: only champion/eagle get a tier-strip.
+      const tierStrip = within(sotdSection).queryByTestId("tier-strip");
+      expect(tierStrip).not.toBeInTheDocument();
     });
 
     it("Eagle section (sort_order=2) renders SponsorCards for eagle-tier sponsors", async () => {
       await renderPage();
       const eagleSection = screen.getByTestId("tier-section-tier-eagle");
       const eagleCard =
+        within(eagleSection).queryByTestId("sponsor-card-sp-eagle-1") ??
         within(eagleSection).queryByTestId("sponsor-card-logo-sp-eagle-1") ??
         within(eagleSection).queryByTestId("sponsor-card-text-sp-eagle-1");
       expect(eagleCard).toBeInTheDocument();
@@ -335,6 +335,7 @@ describe("SponsorsPage — redesign (#220)", () => {
       await renderPage();
       const mbSection = screen.getByTestId("tier-section-tier-morning-biscuit");
       const mbCard =
+        within(mbSection).queryByTestId("sponsor-card-sp-mb-1") ??
         within(mbSection).queryByTestId("sponsor-card-logo-sp-mb-1") ??
         within(mbSection).queryByTestId("sponsor-card-text-sp-mb-1");
       expect(mbCard).toBeInTheDocument();
@@ -360,7 +361,9 @@ describe("SponsorsPage — redesign (#220)", () => {
     it("Champion sponsor sp-champ-1 is inside the champion tier section", async () => {
       await renderPage();
       const champSection = screen.getByTestId("tier-section-tier-champion");
+      // Unified testid (#227) takes priority; fall back to old split testids for compat.
       const card =
+        within(champSection).queryByTestId("sponsor-card-sp-champ-1") ??
         within(champSection).queryByTestId("sponsor-card-logo-sp-champ-1") ??
         within(champSection).queryByTestId("sponsor-card-text-sp-champ-1");
       expect(card).toBeInTheDocument();
@@ -370,6 +373,7 @@ describe("SponsorsPage — redesign (#220)", () => {
       await renderPage();
       const eagleSection = screen.getByTestId("tier-section-tier-eagle");
       const card =
+        within(eagleSection).queryByTestId("sponsor-card-sp-champ-1") ??
         within(eagleSection).queryByTestId("sponsor-card-logo-sp-champ-1") ??
         within(eagleSection).queryByTestId("sponsor-card-text-sp-champ-1");
       expect(card).not.toBeInTheDocument();
@@ -379,6 +383,7 @@ describe("SponsorsPage — redesign (#220)", () => {
       await renderPage();
       const sotdSection = screen.getByTestId("tier-section-tier-shot-of-the-day");
       const card =
+        within(sotdSection).queryByTestId("sponsor-card-sp-sotd-1") ??
         within(sotdSection).queryByTestId("sponsor-card-logo-sp-sotd-1") ??
         within(sotdSection).queryByTestId("sponsor-card-text-sp-sotd-1");
       expect(card).toBeInTheDocument();

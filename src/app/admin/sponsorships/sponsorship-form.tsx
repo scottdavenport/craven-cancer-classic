@@ -49,9 +49,9 @@ export function SponsorshipForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="sf-name">Package Name</Label>
           <Input
             id="sf-name"
@@ -60,7 +60,7 @@ export function SponsorshipForm({
             required
           />
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="sf-price">Price ($)</Label>
           <Input
             id="sf-price"
@@ -75,25 +75,26 @@ export function SponsorshipForm({
             required
           />
         </div>
-        <div className="space-y-2 sm:col-span-2">
+        <div className="space-y-1.5 sm:col-span-2">
           <Label htmlFor="sf-description">Description</Label>
           <Textarea
             id="sf-description"
             name="description"
-            rows={2}
+            rows={3}
             defaultValue={defaultValues?.description ?? ""}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="sf-max">Max Quantity (blank = unlimited)</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="sf-max">Max Quantity</Label>
           <Input
             id="sf-max"
             name="max_quantity"
             type="number"
             defaultValue={defaultValues?.max_quantity ?? ""}
           />
+          <p className="text-xs text-muted-foreground">Leave blank for unlimited</p>
         </div>
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <Label htmlFor="sf-active">Status</Label>
           {/* Hidden input ensures FormData always carries the value */}
           <input type="hidden" name="active" value={active} />

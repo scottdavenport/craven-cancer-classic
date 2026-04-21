@@ -72,7 +72,7 @@ export function InviteForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20">
               {error}

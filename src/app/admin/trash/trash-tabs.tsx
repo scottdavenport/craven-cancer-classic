@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import {
   Table,
   TableBody,
@@ -57,11 +58,7 @@ function truncateUuid(id: string | null): string {
 }
 
 function EmptyState() {
-  return (
-    <p className="py-10 text-center text-sm text-muted-foreground">
-      Trash is empty
-    </p>
-  );
+  return <AdminEmptyState title="Nothing in trash" />;
 }
 
 // ---- Per-entity tab panels ----
@@ -82,30 +79,32 @@ function ContactsTab({ initial }: { initial: Contact[] }) {
   if (rows.length === 0) return <EmptyState />;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Deleted</TableHead>
-          <TableHead>Deleted By</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.id}>
-            <TableCell className="font-medium">{row.full_name || "—"}</TableCell>
-            <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
-            <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
-            <TableCell className="text-right">
-              <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
-                Restore
-              </Button>
-            </TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Deleted</TableHead>
+            <TableHead>Deleted By</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.id}>
+              <TableCell className="font-medium">{row.full_name || "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
+                  Restore
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -125,30 +124,32 @@ function TeamsTab({ initial }: { initial: Team[] }) {
   if (rows.length === 0) return <EmptyState />;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Team Name</TableHead>
-          <TableHead>Deleted</TableHead>
-          <TableHead>Deleted By</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.id}>
-            <TableCell className="font-medium">{row.team_name || "—"}</TableCell>
-            <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
-            <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
-            <TableCell className="text-right">
-              <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
-                Restore
-              </Button>
-            </TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Team Name</TableHead>
+            <TableHead>Deleted</TableHead>
+            <TableHead>Deleted By</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.id}>
+              <TableCell className="font-medium">{row.team_name || "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
+                  Restore
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -168,30 +169,32 @@ function SponsorsTab({ initial }: { initial: Sponsor[] }) {
   if (rows.length === 0) return <EmptyState />;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Deleted</TableHead>
-          <TableHead>Deleted By</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.id}>
-            <TableCell className="font-medium">{row.name || "—"}</TableCell>
-            <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
-            <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
-            <TableCell className="text-right">
-              <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
-                Restore
-              </Button>
-            </TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Deleted</TableHead>
+            <TableHead>Deleted By</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.id}>
+              <TableCell className="font-medium">{row.name || "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
+                  Restore
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -211,30 +214,32 @@ function SponsorshipItemsTab({ initial }: { initial: SponsorshipItem[] }) {
   if (rows.length === 0) return <EmptyState />;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Deleted</TableHead>
-          <TableHead>Deleted By</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.id}>
-            <TableCell className="font-medium">{row.name || "—"}</TableCell>
-            <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
-            <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
-            <TableCell className="text-right">
-              <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
-                Restore
-              </Button>
-            </TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Name</TableHead>
+            <TableHead>Deleted</TableHead>
+            <TableHead>Deleted By</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.id}>
+              <TableCell className="font-medium">{row.name || "—"}</TableCell>
+              <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
+                  Restore
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -254,34 +259,36 @@ function PhotosTab({ initial }: { initial: Photo[] }) {
   if (rows.length === 0) return <EmptyState />;
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Caption / ID</TableHead>
-          <TableHead>Deleted</TableHead>
-          <TableHead>Deleted By</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {rows.map((row) => (
-          <TableRow key={row.id}>
-            <TableCell className="font-medium">
-              {row.caption ? row.caption : (
-                <span className="font-mono text-xs text-muted-foreground">{truncateUuid(row.id)}</span>
-              )}
-            </TableCell>
-            <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
-            <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
-            <TableCell className="text-right">
-              <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
-                Restore
-              </Button>
-            </TableCell>
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Caption / ID</TableHead>
+            <TableHead>Deleted</TableHead>
+            <TableHead>Deleted By</TableHead>
+            <TableHead className="text-right">Actions</TableHead>
           </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        </TableHeader>
+        <TableBody>
+          {rows.map((row) => (
+            <TableRow key={row.id}>
+              <TableCell className="font-medium">
+                {row.caption ? row.caption : (
+                  <span className="font-mono text-xs text-muted-foreground">{truncateUuid(row.id)}</span>
+                )}
+              </TableCell>
+              <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
+              <TableCell className="text-muted-foreground font-mono text-xs">{truncateUuid(row.deleted_by)}</TableCell>
+              <TableCell className="text-right">
+                <Button variant="outline" size="sm" onClick={() => handleRestore(row.id)}>
+                  Restore
+                </Button>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
   );
 }
 
@@ -322,7 +329,7 @@ export function TrashTabs({
           >
             {label}
             {counts[key] > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-xs font-semibold text-muted-foreground">
+              <span className="ml-1.5 inline-flex items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[0.6875rem] font-semibold text-muted-foreground">
                 {counts[key]}
               </span>
             )}

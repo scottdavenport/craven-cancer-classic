@@ -118,7 +118,7 @@ export function ScoreForm({
         </Select>
       </div>
 
-      <div className="flex gap-2 pt-2 pb-4">
+      <div className="flex gap-2 pt-2">
         <Button type="submit" disabled={loading}>
           {loading ? "Saving..." : "Save"}
         </Button>

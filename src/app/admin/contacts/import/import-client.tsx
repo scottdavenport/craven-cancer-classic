@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import { previewImport, commitImport } from "../import-actions";
 import type { ParsedRow, CommitRow, ImportPreview } from "../csv-parser";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -11,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { UploadCloud } from "lucide-react";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,19 +124,7 @@ function UploadStep({
           }}
         />
         <div className="flex flex-col items-center gap-3">
-          <svg
-            className="w-10 h-10 text-muted-foreground"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-            strokeWidth={1.25}
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-            />
-          </svg>
+          <UploadCloud className="w-10 h-10 text-muted-foreground" />
           <div>
             <p className="text-sm font-medium text-foreground">
               Drop a CSV file here, or click to browse
@@ -401,12 +391,9 @@ function SuccessStep({
         <Button onClick={onReset} variant="outline">
           Import another file
         </Button>
-        <a
-          href="/admin/contacts"
-          className="inline-flex items-center justify-center rounded-md bg-brand px-4 py-2 text-sm font-medium text-white shadow hover:bg-brand/90 transition-colors"
-        >
+        <Link href="/admin/contacts" data-testid="success-view-contacts" className={buttonVariants({ variant: "default" })}>
           View contacts
-        </a>
+        </Link>
       </div>
     </div>
   );

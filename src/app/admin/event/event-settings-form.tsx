@@ -98,7 +98,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <fieldset className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="name">Tournament Name</Label>
               <Input
                 id="name"
@@ -112,7 +112,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
@@ -137,7 +137,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         <CardContent className="space-y-4">
           <fieldset className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="tournament_start_date">Start Date</Label>
                 <Input
                   id="tournament_start_date"
@@ -147,7 +147,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                   onChange={() => setDateRangeError(null)}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="tournament_end_date">End Date</Label>
                 <Input
                   id="tournament_end_date"
@@ -168,7 +168,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
               <p className="text-destructive text-sm">{dateRangeError}</p>
             )}
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="venue_name">Venue Name</Label>
               <Input
                 id="venue_name"
@@ -201,7 +201,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
               />
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="registration_fee">Registration Fee (USD)</Label>
               <Input
                 id="registration_fee"
@@ -225,7 +225,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="morning_cap">Morning Slot Cap</Label>
                 <Input
                   id="morning_cap"
@@ -234,7 +234,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                   defaultValue={settings?.morning_cap ?? 36}
                 />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="afternoon_cap">Afternoon Slot Cap</Label>
                 <Input
                   id="afternoon_cap"
@@ -248,7 +248,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         </CardContent>
       </Card>
 
-      <Button type="submit" size="lg" disabled={isPending}>
+      <Button type="submit" disabled={isPending}>
         {isPending ? "Saving..." : "Save Settings"}
       </Button>
     </form>

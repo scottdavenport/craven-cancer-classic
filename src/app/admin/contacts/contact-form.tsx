@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import {
   Select,
   SelectContent,
@@ -181,12 +182,14 @@ export function ContactForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label htmlFor="cf-salutation">Salutation</Label>
-            <Input
-              id="cf-salutation"
-              value={salutation}
-              onChange={(e) => setSalutation(e.target.value)}
-              placeholder="Mr., Ms., Dr."
-            />
+            <div className="max-w-[120px]">
+              <Input
+                id="cf-salutation"
+                value={salutation}
+                onChange={(e) => setSalutation(e.target.value)}
+                placeholder="Mr., Ms., Dr."
+              />
+            </div>
           </div>
           <div className="col-span-2 sm:col-span-1" />
           <div className="space-y-1.5 col-span-2 sm:col-span-1">
@@ -301,15 +304,16 @@ export function ContactForm({
             </Select>
           </div>
         </div>
-        <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
-          <input
-            type="checkbox"
+        <div className="flex items-center gap-2">
+          <Switch
+            id="cf-marketing-consent"
             checked={marketingConsent}
-            onChange={(e) => setMarketingConsent(e.target.checked)}
-            className="accent-brand h-4 w-4 rounded"
+            onCheckedChange={setMarketingConsent}
           />
-          Marketing consent (subscribed to emails)
-        </label>
+          <Label htmlFor="cf-marketing-consent" className="cursor-pointer">
+            Marketing consent (subscribed to emails)
+          </Label>
+        </div>
       </div>
 
       {/* Address */}
@@ -387,7 +391,7 @@ export function ContactForm({
       </div>
 
       {/* Actions */}
-      <div className="flex gap-2 pt-2 pb-4">
+      <div className="flex gap-2 pt-2">
         <Button type="submit" disabled={submitting || hasErrors}>
           {submitting ? "Saving..." : submitLabel}
         </Button>

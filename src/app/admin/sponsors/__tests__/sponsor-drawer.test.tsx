@@ -28,6 +28,7 @@ vi.mock("../actions", () => ({
   deleteSponsor: vi.fn(async () => ({})),
   uploadSponsorLogo: vi.fn(async () => ({ url: "https://cdn.example.com/new-logo.png" })),
   getSponsorContacts: vi.fn(async () => []),
+  deleteSponsorLogo: vi.fn(async () => ({ success: true })),
 }));
 
 // ---------------------------------------------------------------------------
@@ -230,6 +231,8 @@ describe("SponsorDrawer — Sprint 20 data-integrity tests (#215)", () => {
     vi.mocked(actions.getSponsorContacts).mockResolvedValue([]);
     vi.mocked(actions.updateSponsor).mockResolvedValue({ success: true });
     vi.mocked(actions.createSponsor).mockResolvedValue({ success: true });
+    // deleteSponsorLogo is not in actions.ts yet — cast to access the mock fn
+    (actions as unknown as Record<string, ReturnType<typeof vi.fn>>).deleteSponsorLogo.mockResolvedValue({ success: true });
   });
 
   // =========================================================================
@@ -531,6 +534,91 @@ describe("SponsorDrawer — Sprint 20 data-integrity tests (#215)", () => {
 
       // Called once for SPONSOR, once for SPONSOR_B
       expect(vi.mocked(actions.getSponsorContacts)).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  // =========================================================================
+  // SECTION 4: Remove logo flag handling — #217
+  //
+  // Target behaviour after Bolt fix:
+  //   handleSubmit checks formData.get("remove_logo") === "true".
+  //   If true AND sponsor.logo_url:
+  //     1. calls deleteSponsorLogo(sponsor.logo_url) — fire and proceed
+  //     2. sets formData.logo_url = "" (→ null after updateSponsor normalization)
+  //     3. deletes remove_logo and logo keys from formData
+  //     4. calls updateSponsor (skips uploadSponsorLogo — no file)
+  //   If remove_logo is absent, follows existing Sprint 20 flow unchanged.
+  //
+  // FAILS on current main:
+  //   - deleteSponsorLogo does not exist in actions.ts
+  //   - handleSubmit never checks for remove_logo flag
+  // =========================================================================
+  describe("Remove logo flag handling — #217", () => {
+    // deleteSponsorLogo does not exist in actions.ts yet — that's intentional,
+    // these are RED tests. Cast through the mock module record to access the
+    // mock fn without a TypeScript error on the missing export.
+    const actionsAny = actions as unknown as Record<string, ReturnType<typeof vi.fn>>;
+
+    // -----------------------------------------------------------------------
+    // Test S4a: deleteSponsorLogo called with sponsor.logo_url
+    // FAILS on current main — deleteSponsorLogo is not imported or called
+    // -----------------------------------------------------------------------
+    it("calls deleteSponsorLogo with sponsor.logo_url when remove_logo=true", async () => {
+      _submitFdForTest = makeFormDataNoFile({ remove_logo: "true" });
+
+      renderEditDrawer(SPONSOR); // SPONSOR.logo_url = "https://cdn.example.com/old-logo.png"
+      await clickSubmit();
+
+      expect(actionsAny.deleteSponsorLogo).toHaveBeenCalledTimes(1);
+      expect(actionsAny.deleteSponsorLogo).toHaveBeenCalledWith(SPONSOR.logo_url);
+    });
+
+    // -----------------------------------------------------------------------
+    // Test S4b: updateSponsor called with logo_url="" when remove_logo=true
+    // FAILS on current main — remove_logo flag never handled
+    // -----------------------------------------------------------------------
+    it("calls updateSponsor with logo_url='' when remove_logo=true", async () => {
+      _submitFdForTest = makeFormDataNoFile({ remove_logo: "true" });
+
+      renderEditDrawer(SPONSOR);
+      await clickSubmit();
+
+      expect(vi.mocked(actions.updateSponsor)).toHaveBeenCalledTimes(1);
+      const [, updateFd] = vi.mocked(actions.updateSponsor).mock.calls[0] as [string, FormData];
+      expect(updateFd.get("logo_url")).toBe("");
+    });
+
+    // -----------------------------------------------------------------------
+    // Test S4c: uploadSponsorLogo NOT called when remove_logo=true
+    // FAILS on current main — remove_logo flag never handled; without a File
+    //   the current code path happens to skip upload, but once the flag branch
+    //   is added the guard must still be explicit (remove wins over upload).
+    // -----------------------------------------------------------------------
+    it("does NOT call uploadSponsorLogo when remove_logo=true", async () => {
+      _submitFdForTest = makeFormDataNoFile({ remove_logo: "true" });
+
+      renderEditDrawer(SPONSOR);
+      await clickSubmit();
+
+      expect(vi.mocked(actions.uploadSponsorLogo)).not.toHaveBeenCalled();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test S4d: Regression — no remove_logo flag preserves existing logo_url
+    // Guards against the Sprint 20 logo-preservation behaviour being broken
+    // when Bolt adds the remove-logo branch.
+    // This test currently passes on main; it must keep passing after the fix.
+    // -----------------------------------------------------------------------
+    it("preserves existing logo_url when remove_logo flag is absent (Sprint 20 regression guard)", async () => {
+      _submitFdForTest = makeFormDataNoFile(); // no remove_logo key
+
+      renderEditDrawer(SPONSOR);
+      await clickSubmit();
+
+      expect(actionsAny.deleteSponsorLogo).not.toHaveBeenCalled();
+      expect(vi.mocked(actions.updateSponsor)).toHaveBeenCalledTimes(1);
+      const [, updateFd] = vi.mocked(actions.updateSponsor).mock.calls[0] as [string, FormData];
+      expect(updateFd.get("logo_url")).toBe(SPONSOR.logo_url);
     });
   });
 });

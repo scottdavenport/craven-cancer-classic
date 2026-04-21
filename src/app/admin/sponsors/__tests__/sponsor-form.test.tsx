@@ -331,4 +331,121 @@ describe("SponsorForm — PR B changes", () => {
       expect(previewImg).not.toBeInTheDocument();
     });
   });
+
+  // -------------------------------------------------------------------------
+  // TEST 11: Remove logo button — #217
+  //
+  // Target behaviour after Bolt fix:
+  //   - "Remove logo" button visible when editing a sponsor with a saved logo_url
+  //   - Button absent in create mode (no defaultValues)
+  //   - Button absent when sponsor exists but logo_url is null
+  //   - Clicking the button clears the preview img from the DOM
+  //   - Submitting after clicking Remove sets remove_logo=true in FormData
+  // -------------------------------------------------------------------------
+  describe("Remove logo button (#217)", () => {
+    const defaultValuesWithLogo = {
+      name: "Acme Corp",
+      tier_id: "tier-gold",
+      logo_url: "/logos/acme.svg",
+      payment_status: "pending" as const,
+      amount_paid_cents: 0,
+      is_active: true,
+    };
+
+    const defaultValuesNoLogo = {
+      name: "No Logo Co",
+      tier_id: "tier-silver",
+      logo_url: null,
+      payment_status: "pending" as const,
+      amount_paid_cents: 0,
+      is_active: true,
+    };
+
+    // -----------------------------------------------------------------------
+    // Test 11a: Button present when editing with a saved logo_url
+    // FAILS on current main — button does not exist yet
+    // -----------------------------------------------------------------------
+    it("visible when editing a sponsor with existing logo_url", () => {
+      renderForm({ defaultValues: defaultValuesWithLogo });
+      expect(
+        screen.getByRole("button", { name: /remove logo/i })
+      ).toBeInTheDocument();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 11b: Button absent in create mode (no defaultValues)
+    // Would pass coincidentally on current main (button never exists), but
+    // included as regression guard — must stay absent in create mode even
+    // after Bolt adds the button in edit mode.
+    // -----------------------------------------------------------------------
+    it("absent in create mode (no defaultValues)", () => {
+      renderForm();
+      expect(
+        screen.queryByRole("button", { name: /remove logo/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 11c: Button absent when sponsor exists but logo_url is null
+    // FAILS on current main — button does not exist yet (incidentally "pass"),
+    // included as regression guard and spec documentation.
+    // -----------------------------------------------------------------------
+    it("absent when sponsor has no logo_url", () => {
+      renderForm({ defaultValues: defaultValuesNoLogo });
+      expect(
+        screen.queryByRole("button", { name: /remove logo/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 11d: Clicking Remove logo clears the preview img
+    // FAILS on current main — button does not exist, preview img never removed
+    // -----------------------------------------------------------------------
+    it("clicking Remove logo clears the preview img", () => {
+      const { container } = renderForm({ defaultValues: defaultValuesWithLogo });
+
+      // Preview should be present before clicking Remove
+      expect(container.querySelector('img[alt="Logo preview"]')).toBeInTheDocument();
+
+      fireEvent.click(screen.getByRole("button", { name: /remove logo/i }));
+
+      // Preview should be gone after clicking Remove
+      expect(container.querySelector('img[alt="Logo preview"]')).not.toBeInTheDocument();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 11e: Clicking Remove logo hides the button itself
+    // FAILS on current main — button does not exist
+    // -----------------------------------------------------------------------
+    it("clicking Remove logo hides the button itself", () => {
+      renderForm({ defaultValues: defaultValuesWithLogo });
+
+      fireEvent.click(screen.getByRole("button", { name: /remove logo/i }));
+
+      expect(
+        screen.queryByRole("button", { name: /remove logo/i })
+      ).not.toBeInTheDocument();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 11f: Submitting after Remove sets remove_logo=true in FormData
+    // FAILS on current main — button does not exist; remove_logo never set
+    // -----------------------------------------------------------------------
+    it("submitting after Remove sets remove_logo=true in FormData", () => {
+      const onSubmit = vi.fn();
+      renderForm({ defaultValues: defaultValuesWithLogo, onSubmit });
+
+      // Click Remove logo to engage the removeLogo state
+      fireEvent.click(screen.getByRole("button", { name: /remove logo/i }));
+
+      // Submit the form — fireEvent.submit on the form element
+      const formEl = document.querySelector("form");
+      expect(formEl).not.toBeNull();
+      fireEvent.submit(formEl!);
+
+      expect(onSubmit).toHaveBeenCalledTimes(1);
+      const fd: FormData = onSubmit.mock.calls[0][0];
+      expect(fd.get("remove_logo")).toBe("true");
+    });
+  });
 });

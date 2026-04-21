@@ -221,3 +221,91 @@ describe("ScoreForm session select", () => {
     expect(screen.getByLabelText(/session/i)).toBeTruthy();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprint 19 — PR C polish tests (RED: fail until PR C lands)
+// ---------------------------------------------------------------------------
+
+describe("ScoreForm — sprint-19 PR-C polish", () => {
+  it("actions div does NOT have pb-4 class", () => {
+    render(<ScoreForm onSubmit={vi.fn()} onCancel={vi.fn()} />);
+
+    const saveBtn = screen.getByRole("button", { name: /save/i });
+    const actionsDiv = saveBtn.parentElement;
+    expect(actionsDiv).toBeTruthy();
+
+    // RED: current main score-form.tsx:121 has <div className="flex gap-2 pt-2 pb-4">
+    // PR C: removes pb-4 to match the standard actions pattern
+    expect(actionsDiv!.className).not.toContain("pb-4");
+  });
+});
+
+describe("ScoreManager — sprint-19 PR-C polish", () => {
+  describe("CSV import panel", () => {
+    it("CSV panel does NOT have border-dashed class after PR C", async () => {
+      const user = userEvent.setup();
+      render(<ScoreManager scores={[]} />);
+
+      // Open the CSV panel
+      await user.click(screen.getByRole("button", { name: /import csv/i }));
+
+      // The CSV panel div
+      const csvPanel = document.querySelector("textarea")?.closest("div[class]")?.parentElement;
+      // Walk up to find the panel container — look for the element containing the textarea
+      const textareaEl = document.querySelector("textarea");
+      expect(textareaEl).toBeTruthy();
+
+      // Find the panel: the container div 2 levels above the textarea
+      let panel: Element | null = textareaEl!.parentElement;
+      while (panel && !panel.className.includes("border")) {
+        panel = panel.parentElement;
+      }
+
+      if (panel) {
+        // RED: current main has border-2 border-dashed; PR C removes border-dashed
+        expect(panel.className).not.toContain("border-dashed");
+      }
+    });
+
+    it("CSV panel is wrapped in a Card (has rounded-xl class or Card component)", async () => {
+      const user = userEvent.setup();
+      render(<ScoreManager scores={[]} />);
+
+      await user.click(screen.getByRole("button", { name: /import csv/i }));
+
+      // PR C: CSV panel is wrapped in a Card component
+      // Card components render with rounded-xl (shadcn Card default)
+      const textareaEl = document.querySelector("textarea");
+      expect(textareaEl).toBeTruthy();
+
+      // Walk up from textarea to find a Card wrapper with rounded-xl
+      let el: Element | null = textareaEl!;
+      let hasCard = false;
+      while (el) {
+        if (el.className.includes("rounded-xl") || el.className.includes("rounded-lg")) {
+          hasCard = true;
+          break;
+        }
+        el = el.parentElement;
+      }
+
+      // RED: current main has no Card wrapper; PR C adds one
+      expect(hasCard).toBe(true);
+    });
+  });
+
+  describe("empty state", () => {
+    it("renders AdminEmptyState (<h3> title) when scores array is empty", () => {
+      render(<ScoreManager scores={[]} />);
+
+      // RED: current main renders bare "No scores yet" text in a <TableCell>
+      // PR C: replace with AdminEmptyState which renders <h3>
+      const h3Els = document.querySelectorAll("h3");
+      const hasEmptyH3 = Array.from(h3Els).some((h3) =>
+        h3.textContent?.match(/no.*score|score.*empty|nothing/i)
+      );
+
+      expect(hasEmptyH3).toBe(true);
+    });
+  });
+});

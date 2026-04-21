@@ -138,3 +138,25 @@ describe("ContactList", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprint 19 — PR C polish tests (RED: fail until PR C lands)
+// ---------------------------------------------------------------------------
+
+describe("ContactList — sprint-19 PR-C polish", () => {
+  it("table wrapper has overflow-x-auto class (P1 mobile clipping fix)", () => {
+    const { container } = render(<ContactList contacts={[makeContact()]} teams={[]} />);
+
+    const table = container.querySelector("table");
+    expect(table).toBeTruthy();
+
+    // Walk up to the closest div wrapper that would carry the overflow class
+    const wrapper = table!.parentElement;
+    expect(wrapper).toBeTruthy();
+
+    // RED: current main has overflow-hidden on the table wrapper; PR C changes to overflow-x-auto
+    expect(wrapper!.className).toContain("overflow-x-auto");
+    // Must NOT have overflow-hidden
+    expect(wrapper!.className).not.toContain("overflow-hidden");
+  });
+});

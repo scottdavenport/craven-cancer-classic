@@ -28,6 +28,31 @@ async function getInviteForm() {
   return mod.InviteForm ?? mod.default;
 }
 
+// ---------------------------------------------------------------------------
+// Sprint 19 — PR C polish tests (RED: fail until PR C lands)
+// ---------------------------------------------------------------------------
+import { InviteForm } from "@/app/admin/settings/invite-form";
+
+describe("InviteForm — sprint-19 PR-C polish", () => {
+  describe("form spacing", () => {
+    it("inner form has space-y-5 or space-y-6 class (not space-y-4)", () => {
+      const { container } = render(<InviteForm />);
+
+      // Find the <form> element inside the Card
+      const form = container.querySelector("form");
+      expect(form).toBeTruthy();
+
+      // RED: current main uses space-y-4; PR C upgrades to space-y-5 or space-y-6
+      const hasUpdatedSpacing =
+        form!.className.includes("space-y-5") || form!.className.includes("space-y-6");
+      expect(hasUpdatedSpacing).toBe(true);
+
+      // Must NOT have the old space-y-4
+      expect(form!.className).not.toContain("space-y-4");
+    });
+  });
+});
+
 describe("S3-5 InviteForm", () => {
   describe("rendering", () => {
     it("renders an email input", async () => {

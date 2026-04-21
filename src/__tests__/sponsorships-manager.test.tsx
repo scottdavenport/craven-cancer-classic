@@ -343,6 +343,27 @@ describe("SponsorshipManager", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Sprint 19 — PR C polish tests (RED: fail until PR C lands)
+// ---------------------------------------------------------------------------
+
+describe("SponsorshipManager — sprint-19 PR-C polish", () => {
+  describe("empty state uses AdminEmptyState", () => {
+    it("renders <h3> title (AdminEmptyState) when items array is empty", () => {
+      render(<SponsorshipManager items={[]} purchases={NO_PURCHASES} />);
+
+      // RED: current main renders bare "No sponsorship packages yet" text in a <TableCell>
+      // PR C: replaces with AdminEmptyState which renders <h3> for the title
+      const h3Els = document.querySelectorAll("h3");
+      const hasEmptyStateH3 = Array.from(h3Els).some((h3) =>
+        h3.textContent?.match(/no.*package|no.*sponsor|empty|nothing/i)
+      );
+
+      expect(hasEmptyStateH3).toBe(true);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Seam test: getSponsorshipItems → SponsorshipManager render
 // ---------------------------------------------------------------------------
 

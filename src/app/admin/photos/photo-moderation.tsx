@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Check, X, Trash2 } from "lucide-react";
 import { updatePhotoStatus, deletePhoto } from "./actions";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import type { Photo } from "@/types/database";
 
 interface PhotoModerationProps {
@@ -113,16 +114,10 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
 
       {/* Photo grid */}
       {filtered.length === 0 ? (
-        <div className="py-16 flex flex-col items-center gap-2">
-          <p className="font-sans text-sm text-muted-foreground/70">
-            No {tab === "all" ? "" : tab} photos
-          </p>
-          {tab === "pending" && (
-            <p className="font-sans text-xs text-muted-foreground/50">
-              Photos submitted via the public gallery appear here.
-            </p>
-          )}
-        </div>
+        <AdminEmptyState
+          title={`No ${tab === "all" ? "" : tab + " "}photos`}
+          body={tab === "pending" ? "Photos submitted via the public gallery appear here." : undefined}
+        />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((photo) => (
@@ -190,6 +185,7 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
                     variant="ghost"
                     onClick={() => setDeleteTarget(photo)}
                     disabled={loading === photo.id}
+                    title="Delete photo"
                     className="ml-auto text-destructive hover:bg-destructive/10 transition-colors duration-150"
                   >
                     <Trash2 className="h-3.5 w-3.5" />

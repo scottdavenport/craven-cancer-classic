@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus, Pencil } from "lucide-react";
 import { toast } from "sonner";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { SponsorshipDrawer } from "./sponsorship-drawer";
 import {
   getSponsorshipItems,
@@ -171,11 +172,8 @@ export function SponsorshipManager({
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="text-center text-muted-foreground"
-                    >
-                      No sponsorship packages yet
+                    <TableCell colSpan={7}>
+                      <AdminEmptyState title="No sponsorship packages yet" />
                     </TableCell>
                   </TableRow>
                 ) : (

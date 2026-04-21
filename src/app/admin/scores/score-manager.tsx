@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Upload, Trash2 } from "lucide-react";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { importScoresFromCSV, deleteAllScores } from "./actions";
 import { ScoreDrawer } from "./score-drawer";
 import type { Score } from "@/types/database";
@@ -119,36 +121,38 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
 
       {/* CSV import */}
       {showCSV && (
-        <div className="border-2 border-dashed border-border/60 rounded-lg p-8 text-center bg-neutral-50 hover:border-primary/40 hover:bg-primary/5 transition-colors duration-150">
-          <p className="mb-4 text-sm font-medium text-foreground">Import from CSV</p>
-          <p className="mb-4 text-sm text-muted-foreground">
-            Paste CSV data with columns: <code>team</code>,{" "}
-            <code>score</code>, and optionally <code>session</code>.
-          </p>
-          <Textarea
-            rows={8}
-            placeholder={`team,score,session\nThe Eagles,72,morning\nBirdie Kings,68,afternoon`}
-            value={csvText}
-            onChange={(e) => setCsvText(e.target.value)}
-            className="mb-4"
-          />
-          <div className="flex justify-center gap-2">
-            <Button
-              size="sm"
-              onClick={handleCSVImport}
-              disabled={loading || !csvText.trim()}
-            >
-              {loading ? "Importing..." : "Import"}
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowCSV(false)}
-            >
-              Cancel
-            </Button>
-          </div>
-        </div>
+        <Card>
+          <CardContent className="p-8 text-center">
+            <p className="mb-4 text-sm font-medium text-foreground">Import from CSV</p>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Paste CSV data with columns: <code>team</code>,{" "}
+              <code>score</code>, and optionally <code>session</code>.
+            </p>
+            <Textarea
+              rows={8}
+              placeholder={`team,score,session\nThe Eagles,72,morning\nBirdie Kings,68,afternoon`}
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+              className="mb-4"
+            />
+            <div className="flex justify-center gap-2">
+              <Button
+                size="sm"
+                onClick={handleCSVImport}
+                disabled={loading || !csvText.trim()}
+              >
+                {loading ? "Importing..." : "Import"}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowCSV(false)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {/* Scores table */}
@@ -166,11 +170,8 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
           <TableBody>
             {scores.length === 0 ? (
               <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center text-muted-foreground"
-                >
-                  No scores yet
+                <TableCell colSpan={5}>
+                  <AdminEmptyState title="No scores yet" />
                 </TableCell>
               </TableRow>
             ) : (

@@ -72,7 +72,7 @@ export function InviteForm() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {error && (
             <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20">
               {error}
@@ -84,7 +84,7 @@ export function InviteForm() {
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="invite-email">Email</Label>
             <Input
               id="invite-email"
@@ -97,7 +97,7 @@ export function InviteForm() {
             />
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-1.5">
             <Label htmlFor="invite-role">Role</Label>
             <Select
               value={role}

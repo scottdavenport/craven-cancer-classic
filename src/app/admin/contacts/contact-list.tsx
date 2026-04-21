@@ -551,7 +551,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
 
       {/* Table */}
       <div
-        className="overflow-hidden rounded-lg border border-border/60 shadow-sm transition-opacity duration-150"
+        className="overflow-x-auto rounded-lg border border-border/60 shadow-sm transition-opacity duration-150"
         style={{ opacity: isPending ? 0.6 : 1 }}
       >
         {isPending && (

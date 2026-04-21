@@ -273,6 +273,41 @@ describe("EventSettingsForm — client-side validation", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Sprint 19 — PR C polish tests (RED: fail until PR C lands)
+// ---------------------------------------------------------------------------
+
+describe("EventSettingsForm — sprint-19 PR-C polish", () => {
+  describe("save button size", () => {
+    it("Save button uses default size (NOT size='lg'), rendering without h-10/h-11 class", () => {
+      render(<EventSettingsForm settings={mockSettings} />);
+
+      // The save button — currently rendered as <Button type="submit" size="lg">
+      const saveBtn = screen.getByRole("button", { name: /save settings/i });
+      expect(saveBtn).toBeTruthy();
+
+      // RED: current main has size="lg" which adds h-10 or h-11 depending on Button config.
+      // PR C: remove size="lg" to use the default size (h-9).
+      // We assert the button does NOT have the h-10 class (size="lg" output).
+      expect(saveBtn.className).not.toContain("h-10");
+      expect(saveBtn.className).not.toContain("h-11");
+    });
+  });
+
+  describe("label-input spacing", () => {
+    it("label/input pairs use space-y-1.5 (not space-y-2)", () => {
+      const { container } = render(<EventSettingsForm settings={mockSettings} />);
+
+      // PR C: standardise label/input gap to space-y-1.5.
+      // Current main uses space-y-2 inside fieldsets.
+      const hasOldSpacing = container.querySelector(".space-y-2 label") !== null;
+
+      // RED: space-y-2 is present on main; PR C replaces with space-y-1.5
+      expect(hasOldSpacing).toBe(false);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // EventSettingsForm — #161 legend cleanup (RED: fail until #161 implemented)
 // ---------------------------------------------------------------------------
 

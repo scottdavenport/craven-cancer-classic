@@ -67,6 +67,13 @@ export function SponsorForm({
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(savedLogoUrl);
+  const [removeLogo, setRemoveLogo] = useState(false);
+
+  function handleRemoveLogo() {
+    setRemoveLogo(true);
+    setLogoFile(null);
+    setPreviewUrl(null);
+  }
 
   function handleLogoChange(file: File | null) {
     setFileError(null);
@@ -81,6 +88,7 @@ export function SponsorForm({
       setPreviewUrl(savedLogoUrl);
       return;
     }
+    setRemoveLogo(false);
     setLogoFile(file);
     setPreviewUrl(URL.createObjectURL(file));
   }
@@ -103,6 +111,9 @@ export function SponsorForm({
     );
     if (logoFile) {
       formData.set("logo", logoFile);
+    }
+    if (removeLogo) {
+      formData.set("remove_logo", "true");
     }
     onSubmit(formData);
   }
@@ -238,6 +249,17 @@ export function SponsorForm({
               alt="Logo preview"
               className="mt-2 h-16 w-auto object-contain rounded-md border border-border/60 bg-neutral-50 p-1"
             />
+          )}
+          {savedLogoUrl && !removeLogo && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="mt-1 text-destructive hover:text-destructive"
+              onClick={handleRemoveLogo}
+            >
+              Remove logo
+            </Button>
           )}
         </div>
       </div>

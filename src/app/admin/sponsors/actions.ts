@@ -319,6 +319,20 @@ async function sanitizeSvgIfNeeded(file: File): Promise<File> {
   return new File([cleaned], file.name, { type: "image/svg+xml" });
 }
 
+export async function deleteSponsorLogo(
+  oldLogoUrl: string
+): Promise<{ success: true } | { error: string }> {
+  await requireAdmin();
+  const supabase = await createClient();
+
+  const fileName = oldLogoUrl.split("/").pop();
+  if (!fileName) return { error: "Invalid logo URL" };
+
+  const { error } = await supabase.storage.from("logos").remove([fileName]);
+  if (error) return { error: error.message };
+  return { success: true };
+}
+
 export async function uploadSponsorLogo(formData: FormData) {
   await requireAdmin();
 

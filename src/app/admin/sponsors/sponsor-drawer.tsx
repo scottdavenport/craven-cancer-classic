@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SponsorForm } from "./sponsor-form";
 import type { SponsorshipItemOption } from "./sponsor-form";
-import { createSponsor, updateSponsor, deleteSponsor, uploadSponsorLogo, getSponsorContacts } from "./actions";
+import { createSponsor, updateSponsor, deleteSponsor, uploadSponsorLogo, getSponsorContacts, deleteSponsorLogo } from "./actions";
 import type { Sponsor } from "@/types/database";
 import type { ContactPickResult } from "@/components/admin/contact-typeahead";
 
@@ -71,23 +71,31 @@ export function SponsorDrawer({
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     try {
-      const logoValue = formData.get("logo");
-      if (logoValue instanceof File && logoValue.size > 0) {
-        const uploadFormData = new FormData();
-        uploadFormData.set("file", logoValue);
-        if (mode === "edit" && sponsor?.logo_url) {
-          uploadFormData.set("oldLogoUrl", sponsor.logo_url);
+      const removeLogoFlag = formData.get("remove_logo") === "true";
+      if (removeLogoFlag && sponsor?.logo_url) {
+        await deleteSponsorLogo(sponsor.logo_url);
+        formData.set("logo_url", "");
+        formData.delete("logo");
+        formData.delete("remove_logo");
+      } else {
+        const logoValue = formData.get("logo");
+        if (logoValue instanceof File && logoValue.size > 0) {
+          const uploadFormData = new FormData();
+          uploadFormData.set("file", logoValue);
+          if (mode === "edit" && sponsor?.logo_url) {
+            uploadFormData.set("oldLogoUrl", sponsor.logo_url);
+          }
+          const uploadResult = await uploadSponsorLogo(uploadFormData);
+          if ("error" in uploadResult) {
+            toast.error(uploadResult.error);
+            return;
+          }
+          formData.set("logo_url", uploadResult.url);
+        } else if (mode === "edit" && sponsor?.logo_url) {
+          formData.set("logo_url", sponsor.logo_url);
         }
-        const uploadResult = await uploadSponsorLogo(uploadFormData);
-        if ("error" in uploadResult) {
-          toast.error(uploadResult.error);
-          return;
-        }
-        formData.set("logo_url", uploadResult.url);
-      } else if (mode === "edit" && sponsor?.logo_url) {
-        formData.set("logo_url", sponsor.logo_url);
+        formData.delete("logo");
       }
-      formData.delete("logo");
 
       const result =
         mode === "create"

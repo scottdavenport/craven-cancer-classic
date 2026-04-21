@@ -295,9 +295,9 @@ describe("SponsorsPage — redesign (#220)", () => {
       await renderPage();
       const champSection = screen.getByTestId("tier-section-tier-champion");
       // Tournament Program direction: champion cards have a tier-strip, not border-l-4.
-      // This assertion is RED until Bolt ships the tier-strip implementation.
-      const hasTierStrip = within(champSection).queryByTestId("tier-strip");
-      expect(hasTierStrip).toBeInTheDocument();
+      // Champion section contains multiple cards → each has its own tier-strip, so queryAllByTestId.
+      const strips = within(champSection).queryAllByTestId("tier-strip");
+      expect(strips.length).toBeGreaterThan(0);
     });
 
     it("Shot of the Day section (sort_order=4) renders compact SponsorCards", async () => {

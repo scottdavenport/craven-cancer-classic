@@ -149,23 +149,23 @@ Files to align: `sponsor-form.tsx`, `sponsorship-form.tsx`, `invite-form.tsx`, `
 
 **Acceptance criteria:**
 
-- [ ] P0: Logo field uses `FileUploadField` — no native `<input type="file">` visible; styled upload button renders; filename chip appears after file select; clear button works
-- [ ] P1: Year filter is a `Select` component (base-ui), not `<select>` — no native browser dropdown chrome on year filter
-- [ ] P1: Year filter `Select.Root` has `items` prop mapping years to display labels (e.g. `{ "2024": "2024", "2025": "2025" }`) — per `feedback_base_ui_select_items`
-- [ ] P1: Status filter active state uses `bg-primary text-primary-foreground` (no hardcoded `bg-teal-600`)
-- [ ] P1: SelectTriggers for Tier and Payment Status have no `h-8` height override — inputs align with adjacent text inputs
-- [ ] P1: Form spacing is `space-y-1.5` (label/input) / `space-y-4` (field/field) / `space-y-6` (section/section)
-- [ ] P2: `is_active` uses `<Switch>` component, not raw checkbox with `role="switch"`
-- [ ] P2: `accent-teal-600` removed; active/checked states use `accent-brand`
-- [ ] P2: Logo preview has frame: `rounded-md border border-border/60 bg-neutral-50 p-1`
-- [ ] P2: Submit/cancel buttons use default size (not `size="sm"`)
-- [ ] P2: Contacts field has helper text explaining what linking contacts does
-- [ ] Sponsor drawer width is `sm:max-w-[540px]`
-- [ ] Logo thumbnail column visible in sponsor list table (shows `<img>` with `w-8 h-8 object-contain rounded` or similar; null logo shows placeholder)
-- [ ] Null/broken logo in list table renders gracefully — no broken img icon, placeholder fills the cell
-- [ ] `AdminEmptyState` from PR A replaces the bare "No sponsors yet" text in the table
+- [x] P0: Logo field uses `FileUploadField` — no native `<input type="file">` visible; styled upload button renders; filename chip appears after file select; clear button works
+- [x] P1: Year filter is a `Select` component (base-ui), not `<select>` — no native browser dropdown chrome on year filter
+- [x] P1: Year filter `Select.Root` has `items` prop mapping years to display labels (e.g. `{ "2024": "2024", "2025": "2025" }`) — per `feedback_base_ui_select_items`
+- [x] P1: Status filter active state uses `bg-primary text-primary-foreground` (no hardcoded `bg-teal-600`)
+- [x] P1: SelectTriggers for Tier and Payment Status have no `h-8` height override — inputs align with adjacent text inputs
+- [x] P1: Form spacing is `space-y-1.5` (label/input) / `space-y-4` (field/field) / `space-y-6` (section/section)
+- [x] P2: `is_active` uses `<Switch>` component, not raw checkbox with `role="switch"`
+- [x] P2: `accent-teal-600` removed; active/checked states use `accent-brand`
+- [x] P2: Logo preview has frame: `rounded-md border border-border/60 bg-neutral-50 p-1`
+- [x] P2: Submit/cancel buttons use default size (not `size="sm"`)
+- [x] P2: Contacts field has helper text explaining what linking contacts does
+- [x] Sponsor drawer width is `sm:max-w-[540px]`
+- [x] Logo thumbnail column visible in sponsor list table (shows `<img>` with `w-8 h-8 object-contain rounded` or similar; null logo shows placeholder)
+- [x] Null/broken logo in list table renders gracefully — no broken img icon, placeholder fills the cell
+- [x] `AdminEmptyState` from PR A replaces the bare "No sponsors yet" text in the table
 - [ ] Existing sponsor form submit/edit/delete flows work end-to-end (Watchdog verifies in browser)
-- [ ] `items` prop on Tier and Payment Status `Select.Root` maps values to labels correctly
+- [x] `items` prop on Tier and Payment Status `Select.Root` maps values to labels correctly
 
 **What NOT to do:**
 - Do not touch `team-drawer.tsx`, `contact-form.tsx`, or any file outside the `/admin/sponsors/` folder

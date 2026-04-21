@@ -12,7 +12,7 @@ export function AdminPageHeading({
   return (
     <div className="border-b border-border/60 pb-6 mb-8 flex items-end justify-between gap-4">
       <div>
-        <h1 className="font-sans text-2xl font-semibold text-foreground">
+        <h1 className="font-heading text-2xl font-semibold text-foreground">
           {title}
         </h1>
         {description && (

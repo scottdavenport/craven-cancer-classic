@@ -24,6 +24,8 @@ async function getSponsorsWithTiers() {
     .from("sponsors")
     .select("*")
     .eq("year", currentYear)
+    .eq("is_active", true)
+    .is("deleted_at", null)
     .order("display_order");
 
   return { tiers: tiers ?? [], sponsors: sponsors ?? [] };

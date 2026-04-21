@@ -16,13 +16,13 @@ interface SponsorCardProps {
 function PatronChampion({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): JSX.Element {
   const initial = sponsor.name.split(" ")[0]?.[0]?.toUpperCase() ?? "";
   return (
-    <div className="relative bg-cream grain-overlay rounded-lg border border-border/60 border-l-4 border-l-brand p-6 overflow-hidden transition-shadow hover:shadow-md">
+    <div className="group relative bg-cream grain-overlay rounded-lg border border-border/60 border-l-4 border-l-brand p-6 overflow-hidden transition-shadow hover:shadow-md">
       {initial && (
         <span
           data-testid="patron-drop-initial"
           aria-hidden="true"
           style={{ fontVariationSettings: "'opsz' 144", fontWeight: 300 }}
-          className="font-display italic text-[56px] sm:text-[80px] leading-none text-brand float-left mr-3 mt-1"
+          className="font-display italic text-[56px] sm:text-[80px] leading-none text-brand group-hover:text-brand-dark transition-colors duration-150 float-left mr-3 mt-1"
         >
           {initial}
         </span>
@@ -57,7 +57,7 @@ function PatronChampion({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): 
 
 function PatronEagle({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): JSX.Element {
   return (
-    <div className="relative bg-cream grain-overlay rounded-md border border-border/60 p-5 transition-shadow hover:shadow-sm">
+    <div className="group relative bg-cream grain-overlay rounded-md border border-border/60 p-5 transition-shadow hover:shadow-sm">
       <div aria-hidden="true" className="mb-4">
         <div className="h-px bg-brand-muted" />
         <div className="h-px bg-brand-muted mt-0.5" />
@@ -67,7 +67,7 @@ function PatronEagle({ sponsor }: { sponsor: SponsorCardProps["sponsor"] }): JSX
           data-testid="patron-ornament"
           aria-hidden="true"
           style={{ fontVariationSettings: "'opsz' 9" }}
-          className="font-display text-[13px] sm:text-[14px] text-brand"
+          className="font-display text-[13px] sm:text-[14px] text-brand group-hover:text-brand-dark transition-colors duration-150"
         >
           ❧
         </span>

@@ -99,7 +99,8 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
     });
   }
 
-  function handleYearChange(yearStr: string) {
+  function handleYearChange(yearStr: string | null) {
+    if (yearStr === null) return;
     const year = Number(yearStr);
     setYearFilter(year);
     const isActiveArg = statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined;

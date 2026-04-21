@@ -203,14 +203,12 @@ describe("SponsorForm — PR B changes", () => {
       expect(switchEl!.getAttribute("data-unchecked")).not.toBeNull();
     });
 
-    it("no raw checkbox (type=checkbox) is used as is_active control", () => {
-      const { container } = renderForm();
-      // There should be no visible checkbox — hidden inputs are ok
-      const checkboxes = container.querySelectorAll(
-        'input[type="checkbox"]:not(.sr-only)'
-      );
-      expect(checkboxes).toHaveLength(0);
-    });
+    // Bug 1 (RED-phase): Removed redundant "no raw checkbox" test.
+    // base-ui Switch renders a visually-hidden <input type="checkbox"> with
+    // inline `visuallyHidden` style — NOT a .sr-only class — so the
+    // :not(.sr-only) selector always matched it. The sibling
+    // "is a base-ui Switch (has data-slot=switch)" test and
+    // "switchEl.tagName !== input" test are sufficient to verify this contract.
   });
 
   // -------------------------------------------------------------------------
@@ -220,8 +218,10 @@ describe("SponsorForm — PR B changes", () => {
     it("no element uses accent-teal-600 class", () => {
       const { container } = renderForm();
       const elements = container.querySelectorAll("[class]");
+      // Bug 2 (RED-phase): SVG elements expose className as SVGAnimatedString,
+      // not a plain string — .includes() throws. Use getAttribute("class") instead.
       const hasTeal = Array.from(elements).some((el) =>
-        el.className.includes("accent-teal-600")
+        el.getAttribute("class")?.includes("accent-teal-600")
       );
       expect(hasTeal).toBe(false);
     });
@@ -281,23 +281,12 @@ describe("SponsorForm — PR B changes", () => {
   describe("Contacts field helper text (P2)", () => {
     it("renders helper text near the contacts field explaining contact linking", () => {
       renderForm();
-      // Some text near the contacts section describing contact linking
-      // Bolt will add a <p> with help text; match loosely on keywords
-      const helperText = screen.queryByText(/contact/i, { exact: false });
-      // Contacts label is already there — look for additional descriptive text
-      // The test is intentionally loose: any element containing "link" or "associate"
-      // near the contacts area satisfies the requirement
-      const helpElements = screen
-        .getAllByText(/contact/i)
-        .filter(
-          (el) =>
-            el.tagName === "P" ||
-            el.className?.includes("muted") ||
-            el.className?.includes("text-xs") ||
-            el.className?.includes("text-sm")
-        );
-      // At least one p/helper element referencing contacts should exist
-      expect(helpElements.length).toBeGreaterThan(0);
+      // Bug 3 (RED-phase): queryByText(/contact/i) matched multiple elements
+      // (the "Contacts" label + "Search contacts" mock text), causing
+      // queryByText to throw "Found multiple elements". Tightened regex to
+      // match only Bolt's chosen helper copy.
+      const helperText = screen.queryByText(/link contacts to this sponsor/i);
+      expect(helperText).toBeInTheDocument();
     });
   });
 });

@@ -287,6 +287,15 @@ describe("SponsorList", () => {
 describe("SponsorList — year filter (#199)", () => {
   const currentYear = new Date().getFullYear();
 
+  // Bug 4 (RED-phase): base-ui Select renders options in a portal attached to
+  // document.body. In the full suite, portal remnants from prior tests linger
+  // and cause option discovery to fail (finds stale options or finds none).
+  // Clearing document.body before each test in this block eliminates portal
+  // bleed-over. Tradeoff: this resets ALL portal state, not just Select portals.
+  beforeEach(() => {
+    document.body.innerHTML = "";
+  });
+
   it("renders a year filter control (dropdown, select, or combobox)", () => {
     render(
       <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />

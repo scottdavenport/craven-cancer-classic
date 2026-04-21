@@ -1,19 +1,8 @@
-import React from "react";
-
-/**
- * STUB — src/components/public/sponsor-card.tsx
- *
- * This file is a minimal stub created by Spec to allow RED tests to compile and
- * run. It exports the SponsorCard type signature only; it does NOT implement
- * any behaviour. Every test that asserts rendered output will fail.
- *
- * Bolt replaces this entire file with the real implementation (#220).
- * Do NOT ship this stub to production.
- */
+import type { JSX } from "react";
 
 export type TierSize = "champion" | "eagle" | "standard" | "compact";
 
-export interface SponsorCardProps {
+interface SponsorCardProps {
   sponsor: {
     id: string;
     name: string;
@@ -23,7 +12,99 @@ export interface SponsorCardProps {
   tierSize: TierSize;
 }
 
-// Stub component — renders nothing. All tests asserting rendered content will fail (RED).
-export function SponsorCard(_props: SponsorCardProps): React.ReactElement {
-  return <></>;
+export function SponsorCard({ sponsor, tierSize }: SponsorCardProps): JSX.Element {
+  const logoHeight = {
+    champion: "h-24",
+    eagle: "h-[72px]",
+    standard: "h-14",
+    compact: "h-12",
+  }[tierSize];
+
+  const nameClass = {
+    champion: "font-display text-base font-semibold",
+    eagle: "font-display text-sm font-semibold",
+    standard: "font-display text-sm font-semibold",
+    compact: "font-sans text-xs",
+  }[tierSize];
+
+  const logoCardBase = {
+    champion: "border-l-4 border-brand bg-cream p-6 rounded-lg border border-border/60",
+    eagle: "border border-border/60 bg-white p-5 rounded-md",
+    standard: "border border-border/60 bg-white p-5 rounded-md",
+    compact: "border border-border/60 bg-white p-3 rounded-md min-h-[5rem]",
+  }[tierSize];
+
+  const textCardBase = {
+    champion: "border-l-4 border-brand bg-cream p-6 rounded-lg border border-border/60",
+    eagle: "border border-border/60 bg-cream p-5 rounded-md",
+    standard: "border border-border/60 bg-cream p-5 rounded-md",
+    compact: "border border-border/60 bg-cream p-3 rounded-md min-h-[5rem]",
+  }[tierSize];
+
+  if (!sponsor.logo_url) {
+    const cardClass = `flex flex-col items-center gap-3 ${textCardBase} transition-shadow hover:shadow-sm`;
+    const cardContent = (
+      <>
+        <div className="h-px w-8 bg-brand-muted mx-auto" />
+        <p className={`${nameClass} text-foreground text-center`}>{sponsor.name}</p>
+      </>
+    );
+
+    if (sponsor.website) {
+      return (
+        <a
+          href={sponsor.website}
+          target="_blank"
+          rel="noopener noreferrer"
+          data-testid={`sponsor-card-text-${sponsor.id}`}
+          className={cardClass}
+        >
+          {cardContent}
+        </a>
+      );
+    }
+    return (
+      <div data-testid={`sponsor-card-text-${sponsor.id}`} className={cardClass}>
+        {cardContent}
+      </div>
+    );
+  }
+
+  const cardClass = `flex flex-col items-center gap-3 ${logoCardBase} transition-shadow hover:shadow-sm`;
+
+  const logoContent = (
+    <>
+      <div className={`relative ${logoHeight} w-full`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={sponsor.logo_url}
+          alt={sponsor.name}
+          data-testid={`sponsor-logo-${sponsor.id}`}
+          className="object-contain w-full h-full"
+        />
+      </div>
+      {tierSize !== "compact" && (
+        <p className={`${nameClass} text-foreground text-center`}>{sponsor.name}</p>
+      )}
+    </>
+  );
+
+  if (sponsor.website) {
+    return (
+      <a
+        href={sponsor.website}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-testid={`sponsor-card-logo-${sponsor.id}`}
+        className={cardClass}
+      >
+        {logoContent}
+      </a>
+    );
+  }
+  return (
+    <div data-testid={`sponsor-card-logo-${sponsor.id}`} className={cardClass}>
+      {logoContent}
+    </div>
+  );
 }

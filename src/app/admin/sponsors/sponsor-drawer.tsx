@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
   Sheet,
@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SponsorForm } from "./sponsor-form";
 import type { SponsorshipItemOption } from "./sponsor-form";
-import { createSponsor, updateSponsor, deleteSponsor } from "./actions";
+import { createSponsor, updateSponsor, deleteSponsor, uploadSponsorLogo, getSponsorContacts } from "./actions";
 import type { Sponsor } from "@/types/database";
+import type { ContactPickResult } from "@/components/admin/contact-typeahead";
 
 interface SponsorDrawerProps {
   open: boolean;
@@ -35,6 +36,32 @@ export function SponsorDrawer({
 }: SponsorDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [initialContacts, setInitialContacts] = useState<ContactPickResult[]>([]);
+  const [contactsLoaded, setContactsLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setInitialContacts([]);
+      setContactsLoaded(false);
+      return;
+    }
+    if (mode === "edit" && sponsor) {
+      setContactsLoaded(false);
+      getSponsorContacts(sponsor.id).then((rows) => {
+        setInitialContacts(
+          rows.map((row) => ({
+            id: row.contacts.id,
+            full_name: row.contacts.full_name,
+            email: row.contacts.email,
+            company: null,
+          }))
+        );
+        setContactsLoaded(true);
+      });
+    } else {
+      setContactsLoaded(true);
+    }
+  }, [open, mode, sponsor?.id]);
 
   const title =
     mode === "create"
@@ -44,6 +71,24 @@ export function SponsorDrawer({
   async function handleSubmit(formData: FormData) {
     setLoading(true);
     try {
+      const logoValue = formData.get("logo");
+      if (logoValue instanceof File && logoValue.size > 0) {
+        const uploadFormData = new FormData();
+        uploadFormData.set("file", logoValue);
+        if (mode === "edit" && sponsor?.logo_url) {
+          uploadFormData.set("oldLogoUrl", sponsor.logo_url);
+        }
+        const uploadResult = await uploadSponsorLogo(uploadFormData);
+        if ("error" in uploadResult) {
+          toast.error(uploadResult.error);
+          return;
+        }
+        formData.set("logo_url", uploadResult.url);
+      } else if (mode === "edit" && sponsor?.logo_url) {
+        formData.set("logo_url", sponsor.logo_url);
+      }
+      formData.delete("logo");
+
       const result =
         mode === "create"
           ? await createSponsor(formData)
@@ -94,10 +139,12 @@ export function SponsorDrawer({
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <SponsorForm
               defaultValues={mode === "edit" ? sponsor : undefined}
+              initialContacts={initialContacts}
               sponsorshipItems={sponsorshipItems}
               onSubmit={handleSubmit}
               onCancel={() => onOpenChange(false)}
               loading={loading}
+              disabled={mode === "edit" && !contactsLoaded}
             />
           </div>
 

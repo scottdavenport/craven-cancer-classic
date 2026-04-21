@@ -10,6 +10,8 @@ vi.mock("@/app/admin/sponsors/actions", () => ({
   updateSponsor: vi.fn(),
   deleteSponsor: vi.fn(),
   getSponsors: vi.fn(),
+  uploadSponsorLogo: vi.fn(async () => ({ url: "" })),
+  getSponsorContacts: vi.fn(async () => []),
 }));
 
 // Mock sonner toast

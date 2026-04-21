@@ -1,66 +1,98 @@
 /**
- * RED tests for PR B — sponsor-drawer.tsx changes
+ * RED tests — sponsor-drawer.tsx (Sprint 20, issue #215)
  *
- * These tests describe the TARGET state after PR B is applied.
- * They will FAIL against current main because:
- *   - SheetContent has sm:max-w-[480px] not sm:max-w-[540px]
+ * Section 1 (existing): Drawer width — sm:max-w-[540px]
+ * Section 2 (NEW): Logo upload wiring — Bug 1
+ * Section 3 (NEW): Initial contacts fetch — Bug 2
+ *
+ * Section 2 + 3 tests FAIL against current main because:
+ *   - handleSubmit never calls uploadSponsorLogo
+ *   - handleSubmit never calls getSponsorContacts
+ *   - existing logo_url is NOT preserved when no new file is picked
  */
 
 import React from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, act, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { SponsorDrawer } from "../sponsor-drawer";
-import type { SponsorshipItemOption } from "../sponsor-form";
+import type { ContactPickResult } from "@/components/admin/contact-typeahead";
 import type { Sponsor } from "@/types/database";
 
 // ---------------------------------------------------------------------------
-// Mocks
+// Mocks — actions
+// Must be at module top level (hoisted by Vitest).
 // ---------------------------------------------------------------------------
 
-// Mock SponsorForm to avoid its full dependency tree (FileUploadField etc.)
-vi.mock("../sponsor-form", () => ({
-  SponsorForm: ({
-    loading,
-  }: {
-    defaultValues?: unknown;
-    contacts?: unknown[];
-    sponsorshipItems: unknown[];
-    onSubmit: (fd: FormData) => void | Promise<void>;
-    onCancel: () => void;
-    loading: boolean;
-  }) => (
-    <div data-testid="sponsor-form">
-      {loading && <span data-testid="form-loading">Saving...</span>}
-    </div>
-  ),
+vi.mock("../actions", () => ({
+  createSponsor: vi.fn(async () => ({})),
+  updateSponsor: vi.fn(async () => ({})),
+  deleteSponsor: vi.fn(async () => ({})),
+  uploadSponsorLogo: vi.fn(async () => ({ url: "https://cdn.example.com/new-logo.png" })),
+  getSponsorContacts: vi.fn(async () => []),
 }));
 
-// Mock sonner toast to avoid JSDOM issues
+// ---------------------------------------------------------------------------
+// Mocks — SponsorForm
+//
+// The mock is a vi.fn() so individual tests can call mockImplementation.
+// Default implementation just renders a data-testid container and a submit button
+// whose onSubmit payload is set by the test via the `_submitFd` ref below.
+// ---------------------------------------------------------------------------
+
+// A ref to feed a custom FormData from the test into the mock's submit button
+let _submitFdForTest: FormData | null = null;
+// A ref to capture the initialContacts the drawer passes to the form
+let _capturedInitialContacts: ContactPickResult[] = [];
+
+vi.mock("../sponsor-form", () => {
+  const MockSponsorForm = vi.fn(
+    ({
+      initialContacts = [],
+      onSubmit,
+      loading,
+    }: {
+      initialContacts?: ContactPickResult[];
+      onSubmit: (fd: FormData) => void | Promise<void>;
+      onCancel: () => void;
+      loading: boolean;
+      [key: string]: unknown;
+    }) => {
+      // Store whatever initialContacts the drawer injected — tests inspect this
+      _capturedInitialContacts = initialContacts;
+
+      return (
+        <div data-testid="sponsor-form">
+          {loading && <span data-testid="form-loading">Saving...</span>}
+          {initialContacts.map((c) => (
+            <span key={c.id} data-testid={`initial-contact-${c.id}`}>
+              {c.full_name}
+            </span>
+          ))}
+          <button
+            type="button"
+            data-testid="mock-submit"
+            onClick={() => {
+              const fd = _submitFdForTest ?? new FormData();
+              onSubmit(fd);
+            }}
+          >
+            Submit
+          </button>
+        </div>
+      );
+    }
+  );
+
+  return {
+    SponsorForm: MockSponsorForm,
+  };
+});
+
+// Mock sonner toast
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),
     error: vi.fn(),
   },
-}));
-
-// Mock server actions
-vi.mock("./actions", async () => {
-  const actual = await vi.importActual<typeof import("../actions")>(
-    "../actions"
-  );
-  return {
-    ...actual,
-    createSponsor: vi.fn(async () => ({})),
-    updateSponsor: vi.fn(async () => ({})),
-    deleteSponsor: vi.fn(async () => ({})),
-  };
-});
-
-// Also mock relative path used inside sponsor-drawer.tsx
-vi.mock("../actions", () => ({
-  createSponsor: vi.fn(async () => ({})),
-  updateSponsor: vi.fn(async () => ({})),
-  deleteSponsor: vi.fn(async () => ({})),
 }));
 
 // Mock ConfirmDialog
@@ -76,8 +108,19 @@ vi.mock("@/components/ui/confirm-dialog", () => ({
     confirmLabel: string;
     onConfirm: () => void | Promise<void>;
   }) =>
-    open ? <div data-testid="confirm-dialog" role="dialog" aria-label={title} /> : null,
+    open ? (
+      <div data-testid="confirm-dialog" role="dialog" aria-label={title} />
+    ) : null,
 }));
+
+// ---------------------------------------------------------------------------
+// Import after mocks
+// ---------------------------------------------------------------------------
+
+import { SponsorDrawer } from "../sponsor-drawer";
+import type { SponsorshipItemOption } from "../sponsor-form";
+import * as actions from "../actions";
+import { toast } from "sonner";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -96,7 +139,7 @@ const SPONSOR: Sponsor = {
   amount_paid_cents: 500000,
   year: 2026,
   is_active: true,
-  logo_url: null,
+  logo_url: "https://cdn.example.com/old-logo.png",
   created_at: "2026-01-01T00:00:00Z",
   deleted_at: null,
   deleted_by: null,
@@ -104,90 +147,390 @@ const SPONSOR: Sponsor = {
   stripe_payment_id: null,
 };
 
-function renderDrawer(
-  open = true,
-  mode: "create" | "edit" = "create",
-  sponsor?: Sponsor
-) {
-  const props = {
-    open,
-    onOpenChange: vi.fn(),
-    mode,
-    sponsor,
-    sponsorshipItems: ITEMS,
-    onSuccess: vi.fn(),
-  };
-  return render(<SponsorDrawer {...props} />);
+const SPONSOR_NO_LOGO: Sponsor = {
+  ...SPONSOR,
+  id: "s-2",
+  logo_url: null,
+};
+
+const SPONSOR_B: Sponsor = {
+  ...SPONSOR,
+  id: "s-99",
+  name: "Beta Co",
+};
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+// Build a FormData that includes a File at key "logo"
+function makeFormDataWithFile(file: File, extra: Record<string, string> = {}): FormData {
+  const fd = new FormData();
+  fd.set("logo", file);
+  fd.set("name", "Acme Corp");
+  fd.set("tier_id", "tier-gold");
+  for (const [k, v] of Object.entries(extra)) fd.set(k, v);
+  return fd;
+}
+
+// Build a FormData without a File (no logo key at all)
+function makeFormDataNoFile(extra: Record<string, string> = {}): FormData {
+  const fd = new FormData();
+  fd.set("name", "Acme Corp");
+  fd.set("tier_id", "tier-gold");
+  if (!("contact_ids" in extra)) fd.set("contact_ids", "");
+  for (const [k, v] of Object.entries(extra)) fd.set(k, v);
+  return fd;
+}
+
+function renderEditDrawer(sponsor: Sponsor = SPONSOR) {
+  return render(
+    <SponsorDrawer
+      open={true}
+      onOpenChange={vi.fn()}
+      mode="edit"
+      sponsor={sponsor}
+      sponsorshipItems={ITEMS}
+      onSuccess={vi.fn()}
+    />
+  );
+}
+
+function renderCreateDrawer() {
+  return render(
+    <SponsorDrawer
+      open={true}
+      onOpenChange={vi.fn()}
+      mode="create"
+      sponsorshipItems={ITEMS}
+      onSuccess={vi.fn()}
+    />
+  );
+}
+
+async function clickSubmit() {
+  await act(async () => {
+    screen.getByTestId("mock-submit").click();
+  });
 }
 
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
 
-describe("SponsorDrawer — PR B changes", () => {
+describe("SponsorDrawer — Sprint 20 data-integrity tests (#215)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    _submitFdForTest = null;
+    _capturedInitialContacts = [];
+    // Restore default mock behaviors after clearAllMocks
+    vi.mocked(actions.uploadSponsorLogo).mockResolvedValue({
+      url: "https://cdn.example.com/new-logo.png",
+    });
+    vi.mocked(actions.getSponsorContacts).mockResolvedValue([]);
+    vi.mocked(actions.updateSponsor).mockResolvedValue({ success: true });
+    vi.mocked(actions.createSponsor).mockResolvedValue({ success: true });
   });
 
-  // -------------------------------------------------------------------------
-  // TEST 1: Drawer width — sm:max-w-[540px] (P1)
-  // -------------------------------------------------------------------------
+  // =========================================================================
+  // SECTION 1 (existing): Drawer width
+  // =========================================================================
   describe("Drawer width — 540px (P1)", () => {
     it("SheetContent has sm:max-w-[540px] class when open in create mode", () => {
-      renderDrawer(true, "create");
-      // SheetContent renders via portal — query document.body, not container
+      renderCreateDrawer();
       const sheetContent = document.querySelector('[data-slot="sheet-content"]');
       expect(sheetContent).not.toBeNull();
       expect(sheetContent!.className).toContain("sm:max-w-[540px]");
     });
 
     it("SheetContent does NOT have sm:max-w-[480px] (old width)", () => {
-      renderDrawer(true, "create");
+      renderCreateDrawer();
       const sheetContent = document.querySelector('[data-slot="sheet-content"]');
       expect(sheetContent).not.toBeNull();
       expect(sheetContent!.className).not.toContain("sm:max-w-[480px]");
     });
 
     it("SheetContent has sm:max-w-[540px] when open in edit mode", () => {
-      renderDrawer(true, "edit", SPONSOR);
+      renderEditDrawer();
       const sheetContent = document.querySelector('[data-slot="sheet-content"]');
       expect(sheetContent).not.toBeNull();
       expect(sheetContent!.className).toContain("sm:max-w-[540px]");
     });
   });
 
-  // -------------------------------------------------------------------------
-  // Additional smoke tests to ensure drawer renders correctly
-  // -------------------------------------------------------------------------
   describe("Drawer renders correctly", () => {
     it("renders the sponsor form when open", () => {
-      renderDrawer(true, "create");
+      renderCreateDrawer();
       expect(screen.getByTestId("sponsor-form")).toBeInTheDocument();
     });
 
     it("shows 'New Sponsor' title in create mode", () => {
-      renderDrawer(true, "create");
+      renderCreateDrawer();
       expect(screen.getByText("New Sponsor")).toBeInTheDocument();
     });
 
     it("shows sponsor name in edit mode title", () => {
-      renderDrawer(true, "edit", SPONSOR);
-      expect(
-        screen.getByText(`Edit Sponsor: ${SPONSOR.name}`)
-      ).toBeInTheDocument();
+      renderEditDrawer();
+      expect(screen.getByText(`Edit Sponsor: ${SPONSOR.name}`)).toBeInTheDocument();
     });
 
     it("does not render when closed", () => {
-      const { container } = renderDrawer(false, "create");
-      // base-ui Dialog hides content when closed — sheet content should not be visible
+      const { container } = render(
+        <SponsorDrawer
+          open={false}
+          onOpenChange={vi.fn()}
+          mode="create"
+          sponsorshipItems={ITEMS}
+          onSuccess={vi.fn()}
+        />
+      );
       const sheetContent = container.querySelector('[data-slot="sheet-content"]');
-      // Either null or hidden — base-ui may keep DOM but mark as hidden
       if (sheetContent) {
-        // Acceptable: element present but not visible/open
         expect(sheetContent.getAttribute("data-open")).not.toBe("true");
       } else {
         expect(sheetContent).toBeNull();
       }
+    });
+  });
+
+  // =========================================================================
+  // SECTION 2: Logo upload wiring (Bug 1)
+  //
+  // Target behaviour after Bolt fix:
+  //   handleSubmit inspects formData for a File at key "logo" with size > 0.
+  //   If present: calls uploadSponsorLogo, sets logo_url = result.url, proceeds.
+  //   If absent + edit + sponsor.logo_url exists: preserves existing logo_url.
+  //   If uploadSponsorLogo errors: toast.error + does NOT call updateSponsor.
+  // =========================================================================
+  describe("Logo upload wiring — Bug 1", () => {
+    it("calls uploadSponsorLogo when formData contains a File at key 'logo'", async () => {
+      const logoFile = new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" });
+      _submitFdForTest = makeFormDataWithFile(logoFile);
+
+      renderEditDrawer();
+      await clickSubmit();
+
+      expect(vi.mocked(actions.uploadSponsorLogo)).toHaveBeenCalledTimes(1);
+      const uploadArg = vi.mocked(actions.uploadSponsorLogo).mock.calls[0][0] as FormData;
+      expect(uploadArg.get("file")).toBe(logoFile);
+    });
+
+    it("passes oldLogoUrl to uploadSponsorLogo when sponsor has existing logo_url", async () => {
+      const logoFile = new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" });
+      _submitFdForTest = makeFormDataWithFile(logoFile);
+
+      renderEditDrawer(SPONSOR); // SPONSOR.logo_url is non-null
+
+      await clickSubmit();
+
+      const uploadArg = vi.mocked(actions.uploadSponsorLogo).mock.calls[0][0] as FormData;
+      expect(uploadArg.get("oldLogoUrl")).toBe(SPONSOR.logo_url);
+    });
+
+    it("calls updateSponsor with logo_url equal to uploadSponsorLogo result URL", async () => {
+      const UPLOAD_URL = "https://cdn.example.com/uploaded.png";
+      vi.mocked(actions.uploadSponsorLogo).mockResolvedValue({ url: UPLOAD_URL });
+
+      const logoFile = new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" });
+      _submitFdForTest = makeFormDataWithFile(logoFile);
+
+      renderEditDrawer();
+      await clickSubmit();
+
+      expect(vi.mocked(actions.updateSponsor)).toHaveBeenCalledTimes(1);
+      const [, updateFd] = vi.mocked(actions.updateSponsor).mock.calls[0] as [string, FormData];
+      expect(updateFd.get("logo_url")).toBe(UPLOAD_URL);
+    });
+
+    it("does NOT call updateSponsor when uploadSponsorLogo returns an error", async () => {
+      vi.mocked(actions.uploadSponsorLogo).mockResolvedValue({ error: "Storage quota exceeded" });
+
+      const logoFile = new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" });
+      _submitFdForTest = makeFormDataWithFile(logoFile);
+
+      renderEditDrawer();
+      await clickSubmit();
+
+      expect(vi.mocked(actions.updateSponsor)).not.toHaveBeenCalled();
+    });
+
+    it("calls toast.error when uploadSponsorLogo returns an error", async () => {
+      vi.mocked(actions.uploadSponsorLogo).mockResolvedValue({ error: "Storage quota exceeded" });
+
+      const logoFile = new File(["<svg/>"], "logo.svg", { type: "image/svg+xml" });
+      _submitFdForTest = makeFormDataWithFile(logoFile);
+
+      renderEditDrawer();
+      await clickSubmit();
+
+      expect(vi.mocked(toast.error)).toHaveBeenCalledTimes(1);
+    });
+
+    it("preserves existing logo_url when no new file is submitted in edit mode", async () => {
+      // FormData has no File at "logo" — just text fields
+      _submitFdForTest = makeFormDataNoFile();
+
+      renderEditDrawer(SPONSOR); // SPONSOR has logo_url
+
+      await clickSubmit();
+
+      expect(vi.mocked(actions.uploadSponsorLogo)).not.toHaveBeenCalled();
+      expect(vi.mocked(actions.updateSponsor)).toHaveBeenCalledTimes(1);
+      const [, updateFd] = vi.mocked(actions.updateSponsor).mock.calls[0] as [string, FormData];
+      expect(updateFd.get("logo_url")).toBe(SPONSOR.logo_url);
+    });
+
+    it("does NOT call uploadSponsorLogo when no new file is submitted in edit mode", async () => {
+      _submitFdForTest = makeFormDataNoFile();
+
+      renderEditDrawer(SPONSOR_NO_LOGO);
+      await clickSubmit();
+
+      expect(vi.mocked(actions.uploadSponsorLogo)).not.toHaveBeenCalled();
+    });
+  });
+
+  // =========================================================================
+  // SECTION 3: Initial contacts fetch (Bug 2)
+  //
+  // Target behaviour after Bolt fix:
+  //   On open + edit + sponsor: calls getSponsorContacts(sponsor.id).
+  //   Passes fetched contacts to SponsorForm as initialContacts prop.
+  //   Form renders only when contactsLoaded (or mode === "create").
+  //   Re-fetches when a different sponsor is opened.
+  // =========================================================================
+  describe("Initial contacts fetch — Bug 2", () => {
+    it("calls getSponsorContacts with sponsor.id when drawer opens in edit mode", async () => {
+      vi.mocked(actions.getSponsorContacts).mockResolvedValue([
+        {
+          contact_id: "c-1",
+          role: "primary",
+          contacts: { id: "c-1", full_name: "Alice Tester", email: "alice@test.com" },
+        },
+      ]);
+
+      renderEditDrawer();
+
+      await waitFor(() => {
+        expect(vi.mocked(actions.getSponsorContacts)).toHaveBeenCalledWith(SPONSOR.id);
+      });
+    });
+
+    it("does NOT call getSponsorContacts in create mode", async () => {
+      renderCreateDrawer();
+
+      // Give any pending effects time to run
+      await act(async () => {});
+
+      expect(vi.mocked(actions.getSponsorContacts)).not.toHaveBeenCalled();
+    });
+
+    it("passes fetched contacts to SponsorForm as initialContacts", async () => {
+      vi.mocked(actions.getSponsorContacts).mockResolvedValue([
+        {
+          contact_id: "c-1",
+          role: "primary",
+          contacts: { id: "c-1", full_name: "Alice Tester", email: "alice@test.com" },
+        },
+        {
+          contact_id: "c-2",
+          role: "primary",
+          contacts: { id: "c-2", full_name: "Bob Builder", email: "bob@test.com" },
+        },
+      ]);
+
+      renderEditDrawer();
+
+      // After contacts load, the mock form renders them via data-testid
+      await waitFor(() => {
+        expect(screen.getByTestId("initial-contact-c-1")).toBeInTheDocument();
+        expect(screen.getByTestId("initial-contact-c-2")).toBeInTheDocument();
+      });
+
+      expect(screen.getByText("Alice Tester")).toBeInTheDocument();
+      expect(screen.getByText("Bob Builder")).toBeInTheDocument();
+    });
+
+    it("submitting edit drawer without touching contacts preserves existing contact_ids", async () => {
+      // Bug 2 root cause: contact_ids submitted as empty string because
+      // initialContacts is never populated. After fix, the drawer seeds
+      // initialContacts from getSponsorContacts; the form serialises them
+      // into contact_ids on submit.
+
+      vi.mocked(actions.getSponsorContacts).mockResolvedValue([
+        {
+          contact_id: "c-1",
+          role: "primary",
+          contacts: { id: "c-1", full_name: "Alice Tester", email: "alice@test.com" },
+        },
+        {
+          contact_id: "c-2",
+          role: "primary",
+          contacts: { id: "c-2", full_name: "Bob Builder", email: "bob@test.com" },
+        },
+      ]);
+
+      renderEditDrawer();
+
+      // Wait for contacts to load (needed so initialContacts is populated before submit)
+      await waitFor(() => {
+        expect(vi.mocked(actions.getSponsorContacts)).toHaveBeenCalledWith(SPONSOR.id);
+      });
+
+      // Build submit fd from whatever initialContacts the drawer sent to the form
+      // (mirroring real form behaviour: contacts are serialised as-received)
+      _submitFdForTest = makeFormDataNoFile({
+        contact_ids: _capturedInitialContacts.map((c) => c.id).join(","),
+      });
+
+      await clickSubmit();
+
+      expect(vi.mocked(actions.updateSponsor)).toHaveBeenCalledTimes(1);
+      const [, updateFd] = vi.mocked(actions.updateSponsor).mock.calls[0] as [string, FormData];
+      const submittedContactIds = updateFd.get("contact_ids") as string;
+      expect(submittedContactIds).toContain("c-1");
+      expect(submittedContactIds).toContain("c-2");
+      expect(submittedContactIds).not.toBe("");
+    });
+
+    it("re-fires getSponsorContacts when a different sponsor is opened", async () => {
+      vi.mocked(actions.getSponsorContacts).mockResolvedValue([]);
+
+      const { rerender } = renderEditDrawer(SPONSOR);
+
+      await waitFor(() => {
+        expect(vi.mocked(actions.getSponsorContacts)).toHaveBeenCalledWith(SPONSOR.id);
+      });
+
+      // Close then reopen with a different sponsor
+      rerender(
+        <SponsorDrawer
+          open={false}
+          onOpenChange={vi.fn()}
+          mode="edit"
+          sponsor={SPONSOR_B}
+          sponsorshipItems={ITEMS}
+          onSuccess={vi.fn()}
+        />
+      );
+
+      rerender(
+        <SponsorDrawer
+          open={true}
+          onOpenChange={vi.fn()}
+          mode="edit"
+          sponsor={SPONSOR_B}
+          sponsorshipItems={ITEMS}
+          onSuccess={vi.fn()}
+        />
+      );
+
+      await waitFor(() => {
+        expect(vi.mocked(actions.getSponsorContacts)).toHaveBeenCalledWith(SPONSOR_B.id);
+      });
+
+      // Called once for SPONSOR, once for SPONSOR_B
+      expect(vi.mocked(actions.getSponsorContacts)).toHaveBeenCalledTimes(2);
     });
   });
 });

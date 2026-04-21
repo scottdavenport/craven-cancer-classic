@@ -31,6 +31,13 @@ const TIER_HEADING_CLASS: Record<TierSize, string> = {
   compact: "font-display text-lg font-semibold text-foreground",
 };
 
+const TIER_RULE_CLASS: Record<TierSize, string> = {
+  champion: "w-full",
+  eagle: "w-16",
+  standard: "w-10",
+  compact: "w-8",
+};
+
 async function getSponsorsWithTiers() {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
@@ -56,7 +63,7 @@ export default async function SponsorsPage() {
   const { tiers, sponsors } = await getSponsorsWithTiers();
 
   return (
-    <div>
+    <div data-testid="sponsors-page">
       <section
         data-testid="sponsors-header"
         className="bg-cream grain-overlay px-4 py-20 sm:py-28"
@@ -96,7 +103,7 @@ export default async function SponsorsPage() {
                   >
                     {tier.name}
                   </h3>
-                  <div className="mx-auto mt-2 h-0.5 w-12 bg-brand" />
+                  <div className={`mx-auto mt-2 h-0.5 ${TIER_RULE_CLASS[tierSize]} bg-brand`} />
                 </div>
 
                 {tierSponsors.length > 0 ? (
@@ -145,7 +152,7 @@ export default async function SponsorsPage() {
             <LinkButton
               data-testid="sponsors-cta-button"
               href="/sponsorships"
-              className="bg-brand px-8 text-sm uppercase tracking-wider text-white hover:bg-brand/90"
+              className="w-full sm:w-auto bg-brand px-8 text-sm uppercase tracking-wider text-white hover:bg-brand/90"
             >
               View Sponsorship Packages
             </LinkButton>

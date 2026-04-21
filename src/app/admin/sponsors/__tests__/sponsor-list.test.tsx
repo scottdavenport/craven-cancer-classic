@@ -314,9 +314,7 @@ describe("SponsorList — PR B changes", () => {
 
       await user.click(screen.getByTestId("logo-thumbnail-trigger"));
 
-      // Drawer for editing has a specific title structure; the row click handler opens it.
-      // Assert that it did NOT open by checking no "Edit Sponsor" heading appeared.
-      expect(screen.queryByRole("heading", { name: /edit sponsor/i })).not.toBeInTheDocument();
+      expect(screen.queryByTestId("sponsor-drawer")).not.toBeInTheDocument();
     });
   });
 });

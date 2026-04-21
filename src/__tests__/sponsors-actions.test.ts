@@ -458,6 +458,7 @@ describe("getSponsors — year and status filters (#199)", () => {
       eqCalls.push([_col, _val]);
       return chain;
     });
+    chain.is = vi.fn(() => chain);
     chain.order = vi.fn(() => Promise.resolve({ data: rows, error: null }));
     chain._eqCalls = eqCalls;
 

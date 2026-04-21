@@ -27,6 +27,7 @@ export interface SponsorshipItemOption {
 interface SponsorFormProps {
   defaultValues?: Partial<Sponsor> & { contact_ids?: string[] };
   contacts?: ContactPickResult[];
+  initialContacts?: ContactPickResult[];
   sponsorshipItems: SponsorshipItemOption[];
   onSubmit: (formData: FormData) => void | Promise<void>;
   onCancel: () => void;
@@ -38,6 +39,7 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 export function SponsorForm({
   defaultValues,
   contacts = [],
+  initialContacts,
   sponsorshipItems,
   onSubmit,
   onCancel,
@@ -51,11 +53,13 @@ export function SponsorForm({
     defaultValues?.is_active !== false
   );
 
-  const initialContacts: ContactPickResult[] = (defaultValues?.contact_ids ?? [])
-    .map((id) => contacts.find((c) => c.id === id))
-    .filter((c): c is ContactPickResult => !!c);
+  const seedContacts: ContactPickResult[] = initialContacts !== undefined
+    ? initialContacts
+    : (defaultValues?.contact_ids ?? [])
+        .map((id) => contacts.find((c) => c.id === id))
+        .filter((c): c is ContactPickResult => !!c);
 
-  const [selectedContacts, setSelectedContacts] = useState<ContactPickResult[]>(initialContacts);
+  const [selectedContacts, setSelectedContacts] = useState<ContactPickResult[]>(seedContacts);
   const [nameError, setNameError] = useState<string | null>(null);
   const savedLogoUrl = defaultValues?.logo_url ?? null;
   const [logoFile, setLogoFile] = useState<File | null>(null);

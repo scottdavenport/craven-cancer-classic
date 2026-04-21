@@ -36,7 +36,8 @@ export async function getSponsors(opts?: { year?: number; is_active?: boolean })
   let query = supabase
     .from("sponsors")
     .select("*")
-    .eq("year", year);
+    .eq("year", year)
+    .is("deleted_at", null);
 
   if (opts?.is_active !== undefined) {
     query = query.eq("is_active", opts.is_active);

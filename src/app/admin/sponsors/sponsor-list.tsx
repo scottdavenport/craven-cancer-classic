@@ -10,6 +10,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { Plus } from "lucide-react";
 import { getSponsors } from "./actions";
 import { SponsorDrawer } from "./sponsor-drawer";
@@ -39,6 +47,30 @@ type SortDir = "asc" | "desc";
 type StatusFilter = "all" | "active" | "inactive";
 
 const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, comped: 2 };
+
+function LogoCell({ logoUrl }: { logoUrl: string | null }) {
+  const [errored, setErrored] = useState(false);
+
+  if (!logoUrl || errored) {
+    return (
+      <div
+        data-testid="logo-placeholder"
+        className="w-8 h-8 rounded bg-neutral-100 flex items-center justify-center"
+        aria-hidden="true"
+      />
+    );
+  }
+
+  return (
+    <img
+      src={logoUrl}
+      alt="Sponsor logo"
+      loading="lazy"
+      className="w-8 h-8 object-contain rounded"
+      onError={() => setErrored(true)}
+    />
+  );
+}
 
 export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: SponsorListProps) {
   const currentYear = new Date().getFullYear();
@@ -67,7 +99,9 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
     });
   }
 
-  function handleYearChange(year: number) {
+  function handleYearChange(yearStr: string | null) {
+    if (yearStr === null) return;
+    const year = Number(yearStr);
     setYearFilter(year);
     const isActiveArg = statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined;
     refetch({ year, is_active: isActiveArg });
@@ -88,16 +122,19 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
     }
   }
 
-  // Derive distinct years from initial sponsors + a rolling 3-year window ending
-  // at currentYear. The window ensures prior years (e.g. currentYear-1) are
-  // always reachable even if no sponsors were imported yet.
   const availableYears = useMemo(() => {
     const years = new Set<number>(initialSponsors.map((s) => s.year));
     for (let y = currentYear - 2; y <= currentYear; y++) years.add(y);
     return Array.from(years).sort((a, b) => b - a);
   }, [initialSponsors, currentYear]);
 
-  // Build a tier name lookup map once
+  const yearItems = useMemo(() => {
+    return availableYears.reduce<Record<string, string>>((acc, y) => {
+      acc[String(y)] = String(y);
+      return acc;
+    }, {});
+  }, [availableYears]);
+
   const tierNameById = useMemo(() => {
     const map = new Map<string, string>();
     for (const item of sponsorshipItems) {
@@ -109,7 +146,6 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
   const displayedSponsors = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    // Filter by search query
     let filtered = q
       ? sponsors.filter((s) => {
           const tierName = s.tier_id ? (tierNameById.get(s.tier_id) ?? "") : "";
@@ -121,7 +157,6 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
         })
       : sponsors;
 
-    // Sort
     filtered = [...filtered].sort((a, b) => {
       if (sortKey !== null) {
         let aVal: string | number;
@@ -150,7 +185,6 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
         return a.id.localeCompare(b.id);
       }
 
-      // Default sort: pending → paid → comped, then name A→Z within bucket
       const rankA = STATUS_RANK[a.payment_status] ?? 99;
       const rankB = STATUS_RANK[b.payment_status] ?? 99;
       if (rankA !== rankB) return rankA - rankB;
@@ -182,20 +216,27 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
           className="max-w-sm"
         />
 
-        {/* Year filter */}
-        <select
-          name="year"
-          aria-label="Year"
-          value={yearFilter}
-          onChange={(e) => handleYearChange(Number(e.target.value))}
-          className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring"
+        {/* Year filter — base-ui Select */}
+        <Select
+          value={String(yearFilter)}
+          onValueChange={handleYearChange}
+          items={yearItems}
         >
-          {availableYears.map((y) => (
-            <option key={y} value={y}>
-              {y}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger
+            aria-label="Year"
+            data-testid="year-filter-trigger"
+            className="w-[100px]"
+          >
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {availableYears.map((y) => (
+              <SelectItem key={y} value={String(y)}>
+                {y}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         {/* Status filter */}
         <div role="radiogroup" aria-label="Status filter" className="flex gap-1 rounded-md border border-input overflow-hidden">
@@ -213,7 +254,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                 className={
                   `px-3 py-1 text-sm capitalize transition-colors ` +
                   (statusFilter === s
-                    ? "bg-teal-600 text-white"
+                    ? "bg-primary text-primary-foreground"
                     : "bg-background text-foreground hover:bg-neutral-100")
                 }
               >
@@ -246,6 +287,9 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
             <Table>
               <TableHeader>
                 <TableRow className="bg-neutral-50">
+                  <TableHead className={headClass}>
+                    Logo
+                  </TableHead>
                   <TableHead className={headClass} onClick={() => handleHeaderClick("name")}>
                     Name{arrowFor("name")}
                   </TableHead>
@@ -267,13 +311,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedSponsors.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">
-                      No sponsors yet. Click &quot;New Sponsor&quot; to get started.
-                    </TableCell>
-                  </TableRow>
-                ) : (
+                {displayedSponsors.length > 0 && (
                   displayedSponsors.map((sponsor) => {
                     const tierName = sponsor.tier_id ? tierNameById.get(sponsor.tier_id) : undefined;
                     const inactive = (sponsor as Sponsor & { is_active?: boolean }).is_active === false;
@@ -285,6 +323,9 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                           setDrawer({ open: true, mode: "edit", sponsor })
                         }
                       >
+                        <TableCell className="w-10">
+                          <LogoCell logoUrl={sponsor.logo_url ?? null} />
+                        </TableCell>
                         <TableCell className="font-medium text-[0.9375rem]">
                           {sponsor.name}
                           {inactive && (
@@ -334,6 +375,12 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
               </TableBody>
             </Table>
           </div>
+          {displayedSponsors.length === 0 && (
+            <AdminEmptyState
+              title="No sponsors yet"
+              body="Add your first sponsor to see it here."
+            />
+          )}
         </CardContent>
       </Card>
 

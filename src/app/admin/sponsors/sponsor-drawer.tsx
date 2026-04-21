@@ -84,7 +84,7 @@ export function SponsorDrawer({
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent
           side="right"
-          className="sm:max-w-[480px] flex flex-col overflow-hidden p-0"
+          className="sm:max-w-[540px] flex flex-col overflow-hidden p-0"
           showCloseButton={false}
         >
           <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">

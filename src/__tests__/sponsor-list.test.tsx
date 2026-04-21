@@ -326,23 +326,12 @@ describe("SponsorList — year filter (#199)", () => {
       <SponsorList sponsors={seedSponsors} sponsorshipItems={sponsorshipItems} />
     );
 
-    // Find the year filter control — try select element first
-    const yearSelect = document.querySelector("select[name=year]") as HTMLSelectElement | null;
-    if (yearSelect) {
-      fireEvent.change(yearSelect, { target: { value: "2025" } });
-    } else {
-      // Try combobox/button pattern
-      const yearCombobox = screen.queryByRole("combobox", { name: /year/i });
-      if (yearCombobox) {
-        await user.click(yearCombobox);
-        const option = screen.queryByRole("option", { name: "2025" });
-        if (option) await user.click(option);
-      }
-    }
+    const trigger = screen.getByTestId("year-filter-trigger");
+    await user.click(trigger);
+    const option = await screen.findByRole("option", { name: "2025" });
+    await user.click(option);
 
     await vi.waitFor(() => {
-      expect(mockGetSponsors).toHaveBeenCalled();
-      // The call should include year: 2025
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const calls = mockGetSponsors.mock.calls as any[][];
       const yearCall = calls.find((args) => {

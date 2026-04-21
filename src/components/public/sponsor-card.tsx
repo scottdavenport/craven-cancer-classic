@@ -74,21 +74,16 @@ export function SponsorCard({ sponsor, tierSize }: SponsorCardProps): JSX.Elemen
   const cardClass = `flex flex-col items-center gap-3 ${logoCardBase} transition-shadow hover:shadow-sm`;
 
   const logoContent = (
-    <>
-      <div className={`relative ${logoHeight} w-full`}>
-        <Image
-          src={sponsor.logo_url}
-          alt={sponsor.name}
-          data-testid={`sponsor-logo-${sponsor.id}`}
-          fill
-          sizes="(max-width: 640px) 50vw, 33vw"
-          className="object-contain"
-        />
-      </div>
-      {tierSize !== "compact" && (
-        <p className={`${nameClass} text-foreground text-center`}>{sponsor.name}</p>
-      )}
-    </>
+    <div className={`relative ${logoHeight} w-full`}>
+      <Image
+        src={sponsor.logo_url}
+        alt={sponsor.name}
+        data-testid={`sponsor-logo-${sponsor.id}`}
+        fill
+        sizes="(max-width: 640px) 50vw, 33vw"
+        className="object-contain"
+      />
+    </div>
   );
 
   if (sponsor.website) {

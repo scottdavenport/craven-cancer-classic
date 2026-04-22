@@ -21,8 +21,7 @@ export function Footer() {
               />
             </div>
             <p className="mt-5 max-w-sm text-sm leading-relaxed text-white/50 italic">
-              &ldquo;Remembering those who valiantly fought cancer, supporting
-              those who continue their fight.&rdquo;
+              &ldquo;Still going, for the same reason.&rdquo;
             </p>
             <p className="mt-4 text-xs uppercase tracking-wider text-white/30">
               Honoring Scott Davenport Sr. &middot; Brian Fisher &middot; John

@@ -17,7 +17,7 @@ export default function AboutPage() {
             Our Story
           </p>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
-            About Our Cause
+            How This Started
           </h1>
           <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-brand to-transparent" />
           <p className="mt-6 text-base text-white/50">
@@ -36,11 +36,7 @@ export default function AboutPage() {
               </h2>
               <div className="mt-1 h-px w-12 bg-primary/40" />
               <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
-                The Craven Cancer Classic was founded in 2010 to honor those who
-                have valiantly fought cancer and to support those who continue
-                their battle. What started as a community gathering has grown
-                into one of the premier charity golf events in eastern North
-                Carolina.
+                Scott Davenport Sr., Brian Fisher, and John Aylward are the reason this tournament exists. Their wives and a community that loved all three men founded it in 2010 — out of love, and out of care for other families facing cancer.
               </p>
             </div>
 
@@ -50,21 +46,24 @@ export default function AboutPage() {
               </h2>
               <div className="mt-1 h-px w-12 bg-primary/40" />
               <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
-                This tournament is dedicated to the memory of{" "}
-                <strong className="font-semibold text-foreground">
-                  Scott Davenport Sr.
-                </strong>
-                ,{" "}
-                <strong className="font-semibold text-foreground">
-                  Brian Fisher
-                </strong>
-                , and{" "}
-                <strong className="font-semibold text-foreground">
-                  John Aylward
-                </strong>{" "}
-                — three men who valiantly fought this devastating disease. Their
-                courage and spirit inspire every swing, every donation, and every
-                moment of this event.
+                The three men this tournament was built to honor. Their families will share their stories here.
+              </p>
+              <div className="mt-8 space-y-8">
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-foreground">Scott Davenport Sr.</h3>
+                  <p className="italic mt-2 text-[15px] leading-[1.8] text-muted-foreground">A tribute from his family — to follow.</p>
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-foreground">Brian Fisher</h3>
+                  <p className="italic mt-2 text-[15px] leading-[1.8] text-muted-foreground">A tribute from his family — to follow.</p>
+                </div>
+                <div>
+                  <h3 className="font-display text-lg font-semibold text-foreground">John Aylward</h3>
+                  <p className="italic mt-2 text-[15px] leading-[1.8] text-muted-foreground">A tribute from his family — to follow.</p>
+                </div>
+              </div>
+              <p className="mt-8 text-[15px] leading-[1.8] text-muted-foreground">
+                Every dollar this tournament raises goes to the community that still carries them.
               </p>
             </div>
 
@@ -130,9 +129,7 @@ export default function AboutPage() {
             {/* Quote block */}
             <div className="border-y border-border py-12 text-center">
               <p className="font-display text-xl font-medium italic text-foreground leading-relaxed">
-                &ldquo;Remembering those who valiantly fought cancer,
-                <br />
-                supporting those who continue their fight.&rdquo;
+                &ldquo;Showing up since 2010. $450,000+ raised. The same reason every time.&rdquo;
               </p>
               <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
                 <LinkButton

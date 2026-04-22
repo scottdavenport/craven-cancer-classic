@@ -396,7 +396,7 @@ describe("Source hygiene — 'valiantly fought' removal (#229)", () => {
     const repoRoot = path.resolve(__dirname, "../../../../");
     let grepOutput = "";
     try {
-      grepOutput = execSync(`grep -r "valiantly fought" "${repoRoot}/src/"`, {
+      grepOutput = execSync(`grep -r --exclude-dir="__tests__" "valiantly fought" "${repoRoot}/src/"`, {
         encoding: "utf8",
       });
     } catch {

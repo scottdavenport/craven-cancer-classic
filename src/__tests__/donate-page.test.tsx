@@ -22,10 +22,10 @@ describe("DonatePage", () => {
 
   it("renders all three In Loving Memory names", () => {
     render(<DonatePage />);
-    // getAllByText handles cases where the name appears in both running prose and strong tags
-    expect(screen.getAllByText("Scott Davenport Sr.").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("Brian Fisher").length).toBeGreaterThan(0);
-    expect(screen.getAllByText("John Aylward").length).toBeGreaterThan(0);
+    // Names appear in a single sentence; use regex to match within prose
+    expect(screen.getByText(/Scott Davenport Sr\./)).toBeInTheDocument();
+    expect(screen.getByText(/Brian Fisher/)).toBeInTheDocument();
+    expect(screen.getByText(/John Aylward/)).toBeInTheDocument();
   });
 
   it("renders the Stay in Touch form with name and email fields", () => {

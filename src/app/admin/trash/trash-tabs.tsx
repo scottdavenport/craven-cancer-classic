@@ -13,6 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Contact, Team, Sponsor, SponsorshipItem, Photo } from "@/types/database";
+import type { WithDeletedByName } from "./actions";
 import {
   restoreContact,
   restoreTeam,
@@ -22,11 +23,11 @@ import {
 } from "./actions";
 
 interface TrashTabsProps {
-  contacts: Contact[];
-  teams: Team[];
-  sponsors: Sponsor[];
-  sponsorshipItems: SponsorshipItem[];
-  photos: Photo[];
+  contacts: WithDeletedByName<Contact>[];
+  teams: WithDeletedByName<Team>[];
+  sponsors: WithDeletedByName<Sponsor>[];
+  sponsorshipItems: WithDeletedByName<SponsorshipItem>[];
+  photos: WithDeletedByName<Photo>[];
 }
 
 type TabKey = "contacts" | "teams" | "sponsors" | "sponsorshipItems" | "photos";
@@ -52,12 +53,7 @@ function formatDeletedAt(value: string | null): string {
   return `${days}d ago`;
 }
 
-/**
- * Renders a resolved "Deleted By" display name.
- * The server action resolves deleted_by UUID to profiles.full_name.
- * If the value is null or empty, falls back to "Unknown".
- */
-function formatDeletedBy(value: string | null): string {
+function formatDeletedBy(value: string | null | undefined): string {
   if (!value) return "Unknown";
   return value;
 }
@@ -77,13 +73,13 @@ interface ColumnDef<T> {
   renderName: (row: T) => React.ReactNode;
 }
 
-interface TrashTableProps<T extends { id: string; deleted_at: string | null; deleted_by: string | null }> {
+interface TrashTableProps<T extends { id: string; deleted_at: string | null; deleted_by: string | null; deleted_by_name: string | null }> {
   rows: T[];
   columns: ColumnDef<T>;
   onRestore: (id: string) => void;
 }
 
-function TrashTable<T extends { id: string; deleted_at: string | null; deleted_by: string | null }>({
+function TrashTable<T extends { id: string; deleted_at: string | null; deleted_by: string | null; deleted_by_name: string | null }>({
   rows,
   columns,
   onRestore,
@@ -104,7 +100,7 @@ function TrashTable<T extends { id: string; deleted_at: string | null; deleted_b
             <TableRow key={row.id}>
               <TableCell className="font-medium">{columns.renderName(row)}</TableCell>
               <TableCell className="text-muted-foreground">{formatDeletedAt(row.deleted_at)}</TableCell>
-              <TableCell className="text-muted-foreground">{formatDeletedBy(row.deleted_by)}</TableCell>
+              <TableCell className="text-muted-foreground">{formatDeletedBy(row.deleted_by_name)}</TableCell>
               <TableCell className="text-right">
                 <Button variant="outline" size="sm" onClick={() => onRestore(row.id)}>
                   Restore
@@ -120,7 +116,7 @@ function TrashTable<T extends { id: string; deleted_at: string | null; deleted_b
 
 // ---- Per-entity tab panels ----
 
-function ContactsTab({ initial }: { initial: Contact[] }) {
+function ContactsTab({ initial }: { initial: WithDeletedByName<Contact>[] }) {
   const [rows, setRows] = useState(initial);
 
   async function handleRestore(id: string) {
@@ -144,7 +140,7 @@ function ContactsTab({ initial }: { initial: Contact[] }) {
   );
 }
 
-function TeamsTab({ initial }: { initial: Team[] }) {
+function TeamsTab({ initial }: { initial: WithDeletedByName<Team>[] }) {
   const [rows, setRows] = useState(initial);
 
   async function handleRestore(id: string) {
@@ -168,7 +164,7 @@ function TeamsTab({ initial }: { initial: Team[] }) {
   );
 }
 
-function SponsorsTab({ initial }: { initial: Sponsor[] }) {
+function SponsorsTab({ initial }: { initial: WithDeletedByName<Sponsor>[] }) {
   const [rows, setRows] = useState(initial);
 
   async function handleRestore(id: string) {
@@ -192,7 +188,7 @@ function SponsorsTab({ initial }: { initial: Sponsor[] }) {
   );
 }
 
-function SponsorshipItemsTab({ initial }: { initial: SponsorshipItem[] }) {
+function SponsorshipItemsTab({ initial }: { initial: WithDeletedByName<SponsorshipItem>[] }) {
   const [rows, setRows] = useState(initial);
 
   async function handleRestore(id: string) {
@@ -216,7 +212,7 @@ function SponsorshipItemsTab({ initial }: { initial: SponsorshipItem[] }) {
   );
 }
 
-function PhotosTab({ initial }: { initial: Photo[] }) {
+function PhotosTab({ initial }: { initial: WithDeletedByName<Photo>[] }) {
   const [rows, setRows] = useState(initial);
 
   async function handleRestore(id: string) {

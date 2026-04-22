@@ -143,7 +143,7 @@ export default function AboutPage() {
                   variant="outline"
                   className="px-8 text-sm uppercase tracking-wider"
                 >
-                  Register to Play
+                  Register Your Team
                 </LinkButton>
               </div>
             </div>

@@ -84,17 +84,16 @@ export default async function RegisterPage() {
             <div className="space-y-6">
               <div className="rounded-lg border border-border bg-muted p-8 text-center">
                 <h2 className="font-display text-xl font-semibold text-foreground">
-                  Registration is Currently Closed
+                  Registration Opens Soon
                 </h2>
                 <p className="mt-3 text-muted-foreground">
-                  Registration for the{" "}
+                  Spots for the{" "}
                   {eventSettings?.tournament_start_date
                     ? new Date(
                         eventSettings.tournament_start_date + "T00:00:00"
                       ).getFullYear()
                     : new Date().getFullYear()}{" "}
-                  tournament is not yet open. Leave your name and email below
-                  and we&apos;ll notify you as soon as spots are available.
+                  {"Craven Cancer Classic aren't available yet. Add your name below and you'll hear from us the moment they are."}
                 </p>
               </div>
 

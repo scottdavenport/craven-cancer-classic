@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Trophy } from "lucide-react";
+import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
 
 export const revalidate = 300;
 
@@ -54,6 +55,23 @@ export default async function LeaderboardPage() {
               <p className="mt-2 text-muted-foreground">
                 Scores will be posted after the tournament.
               </p>
+
+              <div className="mx-auto mt-12 max-w-xl rounded-lg border border-border/60 bg-neutral-50 px-6 py-8 text-left shadow-sm">
+                <h2 className="font-display text-lg font-semibold text-foreground">
+                  Want a ping when the scores post?
+                </h2>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Leave your name and email. We&apos;ll send you one note when this year&apos;s results are live.
+                </p>
+                <div className="mt-6">
+                  <ProspectCaptureForm
+                    contactType="player"
+                    showCompany={false}
+                    notesPrefix="leaderboard prospect — notified when scores post"
+                    successMessage="We'll let you know the moment scores post."
+                  />
+                </div>
+              </div>
             </div>
           ) : (
             <div className="space-y-12">

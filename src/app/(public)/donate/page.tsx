@@ -136,21 +136,7 @@ export default function DonatePage() {
           </h2>
           <div className="mt-2 h-0.5 w-12 bg-primary" />
           <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
-            This tournament is dedicated to the memory of{" "}
-            <span className="font-display italic font-semibold text-foreground">
-              Scott Davenport Sr.
-            </span>
-            ,{" "}
-            <span className="font-display italic font-semibold text-foreground">
-              Brian Fisher
-            </span>
-            , and{" "}
-            <span className="font-display italic font-semibold text-foreground">
-              John Aylward
-            </span>{" "}
-            — three men who valiantly fought this devastating disease. Their
-            courage and spirit inspire every swing, every donation, and every
-            moment of this event.
+            Every dollar here honors Scott Davenport Sr., Brian Fisher, and John Aylward — the reason this tournament exists. Their families built this in 2010. Every gift keeps it going.
           </p>
         </div>
       </section>

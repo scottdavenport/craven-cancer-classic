@@ -1,8 +1,24 @@
-// TODO: Implement useUnsavedChanges hook (Sprint 21 · #236)
-// Bolt: implement this hook so it:
-//   - attaches a window beforeunload listener when isDirty=true
-//   - calls event.preventDefault() and sets event.returnValue in the handler
-//   - removes the listener when isDirty becomes false or component unmounts
-export function useUnsavedChanges(_isDirty: boolean): void {
-  // stub — not implemented
+import { useEffect } from "react";
+
+/**
+ * useUnsavedChanges — attaches a `beforeunload` listener when `isDirty` is true,
+ * preventing accidental navigation away from a form with unsaved changes.
+ * Cleans up the listener on unmount or when `isDirty` transitions to false.
+ *
+ * @param isDirty - whether the form has unsaved changes
+ */
+export function useUnsavedChanges(isDirty: boolean): void {
+  useEffect(() => {
+    if (!isDirty) return;
+
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      event.preventDefault();
+      event.returnValue = "You have unsaved changes. Are you sure you want to leave?";
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [isDirty]);
 }

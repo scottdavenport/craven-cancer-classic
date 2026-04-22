@@ -48,7 +48,7 @@ function PaymentStatusBadge({ status }: { status: string }) {
 function OpenSlotsBadge({ open }: { open: number }) {
   if (open === 0) return null;
   return (
-    <span className="inline-flex items-center rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold bg-amber-100 text-amber-700">
+    <span className="inline-flex items-center rounded-sm px-2 py-0.5 text-[0.6875rem] font-semibold bg-warning-muted text-warning">
       {open} open
     </span>
   );

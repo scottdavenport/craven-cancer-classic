@@ -33,17 +33,30 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
+/**
+ * CardTitle — polymorphic card heading.
+ *
+ * Props:
+ *   as?   — "h2" | "h3" | "h4" (default: "div"). Renders as the specified element.
+ *   size? — "default" | "sm" (default: "default").
+ *           "default": font-display text-[1.25rem] leading-snug font-medium
+ *           "sm":      font-sans text-base font-semibold (compact section header style)
+ */
 function CardTitle({
   className,
   as,
+  size = "default",
   ...props
-}: React.ComponentProps<"div"> & { as?: "h2" | "h3" | "h4" }) {
+}: React.ComponentProps<"div"> & { as?: "h2" | "h3" | "h4"; size?: "default" | "sm" }) {
   const Component = as ?? "div"
   return (
     <Component
       data-slot="card-title"
+      data-size={size}
       className={cn(
-        "font-display text-[1.25rem] leading-snug font-medium group-data-[size=sm]/card:text-sm",
+        size === "sm"
+          ? "font-sans text-base font-semibold"
+          : "font-display text-[1.25rem] leading-snug font-medium group-data-[size=sm]/card:text-sm",
         className
       )}
       {...props}

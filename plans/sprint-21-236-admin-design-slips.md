@@ -83,18 +83,18 @@ Rationale: Cleaner API, reusable across all admin cards that need a compact sect
 
 ---
 
-## Issue 7 — Dead file deletion: `src/components/ui/file-upload.tsx`
+## Issue 7 — ~~Dead file deletion: `src/components/ui/file-upload.tsx`~~ — DESCOPED → #243
 
-**File:** `src/components/ui/file-upload.tsx`  
-**Decision:** DELETE. File is unused — gallery uses raw `<Input type="file">`. Wiring it in is out of scope for this sprint. Future unification is a separate issue.
-
-**Test:** `src/__tests__/file-upload-deleted.test.ts` — hygiene test asserting `fs.existsSync` returns false for this path.
+**Decision revised 2026-04-22:** File is actively used by `sponsor-form.tsx:237`. Descoped to follow-up issue #243 for proper unification.  
+**Do NOT delete `src/components/ui/file-upload.tsx`.**  
+**Test file `src/__tests__/file-upload-deleted.test.ts` was deleted** (Spec wrote it for descoped area).
 
 ---
 
 ## Acceptance Criteria (Bolt GREEN)
 
-- [ ] All 7 RED test files pass
+- [ ] All 6 RED test files (Areas 1–6) pass
+- [ ] `src/__tests__/file-upload-deleted.test.ts` deleted (descoped area)
 - [ ] `npx tsc --noEmit` — 0 errors
 - [ ] No existing passing tests broken
 - [ ] `CardTitle size="sm"` documented in component JSDoc

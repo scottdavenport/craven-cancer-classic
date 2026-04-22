@@ -127,7 +127,7 @@ export function ProspectCaptureForm({
       </div>
 
       {error && (
-        <p role="alert" className="rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">
+        <p role="alert" className="rounded-md bg-destructive/10 px-4 py-3 text-sm text-destructive border border-destructive/20">
           {error}
         </p>
       )}

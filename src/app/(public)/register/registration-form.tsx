@@ -122,7 +122,7 @@ export function RegistrationForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       {error && (
-        <div className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+        <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive border border-destructive/20">
           {error}
         </div>
       )}
@@ -130,15 +130,17 @@ export function RegistrationForm({
       {/* Session picker */}
       <Card>
         <CardHeader>
-          <CardTitle>Select Session</CardTitle>
+          <CardTitle as="h3">Select Session</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 gap-4">
+          <div role="radiogroup" aria-label="Preferred session" className="grid grid-cols-2 gap-4">
             <button
               type="button"
+              role="radio"
+              aria-pressed={session === "morning"}
               onClick={() => setSession("morning")}
               disabled={morningAvailable <= 0}
-              className={`rounded-lg border-2 p-4 text-center transition-colors ${
+              className={`rounded-lg border-2 p-4 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
                 session === "morning"
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/30"
@@ -153,9 +155,11 @@ export function RegistrationForm({
             </button>
             <button
               type="button"
+              role="radio"
+              aria-pressed={session === "afternoon"}
               onClick={() => setSession("afternoon")}
               disabled={afternoonAvailable <= 0}
-              className={`rounded-lg border-2 p-4 text-center transition-colors ${
+              className={`rounded-lg border-2 p-4 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
                 session === "afternoon"
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/30"
@@ -175,7 +179,7 @@ export function RegistrationForm({
       {/* Team & Captain info */}
       <Card>
         <CardHeader>
-          <CardTitle>Team Information</CardTitle>
+          <CardTitle as="h3">Team Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
@@ -213,7 +217,7 @@ export function RegistrationForm({
         return (
           <Card key={i}>
             <CardHeader>
-              <CardTitle>{label}</CardTitle>
+              <CardTitle as="h3">{label}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* TBD checkbox */}

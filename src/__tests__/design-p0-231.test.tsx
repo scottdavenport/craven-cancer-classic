@@ -24,7 +24,7 @@ describe("A. Phantom Tailwind classes", () => {
   it("no phantom text-h2 or text-h3 classes remain in src/", () => {
     const repoRoot = resolve(__dirname, "../../");
     const result = execSync(
-      'grep -rn "text-h[23]" src/ --include="*.tsx" --include="*.ts" || true',
+      'grep -rn "text-h[23]" src/ --include="*.tsx" --include="*.ts" --exclude-dir="__tests__" || true',
       { cwd: repoRoot, encoding: "utf-8" }
     ).trim();
     expect(result).toBe("");

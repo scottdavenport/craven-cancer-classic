@@ -112,7 +112,7 @@ export function GalleryGrid({
       {showUpload && (
         <Card>
           <CardContent className="pt-6">
-            <h3 className="font-display text-h3 font-semibold">Share a Photo</h3>
+            <h3 className="font-display text-lg font-semibold">Share a Photo</h3>
             <p className="mt-1 font-sans text-[0.9375rem] text-muted-foreground">
               Photos are reviewed by an admin before appearing in the gallery.
             </p>

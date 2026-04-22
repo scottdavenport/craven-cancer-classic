@@ -19,7 +19,7 @@ export default function Error({
       <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
         Something Went Wrong
       </p>
-      <h2 className="font-display text-h2 font-semibold text-foreground mb-4">
+      <h2 className="font-display text-2xl sm:text-[1.75rem] font-semibold text-foreground mb-4">
         We hit an unexpected error
       </h2>
       <p className="font-sans text-[0.9375rem] text-muted-foreground max-w-sm mb-8">

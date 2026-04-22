@@ -112,9 +112,9 @@ export function SponsorshipManager({
     const remaining = count - maxShow;
     const nameList = shown.join(", ");
     if (remaining > 0) {
-      return `${count} sponsors are linked to this package: ${nameList}, … and ${remaining} more. They'll show '(deleted package)' until you reassign them. Continue?`;
+      return `${count} sponsors are linked to this package: ${nameList}, … and ${remaining} more. They'll show '(no package)' until you reassign them.`;
     }
-    return `${count} sponsors are linked to this package: ${nameList}. They'll show '(deleted package)' until you reassign them. Continue?`;
+    return `${count} sponsors are linked to this package: ${nameList}. They'll show '(no package)' until you reassign them.`;
   }
 
   return (
@@ -327,7 +327,7 @@ export function SponsorshipManager({
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This action cannot be undone. The package will be permanently removed.
+            This package has no linked sponsors. It will be permanently deleted — this cannot be undone.
           </p>
           <DialogFooter className="gap-2">
             <Button

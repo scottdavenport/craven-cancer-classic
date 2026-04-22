@@ -200,8 +200,8 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
       <ConfirmDialog
         open={deleteTarget !== null}
         onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
-        title="Permanently delete this photo?"
-        description="This action cannot be undone. The photo will be removed permanently."
+        title="Delete this photo?"
+        description="This permanently removes the photo — it cannot be restored from Trash."
         confirmLabel="Delete"
         onConfirm={handleDeleteConfirmed}
       />

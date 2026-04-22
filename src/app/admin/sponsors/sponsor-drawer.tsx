@@ -124,7 +124,7 @@ export function SponsorDrawer({
         toast.error(result.error);
         return;
       }
-      toast.success("Sponsor deleted");
+      toast.success("Sponsor moved to Trash");
       onOpenChange(false);
       onSuccess();
     } finally {
@@ -176,7 +176,7 @@ export function SponsorDrawer({
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
         title={`Delete ${sponsor?.name ?? "this sponsor"}?`}
-        description="This sponsor will be removed. This action cannot be undone."
+        description="This sponsor will be moved to Trash. You can restore from Admin → Trash."
         confirmLabel="Delete"
         onConfirm={handleDeleteConfirmed}
       />

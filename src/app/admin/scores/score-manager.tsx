@@ -224,8 +224,8 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
       <ConfirmDialog
         open={confirmDeleteAll}
         onOpenChange={setConfirmDeleteAll}
-        title="Delete ALL scores for this year?"
-        description="This cannot be undone. All scores for the current year will be permanently removed."
+        title={`Clear all scores for ${new Date().getFullYear()}?`}
+        description={`This permanently removes every score for ${new Date().getFullYear()}. It cannot be undone.`}
         confirmLabel="Delete All"
         onConfirm={handleDeleteAllConfirmed}
       />

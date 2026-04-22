@@ -352,7 +352,7 @@ describe("D. CardTitle polymorphism — RegistrationForm integration", () => {
 
     // These card titles must all be h3 elements after Bolt's fix
     const expectedH3s = [
-      "Select Session",
+      "Preferred Session",
       "Team Information",
       "Player 2",
       "Player 3",
@@ -365,13 +365,13 @@ describe("D. CardTitle polymorphism — RegistrationForm integration", () => {
     }
   });
 
-  it("'Select Session' is an h3, not a div", async () => {
+  it("'Preferred Session' is an h3, not a div", async () => {
     const { RegistrationForm } = await import(
       "@/app/(public)/register/registration-form"
     );
     const { container } = render(<RegistrationForm {...defaultProps} />);
     const h3s = Array.from(container.querySelectorAll("h3"));
-    const selectSession = h3s.find((el) => el.textContent === "Select Session");
+    const selectSession = h3s.find((el) => el.textContent === "Preferred Session");
     expect(selectSession).toBeDefined();
   });
 

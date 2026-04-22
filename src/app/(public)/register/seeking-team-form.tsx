@@ -126,7 +126,7 @@ export function SeekingTeamForm() {
           disabled={loading}
           className="bg-primary px-8 text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
         >
-          {loading ? "Submitting..." : "Submit"}
+          {loading ? "Adding you..." : "Add Me to the List"}
         </Button>
         <Button
           type="button"

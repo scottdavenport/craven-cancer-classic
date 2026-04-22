@@ -130,7 +130,7 @@ export function RegistrationForm({
       {/* Session picker */}
       <Card>
         <CardHeader>
-          <CardTitle as="h3">Select Session</CardTitle>
+          <CardTitle as="h3">Preferred Session</CardTitle>
         </CardHeader>
         <CardContent>
           <div role="radiogroup" aria-label="Preferred session" className="grid grid-cols-2 gap-4">
@@ -173,6 +173,9 @@ export function RegistrationForm({
               </p>
             </button>
           </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            The committee balances morning and afternoon groups. Your final session will be confirmed by email.
+          </p>
         </CardContent>
       </Card>
 
@@ -310,7 +313,7 @@ export function RegistrationForm({
           disabled={loading}
           className="mt-4 w-full bg-primary text-sm uppercase tracking-wider text-primary-foreground hover:bg-secondary"
         >
-          {loading ? "Processing..." : "Proceed to Payment"}
+          {loading ? "Processing..." : "Continue to Payment"}
         </Button>
       </div>
     </form>

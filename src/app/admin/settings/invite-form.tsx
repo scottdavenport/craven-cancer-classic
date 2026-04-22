@@ -64,7 +64,7 @@ export function InviteForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-sans text-base font-semibold">
+        <CardTitle size="sm">
           Invite Admin
         </CardTitle>
         <CardDescription className="font-sans text-[0.8125rem] text-muted-foreground">

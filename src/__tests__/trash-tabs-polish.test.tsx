@@ -43,12 +43,13 @@ vi.mock("sonner", () => ({
 // ---------------------------------------------------------------------------
 import { TrashTabs } from "@/app/admin/trash/trash-tabs";
 import type { Contact, Team, Sponsor, SponsorshipItem, Photo } from "@/types/database";
+import type { WithDeletedByName } from "@/app/admin/trash/actions";
 
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeContact(overrides: Partial<Contact> = {}): Contact {
+function makeContact(overrides: Partial<WithDeletedByName<Contact>> = {}): WithDeletedByName<Contact> {
   return {
     id: "c-1",
     full_name: "Jane Smith",
@@ -71,11 +72,12 @@ function makeContact(overrides: Partial<Contact> = {}): Contact {
     created_at: new Date().toISOString(),
     deleted_at: new Date().toISOString(),
     deleted_by: "admin-uuid",
+    deleted_by_name: null,
     ...overrides,
   };
 }
 
-function makeTeam(overrides: Partial<Team> = {}): Team {
+function makeTeam(overrides: Partial<WithDeletedByName<Team>> = {}): WithDeletedByName<Team> {
   return {
     id: "t-1",
     team_name: "The Eagles",
@@ -89,11 +91,12 @@ function makeTeam(overrides: Partial<Team> = {}): Team {
     created_at: new Date().toISOString(),
     deleted_at: new Date().toISOString(),
     deleted_by: "admin-uuid",
+    deleted_by_name: null,
     ...overrides,
   };
 }
 
-function makeSponsor(overrides: Partial<Sponsor> = {}): Sponsor {
+function makeSponsor(overrides: Partial<WithDeletedByName<Sponsor>> = {}): WithDeletedByName<Sponsor> {
   return {
     id: "s-1",
     name: "Acme Corp",
@@ -109,11 +112,12 @@ function makeSponsor(overrides: Partial<Sponsor> = {}): Sponsor {
     created_at: new Date().toISOString(),
     deleted_at: new Date().toISOString(),
     deleted_by: "admin-uuid",
+    deleted_by_name: null,
     ...overrides,
   };
 }
 
-function makeSponsorshipItem(overrides: Partial<SponsorshipItem> = {}): SponsorshipItem {
+function makeSponsorshipItem(overrides: Partial<WithDeletedByName<SponsorshipItem>> = {}): WithDeletedByName<SponsorshipItem> {
   return {
     id: "si-1",
     name: "Gold Package",
@@ -128,11 +132,12 @@ function makeSponsorshipItem(overrides: Partial<SponsorshipItem> = {}): Sponsors
     created_at: new Date().toISOString(),
     deleted_at: new Date().toISOString(),
     deleted_by: "admin-uuid",
+    deleted_by_name: null,
     ...overrides,
   };
 }
 
-function makePhoto(overrides: Partial<Photo> = {}): Photo {
+function makePhoto(overrides: Partial<WithDeletedByName<Photo>> = {}): WithDeletedByName<Photo> {
   return {
     id: "p-1",
     image_url: "https://example.com/photo.jpg",
@@ -144,6 +149,7 @@ function makePhoto(overrides: Partial<Photo> = {}): Photo {
     created_at: new Date().toISOString(),
     deleted_at: new Date().toISOString(),
     deleted_by: "admin-uuid",
+    deleted_by_name: null,
     ...overrides,
   };
 }

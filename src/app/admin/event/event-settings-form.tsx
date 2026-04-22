@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useUnsavedChanges } from "@/hooks/use-unsaved-changes";
 import { updateEventSettings } from "./actions";
 import type { EventSettings } from "@/types/database";
 
@@ -17,9 +18,13 @@ interface EventSettingsFormProps {
 
 export function EventSettingsForm({ settings }: EventSettingsFormProps) {
   const [isPending, startTransition] = useTransition();
+  const [isDirty, setIsDirty] = useState(false);
+  const [submitAttempted, setSubmitAttempted] = useState(false);
   const [registrationOpen, setRegistrationOpen] = useState(
     settings?.registration_open ?? false
   );
+
+  useUnsavedChanges(isDirty);
 
   const [nameError, setNameError] = useState<string | null>(null);
   const [descriptionError, setDescriptionError] = useState<string | null>(null);
@@ -77,6 +82,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
     setDescriptionError(descErr);
     setFeeError(feeErr);
     setDateRangeError(dateErr);
+    setSubmitAttempted(true);
 
     if (nameErr || descErr || feeErr || dateErr) return;
 
@@ -86,12 +92,13 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         toast.error(result.error || "Failed to save");
       } else {
         toast.success("Event settings saved");
+        setIsDirty(false);
       }
     });
   }
 
   return (
-    <form action={handleSubmit} noValidate className="space-y-6">
+    <form action={handleSubmit} noValidate className="space-y-6" onChange={() => setIsDirty(true)}>
       <Card>
         <CardHeader>
           <CardTitle>Tournament Details</CardTitle>
@@ -104,12 +111,13 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                 id="name"
                 name="name"
                 defaultValue={settings?.name ?? "Craven Cancer Classic"}
+                aria-describedby="name-error"
                 onBlur={(e) => setNameError(validateName(e.target.value))}
                 onChange={() => setNameError(null)}
               />
-              {nameError && (
-                <p className="text-destructive text-sm">{nameError}</p>
-              )}
+              <p id="name-error" className="text-destructive text-sm">
+                {nameError ?? ""}
+              </p>
             </div>
 
             <div className="space-y-1.5">
@@ -119,12 +127,13 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                 name="description"
                 rows={3}
                 defaultValue={settings?.description ?? ""}
+                aria-describedby="description-error"
                 onBlur={(e) => setDescriptionError(validateDescription(e.target.value))}
                 onChange={() => setDescriptionError(null)}
               />
-              {descriptionError && (
-                <p className="text-destructive text-sm">{descriptionError}</p>
-              )}
+              <p id="description-error" className="text-destructive text-sm">
+                {descriptionError ?? ""}
+              </p>
             </div>
           </fieldset>
         </CardContent>
@@ -136,7 +145,7 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
         </CardHeader>
         <CardContent className="space-y-4">
           <fieldset className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="tournament_start_date">Start Date</Label>
                 <Input
@@ -213,18 +222,19 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                     ? (settings.registration_fee_cents / 100).toFixed(2)
                     : "700.00"
                 }
+                aria-describedby="registration_fee-error"
                 onBlur={(e) => setFeeError(validateFee(e.target.value))}
                 onChange={() => setFeeError(null)}
               />
-              {feeError && (
-                <p className="text-destructive text-sm">{feeError}</p>
-              )}
+              <p id="registration_fee-error" className="text-destructive text-sm">
+                {feeError ?? ""}
+              </p>
               <p className="mt-1 font-sans text-[0.75rem] text-muted-foreground">
                 Amount shown on the public registration page per team.
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-1.5">
                 <Label htmlFor="morning_cap">Morning Slot Cap</Label>
                 <Input
@@ -247,6 +257,17 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
           </fieldset>
         </CardContent>
       </Card>
+
+      <div role="alert" aria-live="polite">
+        {submitAttempted && hasAnyError() ? (
+          <ul className="text-destructive text-sm list-disc pl-4 space-y-1">
+            {nameError && <li>{nameError}</li>}
+            {descriptionError && <li>{descriptionError}</li>}
+            {feeError && <li>{feeError}</li>}
+            {dateRangeError && <li>{dateRangeError}</li>}
+          </ul>
+        ) : null}
+      </div>
 
       <Button type="submit" disabled={isPending}>
         {isPending ? "Saving..." : "Save Settings"}

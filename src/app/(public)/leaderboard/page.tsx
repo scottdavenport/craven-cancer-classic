@@ -67,6 +67,7 @@ export default async function LeaderboardPage() {
                   <ProspectCaptureForm
                     contactType="player"
                     showCompany={false}
+                    notesPrefix="leaderboard prospect — notified when scores post"
                     successMessage="We'll let you know the moment scores post."
                   />
                 </div>

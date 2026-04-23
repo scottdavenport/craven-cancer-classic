@@ -41,7 +41,7 @@ export default async function HomePage(
   return (
     <div>
       {/* ── Hero ──────────────────────────────────────────────────────────── */}
-      <section className="grain-overlay relative overflow-hidden bg-[#1A2E3A] px-4 py-14 sm:py-20">
+      <section className="grain-overlay relative overflow-hidden bg-[#1A2E3A] px-4 py-20 sm:py-28">
         {/* Background photo */}
         <Image
           src={HERO_PHOTO_URL}
@@ -153,7 +153,7 @@ export default async function HomePage(
       </section>
 
       {/* ── Impact stats ─────────────────────────────────────────────────── */}
-      <section className="border-b border-border bg-neutral-50 px-4 py-14 sm:py-20">
+      <section className="border-b border-border bg-neutral-50 px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-4xl">
           <div className="grid gap-12 sm:grid-cols-3">
             {[
@@ -176,10 +176,10 @@ export default async function HomePage(
       </section>
 
       {/* ── Mission — cream background ───────────────────────────────────── */}
-      <section className="bg-cream px-4 py-14 sm:py-20">
+      <section className="bg-cream px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <SectionEyebrow tone="primary">Our Mission</SectionEyebrow>
-          <h2 className="font-display text-3xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
+          <h2 className="font-display text-2xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
             Making a Difference in
             <br />
             Our Community
@@ -230,10 +230,10 @@ export default async function HomePage(
       </section>
 
       {/* ── Donate CTA — white ───────────────────────────────────────────── */}
-      <section className="bg-white px-4 py-14 sm:py-20">
+      <section className="bg-white px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-3xl text-center">
           <SectionEyebrow tone="primary">Get Involved</SectionEyebrow>
-          <h2 className="font-display text-3xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
+          <h2 className="font-display text-2xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
             Every Contribution
             <br />
             Makes an Impact

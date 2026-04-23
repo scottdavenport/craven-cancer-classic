@@ -199,6 +199,7 @@ describe("SectionEyebrow — hygiene (source grep — RED until GREEN)", () => {
         '"tracking-\\[0\\.3em\\]"',
         "src/app/\\(public\\)/",
         '--include="*.tsx"',
+        '--exclude-dir="__tests__"',
         "|| true",
       ].join(" "),
       { cwd: repoRoot, encoding: "utf-8" }

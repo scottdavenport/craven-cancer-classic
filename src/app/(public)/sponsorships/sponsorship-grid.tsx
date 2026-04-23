@@ -32,7 +32,7 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
               className={`relative shadow-sm border border-border/60 transition-[box-shadow,transform] duration-200 ${
                 soldOut
                   ? "opacity-60"
-                  : "hover:shadow-md hover:-translate-y-0.5"
+                  : ""
               } ${selectedId === item.id ? "ring-2 ring-primary" : ""}`}
             >
               {soldOut && (

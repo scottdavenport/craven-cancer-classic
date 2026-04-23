@@ -87,7 +87,7 @@ export default function DonatePage() {
             ].map((item) => (
               <div
                 key={item.title}
-                className="flex gap-4 border-l-[3px] border-primary/40 pl-5"
+                className="border-l-[3px] border-primary/40 pl-5"
               >
                 <div>
                   <p className="text-sm font-semibold text-foreground">

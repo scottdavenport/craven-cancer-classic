@@ -141,7 +141,7 @@ export function RegistrationForm({
               aria-pressed={session === "morning"}
               onClick={() => setSession("morning")}
               disabled={morningAvailable <= 0}
-              className={`rounded-lg border-2 p-4 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+              className={`rounded-lg border p-4 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
                 session === "morning"
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/30"
@@ -160,7 +160,7 @@ export function RegistrationForm({
               aria-pressed={session === "afternoon"}
               onClick={() => setSession("afternoon")}
               disabled={afternoonAvailable <= 0}
-              className={`rounded-lg border-2 p-4 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+              className={`rounded-lg border p-4 text-center transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
                 session === "afternoon"
                   ? "border-primary bg-primary/5"
                   : "border-border hover:border-primary/30"

@@ -33,7 +33,7 @@ export default function AboutPage() {
               <h2 className="font-display text-2xl font-semibold text-foreground">
                 Our Story
               </h2>
-              <div className="mt-1 h-px w-12 bg-primary/40" />
+              <div className="mt-1 h-0.5 w-12 bg-primary" />
               <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
                 Scott Davenport Sr., Brian Fisher, and John Aylward are the reason this tournament exists. Their wives and a community that loved all three men founded it in 2010 — out of love, and out of care for other families facing cancer.
               </p>
@@ -43,7 +43,7 @@ export default function AboutPage() {
               <h2 className="font-display text-2xl font-semibold text-foreground">
                 In Loving Memory
               </h2>
-              <div className="mt-1 h-px w-12 bg-primary/40" />
+              <div className="mt-1 h-0.5 w-12 bg-primary" />
               <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
                 The three men this tournament was built to honor. Their families will share their stories here.
               </p>
@@ -70,7 +70,7 @@ export default function AboutPage() {
               <h2 className="font-display text-2xl font-semibold text-foreground">
                 Where the Money Goes
               </h2>
-              <div className="mt-1 h-px w-12 bg-primary/40" />
+              <div className="mt-1 h-0.5 w-12 bg-primary" />
               <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
                 Every dollar raised through the Craven Cancer Classic goes
                 directly to the Carolina East Health Foundation to support cancer
@@ -93,7 +93,7 @@ export default function AboutPage() {
                 ].map((item) => (
                   <div
                     key={item.title}
-                    className="flex gap-4 border-l-2 border-primary/30 pl-5"
+                    className="border-l-2 border-primary/30 pl-5"
                   >
                     <div>
                       <p className="text-sm font-semibold text-foreground">
@@ -112,7 +112,7 @@ export default function AboutPage() {
               <h2 className="font-display text-2xl font-semibold text-foreground">
                 Our Impact
               </h2>
-              <div className="mt-1 h-px w-12 bg-primary/40" />
+              <div className="mt-1 h-0.5 w-12 bg-primary" />
               <p className="mt-6 text-[15px] leading-[1.8] text-muted-foreground">
                 Since 2010, the Craven Cancer Classic has raised over{" "}
                 <strong className="font-semibold text-foreground">

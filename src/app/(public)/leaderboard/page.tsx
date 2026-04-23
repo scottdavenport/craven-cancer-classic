@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { Trophy } from "lucide-react";
 import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
+import { InfoCallout } from "@/components/public/info-callout";
+import { PublicEmptyState } from "@/components/public/public-empty-state";
 
 export const revalidate = 300;
 
@@ -34,9 +36,7 @@ export default async function LeaderboardPage() {
     <div>
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
-            Results
-          </p>
+          <SectionEyebrow tone="light">Results</SectionEyebrow>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Leaderboard
           </h1>
@@ -47,32 +47,28 @@ export default async function LeaderboardPage() {
       <section className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-4xl">
           {scores.length === 0 ? (
-            <div className="py-16 text-center">
-              <Trophy className="mx-auto h-12 w-12 text-muted-foreground/30" />
-              <p className="mt-4 font-display text-xl font-semibold text-foreground">
-                Scores Coming Soon
-              </p>
-              <p className="mt-2 text-muted-foreground">
-                Scores will be posted after the tournament.
-              </p>
-
-              <div className="mx-auto mt-12 max-w-xl rounded-lg border border-border/60 bg-neutral-50 px-6 py-8 text-left shadow-sm">
-                <h2 className="font-display text-lg font-semibold text-foreground">
-                  Want a ping when the scores post?
-                </h2>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Leave your name and email. We&apos;ll send you one note when this year&apos;s results are live.
-                </p>
-                <div className="mt-6">
-                  <ProspectCaptureForm
-                    contactType="player"
-                    showCompany={false}
-                    notesPrefix="leaderboard prospect — notified when scores post"
-                    successMessage="We'll let you know the moment scores post."
-                  />
-                </div>
-              </div>
-            </div>
+            <PublicEmptyState
+              title="Scores Coming Soon"
+              body="Scores will be posted after the tournament."
+              action={
+                <InfoCallout className="mx-auto mt-4 max-w-xl text-left">
+                  <h2 className="font-display text-lg font-semibold text-foreground">
+                    Want a ping when the scores post?
+                  </h2>
+                  <p className="mt-2 text-sm text-muted-foreground">
+                    Leave your name and email. We&apos;ll send you one note when this year&apos;s results are live.
+                  </p>
+                  <div className="mt-6">
+                    <ProspectCaptureForm
+                      contactType="player"
+                      showCompany={false}
+                      notesPrefix="leaderboard prospect — notified when scores post"
+                      successMessage="We'll let you know the moment scores post."
+                    />
+                  </div>
+                </InfoCallout>
+              }
+            />
           ) : (
             <div className="space-y-12">
               {morningScores.length > 0 && (
@@ -128,9 +124,7 @@ function ScoreTable({
 }) {
   return (
     <div>
-      <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
-        {flightLabel}
-      </p>
+      <SectionEyebrow tone="light">{flightLabel}</SectionEyebrow>
       <h2 className="font-display text-xl font-semibold text-foreground">
         {title}
       </h2>
@@ -140,13 +134,13 @@ function ScoreTable({
         <table className="w-full">
           <thead>
             <tr className="border-b border-border bg-neutral-50">
-              <th className="px-4 py-3 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground w-16">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground w-16">
                 Pos
               </th>
-              <th className="px-4 py-3 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <th className="px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Team
               </th>
-              <th className="px-4 py-3 text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              <th className="px-4 py-3 text-right text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Score
               </th>
             </tr>

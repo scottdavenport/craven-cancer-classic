@@ -9,6 +9,7 @@ import { Check, X, Trash2 } from "lucide-react";
 import { updatePhotoStatus, deletePhoto } from "./actions";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import type { Photo } from "@/types/database";
+import { Tabs, TabsList, TabsTrigger, TabsPanel } from "@/components/ui/tabs";
 
 interface PhotoModerationProps {
   photos: Photo[];
@@ -46,15 +47,12 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 export function PhotoModeration({ photos }: PhotoModerationProps) {
-  const [tab, setTab] = useState<FilterTab>("pending");
   const [loading, setLoading] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null);
 
-  const filtered =
-    tab === "all" ? photos : photos.filter((p) => p.status === tab);
-  const pendingCount = photos.filter((p) => p.status === "pending").length;
-  const approvedCount = photos.filter((p) => p.status === "approved").length;
-  const rejectedCount = photos.filter((p) => p.status === "rejected").length;
+  const pendingPhotos = photos.filter((p) => p.status === "pending");
+  const approvedPhotos = photos.filter((p) => p.status === "approved");
+  const rejectedPhotos = photos.filter((p) => p.status === "rejected");
 
   async function handleApprove(id: string) {
     setLoading(id);
@@ -75,127 +73,137 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
     setLoading(null);
   }
 
-  const tabs: { key: FilterTab; label: string; count?: number }[] = [
-    { key: "pending", label: "Pending", count: pendingCount },
-    { key: "approved", label: "Approved", count: approvedCount },
-    { key: "rejected", label: "Rejected", count: rejectedCount },
-    { key: "all", label: "All", count: photos.length },
-  ];
+  function PhotoGrid({ items, emptyTitle, emptyBody }: { items: Photo[]; emptyTitle: string; emptyBody?: string }) {
+    if (items.length === 0) {
+      return <AdminEmptyState title={emptyTitle} body={emptyBody} />;
+    }
+    return (
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((photo) => (
+          <Card
+            key={photo.id}
+            className="group overflow-hidden shadow-sm border border-border/60"
+          >
+            <div className="relative aspect-[4/3] overflow-hidden">
+              <div className="absolute inset-0 transition-transform duration-200 group-hover:scale-[1.02]">
+                <Image
+                  src={photo.image_url}
+                  alt={photo.caption || "Tournament photo"}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                />
+              </div>
+              <div className="absolute right-2 top-2 z-10">
+                <StatusBadge status={photo.status} />
+              </div>
+            </div>
+            <CardContent className="pt-3">
+              {photo.caption && (
+                <p className="text-sm text-foreground line-clamp-2">
+                  {photo.caption}
+                </p>
+              )}
+              <p className="mt-1 font-sans text-[0.75rem] text-muted-foreground">
+                By {photo.uploaded_by_name}
+                {photo.uploaded_by_email && ` (${photo.uploaded_by_email})`}
+              </p>
+              <p className="font-sans text-[0.75rem] tabular-nums text-muted-foreground">
+                {new Date(photo.created_at).toLocaleDateString()}
+              </p>
+
+              <div
+                className={`mt-3 flex gap-2 ${loading === photo.id ? "opacity-50 pointer-events-none" : ""}`}
+              >
+                {photo.status !== "approved" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleApprove(photo.id)}
+                    disabled={loading === photo.id}
+                    className="text-success hover:text-success"
+                  >
+                    <Check className="mr-1 h-3.5 w-3.5" />
+                    Approve
+                  </Button>
+                )}
+                {photo.status !== "rejected" && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleReject(photo.id)}
+                    disabled={loading === photo.id}
+                    className="hover:text-destructive hover:border-destructive/40 transition-colors duration-150"
+                  >
+                    <X className="mr-1 h-3.5 w-3.5" />
+                    Reject
+                  </Button>
+                )}
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setDeleteTarget(photo)}
+                  disabled={loading === photo.id}
+                  title="Delete photo"
+                  className="ml-auto text-destructive hover:bg-destructive/10 transition-colors duration-150"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
-      <div className="flex gap-1 border-b border-border">
-        {tabs.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={`px-4 py-2 text-sm font-medium transition-colors ${
-              tab === t.key
-                ? "border-b-2 border-primary text-foreground"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+      <Tabs defaultValue="pending">
+        <TabsList className="flex gap-1 border-b border-border">
+          <TabsTrigger
+            value="pending"
+            count={pendingPhotos.length}
+            className="px-4 py-2 text-sm font-medium transition-colors data-[selected]:border-b-2 data-[selected]:border-primary data-[selected]:text-foreground text-muted-foreground hover:text-foreground"
           >
-            {t.label}
-            {t.count !== undefined && (
-              <span
-                className={`ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[0.625rem] font-semibold tabular-nums ${
-                  tab === t.key
-                    ? "bg-primary/10 text-primary"
-                    : "bg-neutral-100 text-muted-foreground"
-                }`}
-              >
-                {t.count}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
+            Pending
+          </TabsTrigger>
+          <TabsTrigger
+            value="approved"
+            count={approvedPhotos.length}
+            className="px-4 py-2 text-sm font-medium transition-colors data-[selected]:border-b-2 data-[selected]:border-primary data-[selected]:text-foreground text-muted-foreground hover:text-foreground"
+          >
+            Approved
+          </TabsTrigger>
+          <TabsTrigger
+            value="rejected"
+            count={rejectedPhotos.length}
+            className="px-4 py-2 text-sm font-medium transition-colors data-[selected]:border-b-2 data-[selected]:border-primary data-[selected]:text-foreground text-muted-foreground hover:text-foreground"
+          >
+            Rejected
+          </TabsTrigger>
+          <TabsTrigger
+            value="all"
+            count={photos.length}
+            className="px-4 py-2 text-sm font-medium transition-colors data-[selected]:border-b-2 data-[selected]:border-primary data-[selected]:text-foreground text-muted-foreground hover:text-foreground"
+          >
+            All
+          </TabsTrigger>
+        </TabsList>
 
-      {/* Photo grid */}
-      {filtered.length === 0 ? (
-        <AdminEmptyState
-          title={`No ${tab === "all" ? "" : tab + " "}photos`}
-          body={tab === "pending" ? "Photos submitted via the public gallery appear here." : undefined}
-        />
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((photo) => (
-            <Card
-              key={photo.id}
-              className="group overflow-hidden shadow-sm border border-border/60"
-            >
-              <div className="relative aspect-[4/3] overflow-hidden">
-                <div className="absolute inset-0 transition-transform duration-200 group-hover:scale-[1.02]">
-                  <Image
-                    src={photo.image_url}
-                    alt={photo.caption || "Tournament photo"}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                  />
-                </div>
-                <div className="absolute right-2 top-2 z-10">
-                  <StatusBadge status={photo.status} />
-                </div>
-              </div>
-              <CardContent className="pt-3">
-                {photo.caption && (
-                  <p className="text-sm text-foreground line-clamp-2">
-                    {photo.caption}
-                  </p>
-                )}
-                <p className="mt-1 font-sans text-[0.75rem] text-muted-foreground">
-                  By {photo.uploaded_by_name}
-                  {photo.uploaded_by_email && ` (${photo.uploaded_by_email})`}
-                </p>
-                <p className="font-sans text-[0.75rem] tabular-nums text-muted-foreground">
-                  {new Date(photo.created_at).toLocaleDateString()}
-                </p>
-
-                <div
-                  className={`mt-3 flex gap-2 ${loading === photo.id ? "opacity-50 pointer-events-none" : ""}`}
-                >
-                  {photo.status !== "approved" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleApprove(photo.id)}
-                      disabled={loading === photo.id}
-                      className="text-success hover:text-success"
-                    >
-                      <Check className="mr-1 h-3.5 w-3.5" />
-                      Approve
-                    </Button>
-                  )}
-                  {photo.status !== "rejected" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => handleReject(photo.id)}
-                      disabled={loading === photo.id}
-                      className="hover:text-destructive hover:border-destructive/40 transition-colors duration-150"
-                    >
-                      <X className="mr-1 h-3.5 w-3.5" />
-                      Reject
-                    </Button>
-                  )}
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setDeleteTarget(photo)}
-                    disabled={loading === photo.id}
-                    title="Delete photo"
-                    className="ml-auto text-destructive hover:bg-destructive/10 transition-colors duration-150"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+        <TabsPanel value="pending" className="mt-6">
+          <PhotoGrid items={pendingPhotos} emptyTitle="No pending photos" emptyBody="Photos submitted via the public gallery appear here." />
+        </TabsPanel>
+        <TabsPanel value="approved" className="mt-6">
+          <PhotoGrid items={approvedPhotos} emptyTitle="No approved photos" />
+        </TabsPanel>
+        <TabsPanel value="rejected" className="mt-6">
+          <PhotoGrid items={rejectedPhotos} emptyTitle="No rejected photos" />
+        </TabsPanel>
+        <TabsPanel value="all" className="mt-6">
+          <PhotoGrid items={photos} emptyTitle="No photos" />
+        </TabsPanel>
+      </Tabs>
 
       <ConfirmDialog
         open={deleteTarget !== null}

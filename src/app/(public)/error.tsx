@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 
 export default function Error({
   error,
@@ -16,9 +17,7 @@ export default function Error({
 
   return (
     <section className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-24 text-center">
-      <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
-        Something Went Wrong
-      </p>
+      <SectionEyebrow tone="light">Something Went Wrong</SectionEyebrow>
       <h2 className="font-display text-2xl sm:text-[1.75rem] font-semibold text-foreground mb-4">
         We hit an unexpected error
       </h2>

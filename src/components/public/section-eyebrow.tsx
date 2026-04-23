@@ -1,8 +1,5 @@
-// STUB — Bolt implements in GREEN phase (Issue #233)
-// This file exists so RED tests can import the component path.
-// All tests against this file are expected to FAIL until Bolt ships the real implementation.
-
 import React from "react";
+import { cn } from "@/lib/utils";
 
 export type EyebrowTone = "light" | "primary" | "brand";
 
@@ -12,10 +9,25 @@ export interface SectionEyebrowProps {
   children: React.ReactNode;
 }
 
-// Stub: renders nothing meaningful — RED tests will fail on styling/tone assertions.
-export function SectionEyebrow({ children, className }: SectionEyebrowProps) {
+const TONE_CLASS: Record<EyebrowTone, string> = {
+  light: "text-brand-light",
+  primary: "text-primary",
+  brand: "text-brand",
+};
+
+export function SectionEyebrow({
+  tone = "primary",
+  className,
+  children,
+}: SectionEyebrowProps) {
   return (
-    <p data-testid="section-eyebrow" className={className}>
+    <p
+      className={cn(
+        "font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] mb-3",
+        TONE_CLASS[tone],
+        className
+      )}
+    >
       {children}
     </p>
   );

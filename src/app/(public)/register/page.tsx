@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { RegistrationForm } from "./registration-form";
 import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
 import { SeekingTeamForm } from "./seeking-team-form";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 
 export const metadata: Metadata = {
   title: "Register Your Team",
@@ -59,9 +60,7 @@ export default async function RegisterPage() {
       {/* Header */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-light">
-            Four-Person Team &middot; {feeLabel}
-          </p>
+          <SectionEyebrow tone="light">Four-Person Team &middot; {feeLabel}</SectionEyebrow>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Register Your Team
           </h1>

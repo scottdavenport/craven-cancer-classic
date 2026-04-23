@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { LinkButton } from "@/components/ui/link-button";
 import { SponsorCard } from "@/components/public/sponsor-card";
 import type { TierSize } from "@/components/public/sponsor-card";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 
 export const metadata: Metadata = {
   title: "Our Sponsors",
@@ -69,9 +70,7 @@ export default async function SponsorsPage() {
         className="bg-cream grain-overlay px-4 py-20 sm:py-28"
       >
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand mb-3">
-            In Gratitude
-          </p>
+          <SectionEyebrow tone="brand">In Gratitude</SectionEyebrow>
           <h1 className="mt-4 font-display text-4xl font-bold text-foreground sm:text-5xl">
             Our Sponsors
           </h1>

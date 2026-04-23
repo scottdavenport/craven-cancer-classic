@@ -191,7 +191,7 @@ describe("TrashTabs — sprint-19 PR-C polish", () => {
       render(<TrashTabs {...EMPTY_PROPS} teams={[makeTeam()]} />);
 
       // Switch to Teams tab
-      fireEvent.click(screen.getByRole("button", { name: /^teams/i }));
+      fireEvent.click(screen.getByRole("tab", { name: /^teams/i }));
 
       const table = document.querySelector("table");
       expect(table).toBeTruthy();
@@ -206,7 +206,7 @@ describe("TrashTabs — sprint-19 PR-C polish", () => {
       // We can't use /^sponsors$/i because the badge text appends digits.
       // We can't use /^sponsors/i because "Sponsorship Items" also starts with "Sponsors".
       // Use getAllByRole and pick the first match (Sponsors comes before Sponsorship Items).
-      const sponsorButtons = screen.getAllByRole("button", { name: /^sponsors/i });
+      const sponsorButtons = screen.getAllByRole("tab", { name: /^sponsors/i });
       // First match is "Sponsors", second is "Sponsorship Items"
       fireEvent.click(sponsorButtons[0]);
 
@@ -219,7 +219,7 @@ describe("TrashTabs — sprint-19 PR-C polish", () => {
     it("Sponsorship Items tab table wrapper has overflow-x-auto", () => {
       render(<TrashTabs {...EMPTY_PROPS} sponsorshipItems={[makeSponsorshipItem()]} />);
 
-      fireEvent.click(screen.getByRole("button", { name: /sponsorship items/i }));
+      fireEvent.click(screen.getByRole("tab", { name: /sponsorship items/i }));
 
       const table = document.querySelector("table");
       expect(table).toBeTruthy();
@@ -230,7 +230,7 @@ describe("TrashTabs — sprint-19 PR-C polish", () => {
     it("Photos tab table wrapper has overflow-x-auto", () => {
       render(<TrashTabs {...EMPTY_PROPS} photos={[makePhoto()]} />);
 
-      fireEvent.click(screen.getByRole("button", { name: /^photos/i }));
+      fireEvent.click(screen.getByRole("tab", { name: /^photos/i }));
 
       const table = document.querySelector("table");
       expect(table).toBeTruthy();

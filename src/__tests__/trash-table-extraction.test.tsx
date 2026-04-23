@@ -169,7 +169,7 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
         teams={[makeTeam()]}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: /teams/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /teams/i }));
     expect(screen.getByTestId("trash-table")).toBeInTheDocument();
   });
 
@@ -180,7 +180,7 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
         sponsors={[makeSponsor()]}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: /^sponsors$/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /^sponsors$/i }));
     expect(screen.getByTestId("trash-table")).toBeInTheDocument();
   });
 
@@ -191,7 +191,7 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
         sponsorshipItems={[makeSponsorshipItem()]}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: /sponsorship items/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /sponsorship items/i }));
     expect(screen.getByTestId("trash-table")).toBeInTheDocument();
   });
 
@@ -202,7 +202,7 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
         photos={[makePhoto()]}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: /photos/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /photos/i }));
     expect(screen.getByTestId("trash-table")).toBeInTheDocument();
   });
 
@@ -223,7 +223,7 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
         teams={[makeTeam({ team_name: "Eagle Squad" })]}
       />
     );
-    fireEvent.click(screen.getByRole("button", { name: /teams/i }));
+    fireEvent.click(screen.getByRole("tab", { name: /teams/i }));
     expect(screen.getByText("Eagle Squad")).toBeInTheDocument();
   });
 

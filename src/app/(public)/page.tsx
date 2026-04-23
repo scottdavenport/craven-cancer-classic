@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { redirect } from "next/navigation";
 import { LinkButton } from "@/components/ui/link-button";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 import {
   getPublicEventSettings,
   formatTournamentDate,
@@ -61,12 +62,12 @@ export default async function HomePage(
             {/* ── Left: logo + headline (cols 1–2) ── */}
             <div className="lg:col-span-2">
               {/* Overline */}
-              <p
-                className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light opacity-0 animate-[fadeUp_400ms_ease-out_forwards]"
-                style={{ animationDelay: "0ms" }}
+              <SectionEyebrow
+                tone="light"
+                className="opacity-0 animate-[fadeUp_400ms_ease-out_forwards]"
               >
                 Annual Charity Golf Tournament
-              </p>
+              </SectionEyebrow>
 
               {/* Full SVG logo — IS the wordmark */}
               <div
@@ -137,16 +138,12 @@ export default async function HomePage(
               {/* Mobile: horizontal rule instead of left border */}
               <div className="mb-6 h-px bg-gradient-to-r from-transparent via-brand/40 to-transparent lg:hidden" />
 
-              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
-                Tournament Date
-              </p>
+              <SectionEyebrow tone="light">Tournament Date</SectionEyebrow>
               <p className="font-display text-xl font-semibold text-white leading-snug">
                 {dateString}
               </p>
 
-              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mt-6 mb-3">
-                Venue
-              </p>
+              <SectionEyebrow tone="light" className="mt-6">Venue</SectionEyebrow>
               <p className="font-display text-xl font-semibold text-white leading-snug">
                 {venueString}
               </p>
@@ -169,7 +166,7 @@ export default async function HomePage(
                 <p className="font-display text-5xl font-bold text-foreground">
                   {stat.value}
                 </p>
-                <p className="mt-2 font-sans text-[0.6875rem] uppercase tracking-[0.2em] text-muted-foreground">
+                <p className="mt-2 font-sans text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
                   {stat.label}
                 </p>
               </div>
@@ -181,9 +178,7 @@ export default async function HomePage(
       {/* ── Mission — cream background ───────────────────────────────────── */}
       <section className="bg-cream px-4 py-14 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary mb-3">
-            Our Mission
-          </p>
+          <SectionEyebrow tone="primary">Our Mission</SectionEyebrow>
           <h2 className="font-display text-3xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
             Making a Difference in
             <br />
@@ -237,9 +232,7 @@ export default async function HomePage(
       {/* ── Donate CTA — white ───────────────────────────────────────────── */}
       <section className="bg-white px-4 py-14 sm:py-20">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-primary mb-3">
-            Get Involved
-          </p>
+          <SectionEyebrow tone="primary">Get Involved</SectionEyebrow>
           <h2 className="font-display text-3xl sm:text-[1.75rem] font-semibold text-foreground mt-0 mb-6">
             Every Contribution
             <br />

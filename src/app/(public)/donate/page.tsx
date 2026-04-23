@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { LinkButton } from "@/components/ui/link-button";
 import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
+import { InfoCallout } from "@/components/public/info-callout";
 
 export const metadata: Metadata = {
   title: "Donate",
@@ -20,9 +22,7 @@ export default function DonatePage() {
       {/* Hero */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
-            Make a Difference
-          </p>
+          <SectionEyebrow tone="light">Make a Difference</SectionEyebrow>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Donate
           </h1>
@@ -57,9 +57,7 @@ export default function DonatePage() {
       {/* Mission + CTA */}
       <section className="px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-2xl">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
-            Your Impact
-          </p>
+          <SectionEyebrow tone="light">Your Impact</SectionEyebrow>
           <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
             Where Your Gift Goes
           </h2>
@@ -103,14 +101,14 @@ export default function DonatePage() {
             ))}
           </div>
 
-          <div className="mt-12 rounded-lg border border-border/60 bg-neutral-50 p-5 shadow-xs">
+          <InfoCallout className="mt-12">
             <p className="text-sm text-muted-foreground">
               When donating, please designate your gift to:
             </p>
             <p className="mt-1 font-semibold text-foreground">
               Craven Cancer Classic Golf Tournament
             </p>
-          </div>
+          </InfoCallout>
 
           <div className="mt-8">
             <LinkButton
@@ -128,9 +126,7 @@ export default function DonatePage() {
       {/* In Loving Memory */}
       <section className="border-y border-purple/20 bg-purple/5 px-4 py-16 sm:py-20">
         <div className="mx-auto max-w-2xl">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
-            In Loving Memory
-          </p>
+          <SectionEyebrow tone="light">In Loving Memory</SectionEyebrow>
           <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
             Those We Honor
           </h2>
@@ -144,9 +140,7 @@ export default function DonatePage() {
       {/* Stay in Touch email capture */}
       <section className="border-t border-border/60 bg-neutral-50 px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-2xl">
-          <p className="mb-3 font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light">
-            Stay Connected
-          </p>
+          <SectionEyebrow tone="light">Stay Connected</SectionEyebrow>
           <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
             Stay in Touch
           </h2>

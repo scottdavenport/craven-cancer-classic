@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LinkButton } from "@/components/ui/link-button";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 
 export const metadata: Metadata = {
   title: "About Our Cause",
@@ -13,9 +14,7 @@ export default function AboutPage() {
       {/* Header */}
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-light">
-            Our Story
-          </p>
+          <SectionEyebrow tone="light">Our Story</SectionEyebrow>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             How This Started
           </h1>

@@ -185,9 +185,7 @@ describe("SectionEyebrow — hygiene (source grep — RED until GREEN)", () => {
       { cwd: repoRoot, encoding: "utf-8" }
     ).trim();
 
-    expect(result).toBe(
-      "After Bolt GREEN: all public page eyebrow classes move to SectionEyebrow"
-    );
+    expect(result).toBe("");
   });
 
   it("tracking-[0.3em] no longer appears on public pages after adoption", () => {
@@ -206,8 +204,6 @@ describe("SectionEyebrow — hygiene (source grep — RED until GREEN)", () => {
       { cwd: repoRoot, encoding: "utf-8" }
     ).trim();
 
-    expect(result).toBe(
-      "After Bolt GREEN: all tracking-[0.3em] variants normalized via SectionEyebrow"
-    );
+    expect(result).toBe("");
   });
 });

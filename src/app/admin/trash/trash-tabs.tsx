@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import { Tabs, TabsList, TabsTrigger, TabsPanel } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -255,8 +256,6 @@ export function TrashTabs({
   sponsorshipItems,
   photos,
 }: TrashTabsProps) {
-  const [activeTab, setActiveTab] = useState<TabKey>("contacts");
-
   const counts: Record<TabKey, number> = {
     contacts: contacts.length,
     teams: teams.length,
@@ -266,37 +265,27 @@ export function TrashTabs({
   };
 
   return (
-    <div>
+    <Tabs defaultValue="contacts">
       {/* Tab bar */}
-      <div className="flex gap-1 border-b border-border/60 mb-6">
+      <TabsList className="flex gap-1 border-b border-border/60 mb-6">
         {(Object.entries(TAB_LABELS) as [TabKey, string][]).map(([key, label]) => (
-          <button
+          <TabsTrigger
             key={key}
-            type="button"
-            onClick={() => setActiveTab(key)}
-            className={[
-              "px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px",
-              activeTab === key
-                ? "border-primary text-foreground"
-                : "border-transparent text-muted-foreground hover:text-foreground hover:border-border",
-            ].join(" ")}
+            value={key}
+            count={counts[key] > 0 ? counts[key] : undefined}
+            className="px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px data-[selected]:border-primary data-[selected]:text-foreground border-transparent text-muted-foreground hover:text-foreground hover:border-border"
           >
             {label}
-            {counts[key] > 0 && (
-              <span aria-hidden="true" className="ml-1.5 inline-flex items-center justify-center rounded-full bg-muted px-1.5 py-0.5 text-[0.6875rem] font-semibold text-muted-foreground">
-                {counts[key]}
-              </span>
-            )}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
       {/* Tab panels */}
-      {activeTab === "contacts" && <ContactsTab initial={contacts} />}
-      {activeTab === "teams" && <TeamsTab initial={teams} />}
-      {activeTab === "sponsors" && <SponsorsTab initial={sponsors} />}
-      {activeTab === "sponsorshipItems" && <SponsorshipItemsTab initial={sponsorshipItems} />}
-      {activeTab === "photos" && <PhotosTab initial={photos} />}
-    </div>
+      <TabsPanel value="contacts"><ContactsTab initial={contacts} /></TabsPanel>
+      <TabsPanel value="teams"><TeamsTab initial={teams} /></TabsPanel>
+      <TabsPanel value="sponsors"><SponsorsTab initial={sponsors} /></TabsPanel>
+      <TabsPanel value="sponsorshipItems"><SponsorshipItemsTab initial={sponsorshipItems} /></TabsPanel>
+      <TabsPanel value="photos"><PhotosTab initial={photos} /></TabsPanel>
+    </Tabs>
   );
 }

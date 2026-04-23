@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -189,9 +190,7 @@ export function GalleryGrid({
         <div className="space-y-16">
           {yearGroups.map(({ year, photos: yearPhotos }) => (
             <section key={year} aria-label={`${year} Tournament photos`}>
-              <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
-                Tournament Year
-              </p>
+              <SectionEyebrow tone="light">Tournament Year</SectionEyebrow>
               <h2
                 className="mb-6 font-display text-2xl font-semibold text-foreground"
                 data-testid={`year-heading-${year}`}

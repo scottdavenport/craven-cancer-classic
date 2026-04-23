@@ -1,18 +1,19 @@
-// STUB — Bolt implements in GREEN phase (Issue #233)
-// This file exists so RED tests can import the component path.
-// All tests against this file are expected to FAIL until Bolt ships the real implementation.
-
 import React from "react";
+import { cn } from "@/lib/utils";
 
 export interface InfoCalloutProps {
   children: React.ReactNode;
   className?: string;
 }
 
-// Stub: renders nothing meaningful — RED tests will fail on styling assertions.
 export function InfoCallout({ children, className }: InfoCalloutProps) {
   return (
-    <div data-testid="info-callout" className={className}>
+    <div
+      className={cn(
+        "rounded-xl border border-border/60 bg-neutral-50 p-5 shadow-xs",
+        className
+      )}
+    >
       {children}
     </div>
   );

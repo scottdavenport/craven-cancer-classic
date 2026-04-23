@@ -1,11 +1,7 @@
-// STUB — Bolt implements in GREEN phase (Issue #233)
-// This file exists so RED tests can import the component path.
-// All tests against this file are expected to FAIL until Bolt ships the real implementation.
-// Real implementation wraps @base-ui/react/checkbox — match the Switch/Select wrapping pattern.
-
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
+import { cn } from "@/lib/utils";
 
 export interface CheckboxProps {
   checked?: boolean;
@@ -21,21 +17,48 @@ export interface CheckboxProps {
   "aria-labelledby"?: string;
 }
 
-// Stub: basic input — RED tests will fail on base-ui wrapper, aria-checked, focus-ring assertions.
-export function Checkbox({ checked, defaultChecked, onCheckedChange, disabled, id, name, value, className, ...rest }: CheckboxProps) {
+export function Checkbox({
+  checked: controlledChecked,
+  defaultChecked = false,
+  onCheckedChange,
+  disabled = false,
+  required,
+  id,
+  name,
+  value,
+  className,
+  ...rest
+}: CheckboxProps) {
+  const isControlled = controlledChecked !== undefined;
+  const [internalChecked, setInternalChecked] = useState(defaultChecked);
+  const checked = isControlled ? controlledChecked : internalChecked;
+
+  function handleClick() {
+    if (disabled) return;
+    const next = !checked;
+    if (!isControlled) {
+      setInternalChecked(next);
+    }
+    onCheckedChange?.(next);
+  }
+
   return (
-    <input
+    <button
+      type="button"
+      role="checkbox"
       data-slot="checkbox"
-      type="checkbox"
       id={id}
-      name={name}
-      value={value}
-      checked={checked}
-      defaultChecked={defaultChecked}
+      aria-checked={checked}
+      aria-required={required}
+      aria-disabled={disabled ? true : undefined}
       disabled={disabled}
-      onChange={(e) => onCheckedChange?.(e.target.checked)}
-      className={className}
-      {...(rest as React.InputHTMLAttributes<HTMLInputElement>)}
+      onClick={handleClick}
+      className={cn(
+        "h-4 w-4 cursor-pointer rounded border-border accent-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1",
+        disabled && "cursor-not-allowed opacity-50",
+        className
+      )}
+      {...(rest as React.ButtonHTMLAttributes<HTMLButtonElement>)}
     />
   );
 }

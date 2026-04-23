@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useTransition } from "react";
 import Link from "next/link";
+import { Checkbox } from "@/components/ui/checkbox";
 import { buttonVariants } from "@/components/ui/button";
 import {
   Select,
@@ -255,7 +256,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
   }
 
   function handleRowCheckbox(
-    e: React.MouseEvent<HTMLInputElement>,
+    e: React.MouseEvent<HTMLElement>,
     contactId: string,
     index: number
   ) {
@@ -456,11 +457,9 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
 
         {/* Captain-only toggle */}
         <label className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={captainOnly}
-            onChange={(e) => handleCaptainOnlyChange(e.target.checked)}
-            className="accent-brand h-4 w-4 rounded"
+            onCheckedChange={handleCaptainOnlyChange}
           />
           Captains only
         </label>
@@ -564,15 +563,10 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
             <tr>
               {/* Checkbox header */}
               <th className="px-4 py-3 w-10">
-                <input
-                  type="checkbox"
+                <Checkbox
                   aria-label="Select all visible contacts"
                   checked={allVisibleSelected}
-                  ref={(el) => {
-                    if (el) el.indeterminate = someVisibleSelected && !allVisibleSelected;
-                  }}
-                  onChange={handleHeaderCheckbox}
-                  className="accent-brand h-4 w-4 rounded cursor-pointer"
+                  onCheckedChange={() => handleHeaderCheckbox()}
                 />
               </th>
               {DATA_HEADERS.map((h) => (
@@ -631,14 +625,17 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                     onClick={() => setDrawer({ open: true, mode: "edit", contact })}
                   >
                     {/* Checkbox cell */}
-                    <td className="px-4 py-3 w-10" onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
+                    <td
+                      className="px-4 py-3 w-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRowCheckbox(e, contact.id, index);
+                      }}
+                    >
+                      <Checkbox
                         aria-label={`Select ${contact.full_name}`}
                         checked={isSelected}
-                        onClick={(e) => handleRowCheckbox(e, contact.id, index)}
-                        onChange={() => {/* controlled by onClick */}}
-                        className="accent-brand h-4 w-4 rounded cursor-pointer"
+                        onCheckedChange={() => {/* controlled by td onClick */}}
                       />
                     </td>
 

@@ -124,6 +124,44 @@ grep -rn "scott@thinkcode.ai" src/ --exclude-dir="__tests__"
 
 ---
 
+---
+
+### Area 6 — Sponsorship checkout fallback (fix-up commit)
+**File:** `src/app/(public)/sponsorships/sponsorship-grid.tsx:135`
+
+```
+OLD: data.error || "Something went wrong"
+NEW: data.error || "Sponsorship didn't go through. Email scott@thinkcode.ai if this keeps happening."
+```
+
+Wire `scott@thinkcode.ai` as a `mailto:` link using `CONTACT_EMAIL`. Error state changed from `string | null` to `React.ReactNode` to support JSX fragment with anchor (Area 1 pattern).
+
+---
+
+### Area 7a — ProspectCaptureForm network catch (fix-up commit)
+**File:** `src/components/public/prospect-capture-form.tsx:64`
+
+```
+OLD: "Something went wrong. Please try again."
+NEW: "Couldn't reach the server. Check your connection and try again."
+```
+
+No email needed — connection errors are self-resolvable (Area 3b pattern).
+
+---
+
+### Area 7b — ProspectCaptureForm API error fallback (fix-up commit)
+**File:** `src/components/public/prospect-capture-form.tsx:72`
+
+```
+OLD: json.error ?? "Something went wrong. Please try again."
+NEW: json.error ?? "Couldn't save your request. Try again — or email scott@thinkcode.ai."
+```
+
+Wire `scott@thinkcode.ai` as a `mailto:` link using `CONTACT_EMAIL`. Error state changed from `string | null` to `React.ReactNode` to support JSX fragment with anchor (Area 3a pattern).
+
+---
+
 ## Out of Scope
 
 - Translating raw Postgres constraint names to human language (Aria's non-blocker flag — follow-up issue)

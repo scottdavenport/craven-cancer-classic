@@ -651,3 +651,226 @@ describe("Hygiene — CONTACT_EMAIL constant", () => {
     expect(result).toBe("");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Area 6 — SponsorshipGrid: checkout fallback
+// ---------------------------------------------------------------------------
+
+describe("Area 6 — SponsorshipGrid: checkout API error fallback", () => {
+  const MOCK_ITEM = {
+    id: "item-1",
+    name: "Gold Sponsor",
+    price_cents: 250000,
+    description: null,
+    max_quantity: null,
+    sold_count: 0,
+    active: true,
+    benefits: [],
+    created_at: "2026-01-01T00:00:00Z",
+    deleted_at: null,
+    deleted_by: null,
+    sort_order: 0,
+    year: 2026,
+  };
+
+  async function renderPurchaseForm() {
+    const { SponsorshipGrid } = await import(
+      "@/app/(public)/sponsorships/sponsorship-grid"
+    );
+    render(<SponsorshipGrid items={[MOCK_ITEM]} />);
+
+    // Click Select to reveal the PurchaseForm
+    const selectBtn = screen.getByRole("button", { name: /^Select$/i });
+    fireEvent.click(selectBtn);
+
+    const form = document.querySelector("form");
+    expect(form).not.toBeNull();
+    return form!;
+  }
+
+  it("shows 'Sponsorship didn't go through' when server returns ok:false with no error field", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    const form = await renderPurchaseForm();
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText(/Sponsorship didn't go through/i)
+      ).not.toBeNull();
+    });
+  });
+
+  it("checkout fallback contains a mailto link for scott@thinkcode.ai", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    const form = await renderPurchaseForm();
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      const link = document.querySelector('a[href^="mailto:"]');
+      expect(link).not.toBeNull();
+      expect(link!.getAttribute("href")).toContain("scott@thinkcode.ai");
+    });
+  });
+
+  it("does NOT show old 'Something went wrong' fallback in sponsorship-grid", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    const form = await renderPurchaseForm();
+    fireEvent.submit(form);
+
+    await waitFor(() => {
+      expect(document.querySelector('[class*="destructive"]')).not.toBeNull();
+    });
+
+    expect(screen.queryByText("Something went wrong")).toBeNull();
+  });
+
+  it("no 'Something went wrong' in sponsorship-grid.tsx source", () => {
+    const result = execSync(
+      'grep -n "Something went wrong" "src/app/(public)/sponsorships/sponsorship-grid.tsx" || true',
+      { cwd: REPO_ROOT, encoding: "utf-8" }
+    ).trim();
+    expect(result).toBe("");
+  });
+
+  it("scott@thinkcode.ai does not appear as a raw string in sponsorship-grid.tsx (uses constant)", () => {
+    const result = execSync(
+      'grep -n "scott@thinkcode.ai" "src/app/(public)/sponsorships/sponsorship-grid.tsx" || true',
+      { cwd: REPO_ROOT, encoding: "utf-8" }
+    ).trim();
+    expect(result).toBe("");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Area 7 — ProspectCaptureForm: network + API error copy
+// ---------------------------------------------------------------------------
+
+describe("Area 7 — ProspectCaptureForm: network catch block", () => {
+  async function renderProspectFormWithNetworkError() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("Network down"))
+    );
+
+    const { ProspectCaptureForm } = await import(
+      "@/components/public/prospect-capture-form"
+    );
+    render(<ProspectCaptureForm contactType="player" />);
+
+    const form = document.querySelector("form");
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
+
+    await waitFor(() => {
+      expect(document.querySelector('[role="alert"]')).not.toBeNull();
+    });
+  }
+
+  it("shows 'Couldn't reach the server' when fetch throws", async () => {
+    await renderProspectFormWithNetworkError();
+
+    expect(
+      screen.queryByText(/Couldn't reach the server/i)
+    ).not.toBeNull();
+  });
+
+  it("network copy mentions 'connection'", async () => {
+    await renderProspectFormWithNetworkError();
+
+    expect(screen.queryByText(/connection/i)).not.toBeNull();
+  });
+
+  it("does NOT show old 'Something went wrong. Please try again.' for network error", async () => {
+    await renderProspectFormWithNetworkError();
+
+    expect(
+      screen.queryByText("Something went wrong. Please try again.")
+    ).toBeNull();
+  });
+});
+
+describe("Area 7 — ProspectCaptureForm: API error fallback", () => {
+  async function renderProspectFormWithApiError() {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: false,
+        json: async () => ({}),
+      })
+    );
+
+    const { ProspectCaptureForm } = await import(
+      "@/components/public/prospect-capture-form"
+    );
+    render(<ProspectCaptureForm contactType="player" />);
+
+    const form = document.querySelector("form");
+    expect(form).not.toBeNull();
+    fireEvent.submit(form!);
+
+    await waitFor(() => {
+      expect(document.querySelector('[role="alert"]')).not.toBeNull();
+    });
+  }
+
+  it("shows 'Couldn't save your request' when API returns ok:false with no error field", async () => {
+    await renderProspectFormWithApiError();
+
+    expect(
+      screen.queryByText(/Couldn't save your request/i)
+    ).not.toBeNull();
+  });
+
+  it("API fallback copy contains a mailto link for scott@thinkcode.ai", async () => {
+    await renderProspectFormWithApiError();
+
+    const link = document.querySelector('a[href^="mailto:"]');
+    expect(link).not.toBeNull();
+    expect(link!.getAttribute("href")).toContain("scott@thinkcode.ai");
+  });
+
+  it("does NOT show old 'Something went wrong. Please try again.' for API error", async () => {
+    await renderProspectFormWithApiError();
+
+    expect(
+      screen.queryByText("Something went wrong. Please try again.")
+    ).toBeNull();
+  });
+
+  it("no 'Something went wrong' in prospect-capture-form.tsx source", () => {
+    const result = execSync(
+      'grep -n "Something went wrong" src/components/public/prospect-capture-form.tsx || true',
+      { cwd: REPO_ROOT, encoding: "utf-8" }
+    ).trim();
+    expect(result).toBe("");
+  });
+
+  it("scott@thinkcode.ai does not appear as a raw string in prospect-capture-form.tsx (uses constant)", () => {
+    const result = execSync(
+      'grep -n "scott@thinkcode.ai" src/components/public/prospect-capture-form.tsx || true',
+      { cwd: REPO_ROOT, encoding: "utf-8" }
+    ).trim();
+    expect(result).toBe("");
+  });
+});

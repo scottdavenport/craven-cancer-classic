@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
 
 type ContactType = "player" | "sponsor" | "donor" | "other";
 
@@ -26,7 +27,7 @@ export function ProspectCaptureForm({
 }: ProspectCaptureFormProps) {
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -61,7 +62,7 @@ export function ProspectCaptureForm({
     } catch (err) {
       console.error("contacts form fetch error:", err);
       setLoading(false);
-      setError("Something went wrong. Please try again.");
+      setError("Couldn't reach the server. Check your connection and try again.");
       return;
     }
 
@@ -69,7 +70,20 @@ export function ProspectCaptureForm({
 
     if (!res.ok) {
       const json = await res.json().catch(() => ({})) as { error?: string };
-      setError(json.error ?? "Something went wrong. Please try again.");
+      setError(
+        json.error ?? (
+          <>
+            {"Couldn't save your request. Try again — or email "}
+            <a
+              href={CONTACT_EMAIL_MAILTO}
+              className="underline underline-offset-4 hover:no-underline"
+            >
+              {CONTACT_EMAIL}
+            </a>
+            {"."}
+          </>
+        )
+      );
       return;
     }
 

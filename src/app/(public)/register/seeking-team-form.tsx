@@ -1,15 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
 
 export function SeekingTeamForm() {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -36,14 +37,27 @@ export function SeekingTeamForm() {
 
       if (!res.ok) {
         const json = await res.json().catch(() => ({})) as { error?: string };
-        setError(json.error ?? "Something went wrong. Please try again.");
+        setError(
+          json.error ?? (
+            <>
+              {"Couldn't save your request. Try again — or email "}
+              <a
+                href={CONTACT_EMAIL_MAILTO}
+                className="underline underline-offset-4 hover:no-underline"
+              >
+                {CONTACT_EMAIL}
+              </a>
+              {"."}
+            </>
+          )
+        );
         return;
       }
 
       setSubmitted(true);
     } catch (err) {
       console.error("[SeekingTeamForm] fetch error:", err);
-      setError("Something went wrong. Please try again.");
+      setError("Couldn't reach the server. Check your connection and try again.");
     } finally {
       setLoading(false);
     }

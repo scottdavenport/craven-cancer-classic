@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import type { SponsorshipItem } from "@/types/database";
+import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
 
 interface SponsorshipGridProps {
   items: SponsorshipItem[];
@@ -104,7 +105,7 @@ function PurchaseForm({
   onCancel: () => void;
 }) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode>(null);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -132,7 +133,20 @@ function PurchaseForm({
 
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Something went wrong");
+        setError(
+          data.error || (
+            <>
+              {"Sponsorship didn't go through. Email "}
+              <a
+                href={CONTACT_EMAIL_MAILTO}
+                className="underline underline-offset-4 hover:no-underline"
+              >
+                {CONTACT_EMAIL}
+              </a>
+              {" if this keeps happening."}
+            </>
+          )
+        );
         return;
       }
       if (data.url) {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
 
 interface RegistrationFormProps {
   morningCap: number;
@@ -47,7 +48,7 @@ export function RegistrationForm({
   registrationFeeCents,
 }: RegistrationFormProps) {
   const formattedFee = formatFee(registrationFeeCents);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<React.ReactNode>(null);
   const [loading, setLoading] = useState(false);
   const [session, setSession] = useState<"morning" | "afternoon">("morning");
   const [teammates, setTeammates] = useState<TeammateInfo[]>([
@@ -105,7 +106,20 @@ export function RegistrationForm({
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Something went wrong");
+        setError(
+          data.error || (
+            <>
+              {"Registration didn't go through. Email "}
+              <a
+                href={CONTACT_EMAIL_MAILTO}
+                className="underline underline-offset-4 hover:no-underline"
+              >
+                {CONTACT_EMAIL}
+              </a>
+              {" if this keeps happening."}
+            </>
+          )
+        );
         return;
       }
 
@@ -114,7 +128,7 @@ export function RegistrationForm({
       }
     } catch (err) {
       console.error("[RegistrationForm] checkout fetch failed:", err);
-      setError("Failed to start registration. Please try again.");
+      setError("Couldn't reach the registration server. Check your connection and try again.");
     } finally {
       setLoading(false);
     }

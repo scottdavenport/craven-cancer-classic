@@ -2,6 +2,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
 
 export default function Error({
   error,
@@ -17,13 +18,20 @@ export default function Error({
   return (
     <section className="flex min-h-[60vh] flex-col items-center justify-center px-4 py-24 text-center">
       <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
-        Something Went Wrong
+        Error
       </p>
       <h2 className="font-display text-2xl sm:text-[1.75rem] font-semibold text-foreground mb-4">
-        We hit an unexpected error
+        Something stopped working.
       </h2>
       <p className="font-sans text-[0.9375rem] text-muted-foreground max-w-sm mb-8">
-        Please try again. If the problem persists, contact the organizers.
+        {"Try again — if it keeps happening, email "}
+        <a
+          href={CONTACT_EMAIL_MAILTO}
+          className="underline underline-offset-4 hover:no-underline"
+        >
+          {CONTACT_EMAIL}
+        </a>
+        {"."}
       </p>
       <div className="flex flex-col sm:flex-row gap-3 items-center">
         <Button

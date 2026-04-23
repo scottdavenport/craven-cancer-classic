@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { GalleryGrid } from "./gallery-grid";
 import type { Photo } from "@/types/database";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 
 export const metadata: Metadata = {
   title: "Photo Gallery",
@@ -56,9 +57,7 @@ export default async function GalleryPage({ searchParams }: GalleryPageProps = {
     <div>
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="font-sans text-[0.6875rem] font-semibold uppercase tracking-[0.25em] text-brand-light mb-3">
-            Memories
-          </p>
+          <SectionEyebrow tone="light">Memories</SectionEyebrow>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             Photo Gallery
           </h1>

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LinkButton } from "@/components/ui/link-button";
+import { SectionEyebrow } from "@/components/public/section-eyebrow";
 
 export const metadata: Metadata = {
   title: "You're In — Craven Cancer Classic",
@@ -10,9 +11,7 @@ export default function RegistrationSuccessPage() {
     <div>
       <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
         <div className="mx-auto max-w-3xl text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-light">
-            Confirmed
-          </p>
+          <SectionEyebrow tone="light">Confirmed</SectionEyebrow>
           <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
             You&apos;re In.
           </h1>

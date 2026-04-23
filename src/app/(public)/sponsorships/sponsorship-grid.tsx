@@ -36,7 +36,7 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
               } ${selectedId === item.id ? "ring-2 ring-primary" : ""}`}
             >
               {soldOut && (
-                <div className="absolute right-3 top-3 bg-neutral-100 text-neutral-600 text-[0.6875rem] font-semibold uppercase tracking-[0.1em] px-2 py-0.5 rounded-sm">
+                <div className="absolute right-3 top-3 bg-neutral-100 text-neutral-600 text-[11px] font-semibold uppercase tracking-[0.1em] px-2 py-0.5 rounded-sm">
                   Sold Out
                 </div>
               )}

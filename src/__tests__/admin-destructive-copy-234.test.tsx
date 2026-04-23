@@ -624,7 +624,7 @@ describe("Area 5 — PhotoModeration confirm dialog copy", () => {
       renderModeration([photo]);
 
       // Switch to All tab to see approved photos
-      await user.click(screen.getByRole("button", { name: /^all/i }));
+      await user.click(screen.getByRole("tab", { name: /^all/i }));
 
       const deleteBtn = document.querySelector("button[title='Delete photo']");
       expect(deleteBtn).not.toBeNull();
@@ -640,7 +640,7 @@ describe("Area 5 — PhotoModeration confirm dialog copy", () => {
       const photo = makePhoto({ status: "approved" });
       renderModeration([photo]);
 
-      await user.click(screen.getByRole("button", { name: /^all/i }));
+      await user.click(screen.getByRole("tab", { name: /^all/i }));
 
       const deleteBtn = document.querySelector("button[title='Delete photo']");
       expect(deleteBtn).not.toBeNull();
@@ -660,7 +660,7 @@ describe("Area 5 — PhotoModeration confirm dialog copy", () => {
       const photo = makePhoto({ status: "approved" });
       renderModeration([photo]);
 
-      await user.click(screen.getByRole("button", { name: /^all/i }));
+      await user.click(screen.getByRole("tab", { name: /^all/i }));
 
       const deleteBtn = document.querySelector("button[title='Delete photo']");
       expect(deleteBtn).not.toBeNull();
@@ -680,7 +680,7 @@ describe("Area 5 — PhotoModeration confirm dialog copy", () => {
       const photo = makePhoto({ status: "approved" });
       renderModeration([photo]);
 
-      await user.click(screen.getByRole("button", { name: /^all/i }));
+      await user.click(screen.getByRole("tab", { name: /^all/i }));
 
       const deleteBtn = document.querySelector("button[title='Delete photo']");
       expect(deleteBtn).not.toBeNull();

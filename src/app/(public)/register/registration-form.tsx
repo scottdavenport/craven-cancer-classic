@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface RegistrationFormProps {
   morningCap: number;
@@ -225,12 +226,10 @@ export function RegistrationForm({
             <CardContent className="space-y-4">
               {/* TBD checkbox */}
               <div className="flex items-center gap-3">
-                <input
+                <Checkbox
                   id={`teammate_${i}_tbd`}
-                  type="checkbox"
                   checked={teammate.tbd}
-                  onChange={(e) => updateTeammate(i, "tbd", e.target.checked)}
-                  className="h-4 w-4 cursor-pointer rounded border-border accent-primary"
+                  onCheckedChange={(checked) => updateTeammate(i, "tbd", checked)}
                 />
                 <Label
                   htmlFor={`teammate_${i}_tbd`}

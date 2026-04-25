@@ -59,9 +59,9 @@ const SLUG_TEST_ITEMS: OpenSponsorshipsItem[] = [
 describe("OpenSponsorshipsBlock — chip count", () => {
   it("renders one chip per item in props", () => {
     const { container } = render(<Block items={SAMPLE_ITEMS} />);
-    // Each chip is a link to /sponsorships that contains the item name
+    // Sprint 23: chips now link to /sponsorships#<slug> — match by item name
     const chips = Array.from(
-      container.querySelectorAll("a[href='/sponsorships']")
+      container.querySelectorAll("a[href^='/sponsorships#']")
     ).filter((el) =>
       SAMPLE_ITEMS.some((item) => el.textContent?.includes(item.name))
     );

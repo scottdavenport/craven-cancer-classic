@@ -1,12 +1,69 @@
 "use client";
 
+/**
+ * SponsorshipGrid — Sprint 23 rewrite
+ *
+ * Client component: holds selectedId state for inline PurchaseForm.
+ * Card rendering delegated to SponsorshipCard (extracted component).
+ * No font-display. No bg-purple. Brand-teal CTAs.
+ */
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent } from "@/components/ui/card";
 import type { SponsorshipItem } from "@/types/database";
 import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
+import { SponsorshipCard } from "@/components/public/sponsorship-card";
+
+// One-line summaries per card slug. For items with populated benefits
+// in DB, derived from the first 2-3 benefits. For the 4 with empty
+// benefits (Golf Carts, Thursday Night, Morning Biscuit Sponsor,
+// Shot of the Day), Aria-flagged placeholder copy — pending Aria/Scott
+// sign-off before merge.
+const CARD_SUMMARIES: Record<string, string> = {
+  champion:
+    "Premier signage at the event, recognition on the site, and 4 complimentary teams.",
+  eagle:
+    "Prominent signage at the event, recognition on the site, and 2 complimentary teams.",
+  "golf-gift":
+    "Your brand on a gift given to every golfer at the tournament.",
+  "celebration-lunch":
+    "Exclusive naming rights for the post-round celebration lunch.",
+  "hole-sponsor":
+    "Your signage at a tournament hole, recognized on the site.",
+  "wall-sponsor":
+    "Permanent recognition on the Craven Cancer Classic Wall of Honor.",
+  "golf-carts":
+    "Your logo on every golf cart, plus recognition on the site.",
+  "thursday-night":
+    "Signage at the Thursday-night kickoff event, plus recognition on the site.",
+  "morning-biscuit-sponsor":
+    "Signage at the pre-tournament breakfast, plus recognition on the site.",
+  "shot-of-the-day":
+    "Featured at the shot-of-the-day moment, plus recognition on the site.",
+  "bloody-mary-bar":
+    "Exclusive sponsor of the Bloody Mary Bar — signature brunch moment of the tournament.",
+  "putting-contest":
+    "Your brand at center stage during the putting contest.",
+};
+
+function getSummary(slug: string): string {
+  return (
+    CARD_SUMMARIES[slug] ?? "Recognition at the tournament and on the site."
+  );
+}
+
+// Slug logic mirrored from sponsorship-utils.ts (inlined to avoid
+// potential client-bundle issues with dynamic slugify import)
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^a-z0-9-]/g, "")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 interface SponsorshipGridProps {
   items: SponsorshipItem[];
@@ -18,75 +75,22 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
   return (
     <div className="space-y-12">
       {/* Package grid */}
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
-          const soldOut =
-            item.max_quantity !== null && item.sold_count >= item.max_quantity;
-          const availabilityPct =
-            item.max_quantity && item.max_quantity > 0
-              ? Math.min((item.sold_count / item.max_quantity) * 100, 100)
-              : 0;
-
+          const slug = slugify(item.name);
+          const summary = getSummary(slug);
           return (
-            <Card
+            <SponsorshipCard
               key={item.id}
-              className={`relative shadow-sm border border-border/60 transition-[box-shadow,transform] duration-200 ${
-                soldOut
-                  ? "opacity-60"
-                  : ""
-              } ${selectedId === item.id ? "ring-2 ring-primary" : ""}`}
-            >
-              {soldOut && (
-                <div className="absolute right-3 top-3 bg-neutral-100 text-neutral-600 text-[11px] font-semibold uppercase tracking-[0.1em] px-2 py-0.5 rounded-sm">
-                  Sold Out
-                </div>
-              )}
-              <CardContent className="pt-6">
-                <p className="font-display text-3xl font-bold text-foreground">
-                  ${(item.price_cents / 100).toLocaleString()}
-                </p>
-                <h3 className="mt-2 font-display text-[1.25rem] font-[500] text-foreground">
-                  {item.name}
-                </h3>
-                {item.description && (
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {item.description}
-                  </p>
-                )}
-                {item.max_quantity && item.max_quantity > 0 && (
-                  <div className="mt-3">
-                    <p className="font-sans text-[0.75rem] text-muted-foreground/70">
-                      {item.max_quantity - item.sold_count} of{" "}
-                      {item.max_quantity} available
-                    </p>
-                    <div className="mt-1 w-full h-0.5 bg-border/40 rounded-full">
-                      <div
-                        className="h-full bg-primary rounded-full"
-                        style={{ width: `${availabilityPct}%` }}
-                      />
-                    </div>
-                  </div>
-                )}
-                <Button
-                  className={`mt-4 w-full bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover ${soldOut ? "pointer-events-none" : ""}`}
-                  disabled={soldOut}
-                  onClick={() =>
-                    setSelectedId(selectedId === item.id ? null : item.id)
-                  }
-                >
-                  {soldOut
-                    ? "Sold Out"
-                    : selectedId === item.id
-                      ? "Selected"
-                      : "Select"}
-                </Button>
-              </CardContent>
-            </Card>
+              item={item}
+              summary={summary}
+              onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+            />
           );
         })}
       </div>
 
-      {/* Purchase form */}
+      {/* Inline PurchaseForm */}
       {selectedId && (
         <PurchaseForm
           item={items.find((i) => i.id === selectedId)!}
@@ -153,7 +157,7 @@ function PurchaseForm({
         window.location.href = data.url;
       }
     } catch (err) {
-      console.error('[SponsorshipGrid] checkout fetch failed:', err);
+      console.error("[SponsorshipGrid] checkout fetch failed:", err);
       setError("Failed to process. Please try again.");
     } finally {
       setLoading(false);
@@ -161,10 +165,13 @@ function PurchaseForm({
   }
 
   return (
-    <div className="rounded-lg border border-border/60 bg-neutral-50 shadow-sm p-6">
+    <div className="rounded-lg border border-border/60 bg-white shadow-sm p-6">
       <div className="flex items-start justify-between">
         <div>
-          <h3 className="font-display text-xl font-semibold">
+          <h3
+            className="font-sans text-xl font-semibold"
+            style={{ fontFamily: "var(--font-manrope)" }}
+          >
             {item.name}
           </h3>
           <p className="text-2xl font-bold text-primary">
@@ -209,7 +216,7 @@ function PurchaseForm({
         <Button
           type="submit"
           disabled={loading}
-          className="w-full bg-purple text-sm uppercase tracking-wider text-purple-foreground hover:bg-purple-hover sm:w-auto"
+          className="w-full bg-brand-darker text-sm uppercase tracking-wider text-white hover:bg-brand sm:w-auto"
         >
           {loading ? "Processing..." : "Proceed to Payment"}
         </Button>

@@ -492,4 +492,17 @@ describe("SponsorshipsPage — Sprint 23 redesign (RED)", () => {
 
     expect(container.innerHTML).not.toContain("font-display");
   });
+
+  // ── Watchdog case 25: Aria-locked masthead body copy (program language) ────
+
+  it("25 — masthead body copy contains Aria-approved program-language string verbatim", async () => {
+    setClient(buildSupabaseMock({ items: ALL_10_ITEMS }));
+    const Page = await loadPage();
+    render(await Page());
+
+    const pageText = document.body.textContent ?? "";
+    expect(pageText).toContain(
+      "transportation, lodging, and medical equipment for cancer patients in active treatment"
+    );
+  });
 });

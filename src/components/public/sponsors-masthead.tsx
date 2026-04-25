@@ -80,9 +80,9 @@ export function SponsorsMasthead({
             color: "rgba(255,255,255,0.82)",
           }}
         >
-          The organizations and individuals who make the Craven Cancer Classic
-          possible. Their support funds transportation, lodging, and treatment
-          for patients in our community.
+          The organizations and individuals behind the Craven Cancer Classic —
+          funding transportation, lodging, and medical equipment for cancer
+          patients in active treatment.
         </p>
 
         {/* Stat row */}

@@ -231,10 +231,9 @@ export default async function SponsorsPage() {
               margin: "0 auto 2rem",
             }}
           >
-            Your gift funds transportation to treatment, lodging during extended
-            care, and support for patients in our community facing the hardest
-            days of their lives. Give as an individual — every dollar reaches
-            someone who needs it.
+            Your gift funds transportation, lodging, and medical equipment for
+            cancer patients in active treatment. Every dollar goes directly to
+            people who need it — no overhead, no administration fees.
           </p>
           <LinkButton
             data-testid="sponsors-cta-button"

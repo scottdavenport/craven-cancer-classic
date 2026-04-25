@@ -79,7 +79,7 @@ export function OpenSponsorshipsBlock({ items }: OpenSponsorshipsBlockProps) {
             marginBottom: "2rem",
           }}
         >
-          {`${items.length} ${items.length === 1 ? "category is" : "categories are"} still open, with multiple slots available in most. From premier packages to high-visibility add-ons, every level puts your organization in front of every player and family on the course.`}
+          {`${items.length} ${items.length === 1 ? "category is" : "categories are"} still open. Multiple slots available in most — every level reaches every player and family on the course.`}
         </p>
 
         {/* Chip grid */}

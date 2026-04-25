@@ -15,6 +15,7 @@ import { Label } from "@/components/ui/label";
 import type { SponsorshipItem } from "@/types/database";
 import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
 import { SponsorshipCard } from "@/components/public/sponsorship-card";
+import { slugifyItemName } from "@/lib/sponsorship-utils";
 
 // One-line summaries per card slug. For items with populated benefits
 // in DB, derived from the first 2-3 benefits. For the 4 with empty
@@ -27,13 +28,13 @@ const CARD_SUMMARIES: Record<string, string> = {
   eagle:
     "Prominent signage at the event, recognition on the site, and 2 complimentary teams.",
   "golf-gift":
-    "Your brand on a gift given to every golfer at the tournament.",
+    "Your logo on every player's golf gift, plus recognition on the site.",
   "celebration-lunch":
-    "Exclusive naming rights for the post-round celebration lunch.",
+    "Signage at the post-tournament awards lunch, plus recognition on the site.",
   "hole-sponsor":
     "Your signage at a tournament hole, recognized on the site.",
   "wall-sponsor":
-    "Permanent recognition on the Craven Cancer Classic Wall of Honor.",
+    "Your name on the on-course sponsor wall, plus recognition on the site.",
   "golf-carts":
     "Your logo on every golf cart, plus recognition on the site.",
   "thursday-night":
@@ -43,7 +44,7 @@ const CARD_SUMMARIES: Record<string, string> = {
   "shot-of-the-day":
     "Featured at the shot-of-the-day moment, plus recognition on the site.",
   "bloody-mary-bar":
-    "Exclusive sponsor of the Bloody Mary Bar — signature brunch moment of the tournament.",
+    "Signage at the morning Bloody Mary bar, plus recognition on the site.",
   "putting-contest":
     "Your brand at center stage during the putting contest.",
 };
@@ -52,17 +53,6 @@ function getSummary(slug: string): string {
   return (
     CARD_SUMMARIES[slug] ?? "Recognition at the tournament and on the site."
   );
-}
-
-// Slug logic mirrored from sponsorship-utils.ts (inlined to avoid
-// potential client-bundle issues with dynamic slugify import)
-function slugify(name: string): string {
-  return name
-    .toLowerCase()
-    .replace(/\s+/g, "-")
-    .replace(/[^a-z0-9-]/g, "")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "");
 }
 
 interface SponsorshipGridProps {
@@ -77,7 +67,7 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
       {/* Package grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
-          const slug = slugify(item.name);
+          const slug = slugifyItemName(item.name);
           const summary = getSummary(slug);
           return (
             <SponsorshipCard

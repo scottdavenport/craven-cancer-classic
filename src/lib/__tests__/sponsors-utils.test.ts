@@ -10,7 +10,6 @@
  */
 
 import { describe, it, expect } from "vitest";
-// @ts-expect-error — module does not exist yet; Bolt creates it in PR B
 import { getTierSize, formatLifetimeRaised } from "@/lib/sponsors-utils";
 
 // ---------------------------------------------------------------------------

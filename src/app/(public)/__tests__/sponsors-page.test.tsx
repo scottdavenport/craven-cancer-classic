@@ -1,17 +1,14 @@
 /**
- * RED integration tests for the public SponsorsPage — #220 Public Sponsors Redesign
+ * Integration tests for the public SponsorsPage — #220 Public Sponsors Redesign
  *
- * These tests describe the TARGET layout state after Bolt's redesign.
- * They will FAIL against current main because:
- *   - The page has no data-testid attributes
- *   - The header uses bg-[#1A2E3A] (dark), not bg-cream grain-overlay
- *   - The CTA uses bg-neutral-50, not bg-[#1A2E3A] grain-overlay
- *   - Tier sections have no data-testid="tier-section-{id}"
- *   - SponsorCard component does not exist (tier-routing not yet implemented)
- *   - Grayscale filter is present on logo images
+ * Updated for Sprint 22 Marquee redesign (#250):
+ *   - Masthead replaces the old cream header (sponsors-masthead testid, not sponsors-header)
+ *   - CTA background set via inline style (--brand-darker CSS var), not bg-[#1A2E3A] class
+ *   - grain-overlay dropped from CTA in new design
+ *   - Tier strips dropped from SponsorCard (Marquee direction)
+ *   - Mock updated for 3 queries: event_settings, sponsorship_items, sponsors
  *
- * Design spec: plans/public-sponsors-redesign.md
- * Mock pattern follows: src/app/admin/sponsors/__tests__/actions-getSponsors.test.ts
+ * Design spec: plans/sprint-22-sponsors-redesign.md
  */
 
 import React from "react";
@@ -54,10 +51,10 @@ vi.mock("next/image", () => ({
 // ---------------------------------------------------------------------------
 
 const STUB_TIERS = [
-  { id: "tier-champion", name: "Champion Sponsor", sort_order: 1, active: true },
-  { id: "tier-eagle", name: "Eagle Sponsor", sort_order: 2, active: true },
-  { id: "tier-morning-biscuit", name: "Morning Biscuit", sort_order: 3, active: true },
-  { id: "tier-shot-of-the-day", name: "Shot of the Day", sort_order: 4, active: true },
+  { id: "tier-champion", name: "Champion Sponsor", sort_order: 1, active: true, deleted_at: null, price_cents: 500000 },
+  { id: "tier-eagle", name: "Eagle Sponsor", sort_order: 2, active: true, deleted_at: null, price_cents: 250000 },
+  { id: "tier-morning-biscuit", name: "Morning Biscuit", sort_order: 3, active: true, deleted_at: null, price_cents: 100000 },
+  { id: "tier-shot-of-the-day", name: "Shot of the Day", sort_order: 4, active: true, deleted_at: null, price_cents: 50000 },
 ];
 
 const STUB_SPONSORS = [
@@ -140,26 +137,45 @@ const STUB_SPONSORS = [
 import * as serverModule from "@/lib/supabase/server";
 
 function buildSupabaseMock() {
-  // The page calls createClient → supabase.from("sponsorship_items").select(...)
-  // and supabase.from("sponsors").select(...). Return stub data for each.
+  // Sprint 22: page now makes 3 queries:
+  //   1. event_settings → .select(...).single()
+  //   2. sponsorship_items → .select(...).eq('active', true).order(...)
+  //   3. sponsors → .select(...).eq(...).eq(...).is(...).order(...)
+  const makeEventSettingsChain = () => ({
+    select: vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue({ data: { lifetime_raised_cents: null }, error: null }),
+    }),
+  });
+
   const makeTierChain = () => ({
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue({ data: STUB_TIERS, error: null }),
+    select: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({ data: STUB_TIERS, error: null }),
+      }),
+    }),
   });
 
   const makeSponsorChain = () => ({
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    is: vi.fn().mockReturnThis(),
-    order: vi.fn().mockResolvedValue({ data: STUB_SPONSORS, error: null }),
+    select: vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          is: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: STUB_SPONSORS, error: null }),
+          }),
+        }),
+      }),
+    }),
   });
 
-  let callCount = 0;
-  const fromFn = vi.fn((_table: string) => {
-    // First call is sponsorship_items, second is sponsors
-    callCount++;
-    return callCount === 1 ? makeTierChain() : makeSponsorChain();
+  const fromFn = vi.fn((table: string) => {
+    if (table === "event_settings") return makeEventSettingsChain();
+    if (table === "sponsorship_items") return makeTierChain();
+    if (table === "sponsors") return makeSponsorChain();
+    return {
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      }),
+    };
   });
 
   vi.mocked(serverModule.createClient).mockResolvedValue({
@@ -180,10 +196,10 @@ async function renderPage() {
 }
 
 // ---------------------------------------------------------------------------
-// Tests
+// Tests — updated for Sprint 22 Marquee design
 // ---------------------------------------------------------------------------
 
-describe("SponsorsPage — redesign (#220)", () => {
+describe("SponsorsPage — redesign (#220, updated Sprint 22)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset module registry to force fresh dynamic import
@@ -196,9 +212,10 @@ describe("SponsorsPage — redesign (#220)", () => {
   // -------------------------------------------------------------------------
 
   describe("structural testids", () => {
-    it("renders data-testid=sponsors-header on the page header section", async () => {
+    // Sprint 22: masthead replaces the old cream header
+    it("renders data-testid=sponsors-masthead on the masthead section", async () => {
       await renderPage();
-      expect(screen.getByTestId("sponsors-header")).toBeInTheDocument();
+      expect(screen.getByTestId("sponsors-masthead")).toBeInTheDocument();
     });
 
     it("renders data-testid=sponsors-cta on the CTA section", async () => {
@@ -222,46 +239,11 @@ describe("SponsorsPage — redesign (#220)", () => {
   });
 
   // -------------------------------------------------------------------------
-  // Header visual treatment
-  // -------------------------------------------------------------------------
-
-  describe("header visual treatment", () => {
-    it("sponsors-header has bg-cream class", async () => {
-      await renderPage();
-      const header = screen.getByTestId("sponsors-header");
-      expect(header.className).toContain("bg-cream");
-    });
-
-    it("sponsors-header has grain-overlay class", async () => {
-      await renderPage();
-      const header = screen.getByTestId("sponsors-header");
-      expect(header.className).toContain("grain-overlay");
-    });
-
-    it("sponsors-header does NOT have bg-[#1A2E3A] (dark background removed)", async () => {
-      await renderPage();
-      const header = screen.getByTestId("sponsors-header");
-      expect(header.className).not.toContain("bg-[#1A2E3A]");
-    });
-  });
-
-  // -------------------------------------------------------------------------
-  // CTA visual treatment
+  // CTA visual treatment (Sprint 22 Marquee)
   // -------------------------------------------------------------------------
 
   describe("CTA visual treatment", () => {
-    it("sponsors-cta has bg-[#1A2E3A] class", async () => {
-      await renderPage();
-      const cta = screen.getByTestId("sponsors-cta");
-      expect(cta.className).toContain("bg-[#1A2E3A]");
-    });
-
-    it("sponsors-cta has grain-overlay class", async () => {
-      await renderPage();
-      const cta = screen.getByTestId("sponsors-cta");
-      expect(cta.className).toContain("grain-overlay");
-    });
-
+    // Sprint 22: background is set via inline style (--brand-darker CSS var), not class
     it("sponsors-cta does NOT use bg-neutral-50 (old design)", async () => {
       await renderPage();
       const cta = screen.getByTestId("sponsors-cta");
@@ -282,41 +264,32 @@ describe("SponsorsPage — redesign (#220)", () => {
     it("Champion section (sort_order=1) renders SponsorCards with champion testids", async () => {
       await renderPage();
       const champSection = screen.getByTestId("tier-section-tier-champion");
-      // Unified testid scheme (#227): sponsor-card-{id} for both logo and patron variants.
-      // Fall back to old split testids for green/backward compat until Bolt ships the rewrite.
-      const champCard =
-        within(champSection).queryByTestId("sponsor-card-sp-champ-1") ??
-        within(champSection).queryByTestId("sponsor-card-logo-sp-champ-1") ??
-        within(champSection).queryByTestId("sponsor-card-text-sp-champ-1");
+      // Unified testid scheme: sponsor-card-{id}
+      const champCard = within(champSection).queryByTestId("sponsor-card-sp-champ-1");
       expect(champCard).toBeInTheDocument();
     });
 
-    it("Champion section cards have champion tier visual treatment (tier-strip)", async () => {
+    // Sprint 22 Marquee: tier strips are dropped — champion cards use white bg + accent line
+    it("Champion section does NOT have a tier-strip (Marquee design dropped tier strips)", async () => {
       await renderPage();
       const champSection = screen.getByTestId("tier-section-tier-champion");
-      // Tournament Program direction: champion cards have a tier-strip, not border-l-4.
-      // Champion section contains multiple cards → each has its own tier-strip, so queryAllByTestId.
       const strips = within(champSection).queryAllByTestId("tier-strip");
-      expect(strips.length).toBeGreaterThan(0);
+      expect(strips.length).toBe(0);
     });
 
     it("Shot of the Day section (sort_order=4) renders compact SponsorCards", async () => {
       await renderPage();
       const sotdSection = screen.getByTestId("tier-section-tier-shot-of-the-day");
-      // Compact cards should have max-h-12 or h-12 (48px logo height) somewhere in section
-      const hasMaxH12 = Array.from(sotdSection.querySelectorAll("*")).some(
-        (el) => el.className && (el.className.includes("max-h-12") || el.className.includes("h-12"))
-      );
-      const hasInlineH48 = Array.from(sotdSection.querySelectorAll("*")).some(
-        (el) => (el as HTMLElement).style?.height === "48px"
-      );
-      expect(hasMaxH12 || hasInlineH48).toBe(true);
+      // Sprint 22: compact grid uses partner-grid--compact or partner-grid--standard class
+      // (SOTD has 2 sponsors, sort_order=4 → standard; not compact since count <= 6)
+      // Just verify tier section exists and contains sponsor cards
+      const cards = within(sotdSection).queryAllByTestId(/^sponsor-card-sp-sotd/);
+      expect(cards.length).toBeGreaterThan(0);
     });
 
-    it("Shot of the Day section does NOT have a tier-strip (compact tier, no strip)", async () => {
+    it("Shot of the Day section does NOT have a tier-strip (Marquee design)", async () => {
       await renderPage();
       const sotdSection = screen.getByTestId("tier-section-tier-shot-of-the-day");
-      // Tournament Program: only champion/eagle get a tier-strip.
       const tierStrip = within(sotdSection).queryByTestId("tier-strip");
       expect(tierStrip).not.toBeInTheDocument();
     });
@@ -324,20 +297,14 @@ describe("SponsorsPage — redesign (#220)", () => {
     it("Eagle section (sort_order=2) renders SponsorCards for eagle-tier sponsors", async () => {
       await renderPage();
       const eagleSection = screen.getByTestId("tier-section-tier-eagle");
-      const eagleCard =
-        within(eagleSection).queryByTestId("sponsor-card-sp-eagle-1") ??
-        within(eagleSection).queryByTestId("sponsor-card-logo-sp-eagle-1") ??
-        within(eagleSection).queryByTestId("sponsor-card-text-sp-eagle-1");
+      const eagleCard = within(eagleSection).queryByTestId("sponsor-card-sp-eagle-1");
       expect(eagleCard).toBeInTheDocument();
     });
 
     it("Morning Biscuit section (sort_order=3) renders SponsorCards for its sponsors", async () => {
       await renderPage();
       const mbSection = screen.getByTestId("tier-section-tier-morning-biscuit");
-      const mbCard =
-        within(mbSection).queryByTestId("sponsor-card-sp-mb-1") ??
-        within(mbSection).queryByTestId("sponsor-card-logo-sp-mb-1") ??
-        within(mbSection).queryByTestId("sponsor-card-text-sp-mb-1");
+      const mbCard = within(mbSection).queryByTestId("sponsor-card-sp-mb-1");
       expect(mbCard).toBeInTheDocument();
     });
   });
@@ -361,31 +328,21 @@ describe("SponsorsPage — redesign (#220)", () => {
     it("Champion sponsor sp-champ-1 is inside the champion tier section", async () => {
       await renderPage();
       const champSection = screen.getByTestId("tier-section-tier-champion");
-      // Unified testid (#227) takes priority; fall back to old split testids for compat.
-      const card =
-        within(champSection).queryByTestId("sponsor-card-sp-champ-1") ??
-        within(champSection).queryByTestId("sponsor-card-logo-sp-champ-1") ??
-        within(champSection).queryByTestId("sponsor-card-text-sp-champ-1");
+      const card = within(champSection).queryByTestId("sponsor-card-sp-champ-1");
       expect(card).toBeInTheDocument();
     });
 
     it("Champion sponsor sp-champ-1 is NOT inside the eagle tier section", async () => {
       await renderPage();
       const eagleSection = screen.getByTestId("tier-section-tier-eagle");
-      const card =
-        within(eagleSection).queryByTestId("sponsor-card-sp-champ-1") ??
-        within(eagleSection).queryByTestId("sponsor-card-logo-sp-champ-1") ??
-        within(eagleSection).queryByTestId("sponsor-card-text-sp-champ-1");
+      const card = within(eagleSection).queryByTestId("sponsor-card-sp-champ-1");
       expect(card).not.toBeInTheDocument();
     });
 
     it("Shot of the Day sponsor sp-sotd-1 is inside the SOTD tier section", async () => {
       await renderPage();
       const sotdSection = screen.getByTestId("tier-section-tier-shot-of-the-day");
-      const card =
-        within(sotdSection).queryByTestId("sponsor-card-sp-sotd-1") ??
-        within(sotdSection).queryByTestId("sponsor-card-logo-sp-sotd-1") ??
-        within(sotdSection).queryByTestId("sponsor-card-text-sp-sotd-1");
+      const card = within(sotdSection).queryByTestId("sponsor-card-sp-sotd-1");
       expect(card).toBeInTheDocument();
     });
   });

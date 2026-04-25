@@ -506,4 +506,33 @@ describe("SponsorsPage — redesign (Sprint 22 RED, #250)", () => {
       container.querySelector(".partner-grid--compact")
     ).toBeInTheDocument();
   });
+
+  // ── Inline AC #14: count badge format "{N} · {year} Season" ──────────────
+
+  it("AC #14 — champion tier shows count badge in '{N} · {year} Season' format", async () => {
+    const championTier = makeTier({ id: "tier-champion", name: "Champion", sort_order: 1 });
+    const champSponsors = Array.from({ length: 4 }, (_, i) =>
+      makeSponsor({
+        id: `s-ac14-${i + 1}`,
+        name: `Champion Sponsor ${i + 1}`,
+        tier_id: "tier-champion",
+      })
+    );
+
+    setClient(
+      buildSupabaseMock({
+        tiers: [championTier],
+        sponsors: champSponsors,
+      })
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    // Count badge must read "{count} · {year} Season"
+    const currentYear = new Date().getFullYear();
+    expect(
+      screen.getByText(new RegExp(`4 · ${currentYear} Season`))
+    ).toBeInTheDocument();
+  });
 });

@@ -44,6 +44,7 @@
   --color-brand: var(--brand);
   --color-brand-light: var(--brand-light);
   --color-brand-dark: var(--brand-dark);
+  --color-brand-darker: var(--brand-darker);
   --color-brand-muted: var(--brand-muted);
   --color-accent-gold: var(--accent-gold);
   --color-purple: var(--purple);
@@ -83,6 +84,7 @@
   --brand: #5797a6;
   --brand-light: #8BB5C9;
   --brand-dark: #3A6B83;
+  --brand-darker: #244A5B;
   --brand-muted: #E8F0F4;
 
   /* Surfaces */

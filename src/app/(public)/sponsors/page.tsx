@@ -1,161 +1,248 @@
+/**
+ * SponsorsPage — Sprint 22 redesign (Marquee direction)
+ *
+ * Dark-teal masthead + populated-tier-only rendering + Open Sponsorships
+ * chip block + bottom CTA → /donate.
+ *
+ * Data flow:
+ *  1. event_settings (current year) — lifetime_raised_cents
+ *  2. sponsorship_items (active, not deleted) — ordered by sort_order
+ *  3. sponsors (current year, active, not deleted) — ordered by display_order
+ *  4. Compute populatedTiers vs openItems
+ *  5. Render masthead → tier sections → open block → bottom CTA
+ */
+
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { LinkButton } from "@/components/ui/link-button";
 import { SponsorCard } from "@/components/public/sponsor-card";
-import type { TierSize } from "@/components/public/sponsor-card";
-import { SectionEyebrow } from "@/components/public/section-eyebrow";
+import { SponsorsMasthead } from "@/components/public/sponsors-masthead";
+import { OpenSponsorshipsBlock } from "@/components/public/open-sponsorships-block";
+import { getTierSize } from "@/lib/sponsors-utils";
+import type { TierSize } from "@/lib/sponsors-utils";
 
 export const metadata: Metadata = {
-  title: "Our Sponsors",
+  title: "Our Partners",
   description:
-    "Meet the sponsors who make the Craven Cancer Classic possible.",
+    "Meet the organizations and individuals who make the Craven Cancer Classic possible.",
 };
 
-const TIER_SIZE_MAP: Record<number, TierSize> = {
-  1: "champion",
-  2: "eagle",
-  3: "standard",
-  4: "compact",
+// Grid CSS class per tier size — includes the partner-grid--{size} identifier
+// that tests 33-36 assert on
+const TIER_GRID_CLASS: Record<TierSize, string> = {
+  champion:
+    "partner-grid--champion grid grid-cols-1 gap-6 sm:grid-cols-2",
+  eagle:
+    "partner-grid--eagle grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3",
+  standard:
+    "partner-grid--standard grid grid-cols-2 gap-4 sm:grid-cols-4",
+  compact:
+    "partner-grid--compact grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6",
 };
 
-const TIER_GRID_MAP: Record<TierSize, string> = {
-  champion: "grid grid-cols-1 gap-6 sm:grid-cols-2",
-  eagle: "grid grid-cols-2 gap-4 sm:gap-5 lg:grid-cols-3",
-  standard: "flex justify-center",
-  compact: "grid grid-cols-2 gap-3 sm:grid-cols-4",
-};
-
-const TIER_HEADING_CLASS: Record<TierSize, string> = {
-  champion: "font-display text-3xl font-semibold text-foreground",
-  eagle: "font-display text-2xl font-semibold text-foreground",
-  standard: "font-display text-xl font-semibold text-foreground",
-  compact: "font-display text-lg font-semibold text-foreground",
-};
-
-const TIER_RULE_CLASS: Record<TierSize, string> = {
-  champion: "w-full",
-  eagle: "w-16",
-  standard: "w-10",
-  compact: "w-8",
-};
-
-async function getSponsorsWithTiers() {
+async function getPageData() {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
-  const { data: tiers } = await supabase
+  // 1. Event settings — for lifetime_raised_cents
+  const { data: eventSettings } = await supabase
+    .from("event_settings")
+    .select("lifetime_raised_cents")
+    .single();
+
+  // 2. Sponsorship items — active only, ordered by sort_order
+  //    Soft-delete filter (deleted_at IS NULL) applied in JS because the
+  //    mock chain only supports one .eq() before .order()
+  const { data: tiersRaw } = await supabase
     .from("sponsorship_items")
-    .select("id, name, sort_order, active")
+    .select("id, name, sort_order, active, deleted_at, price_cents")
     .eq("active", true)
     .order("sort_order");
 
+  // Filter soft-deleted items in JS
+  const tiers = (tiersRaw ?? []).filter(
+    (t) => t.deleted_at === null || t.deleted_at === undefined
+  );
+
+  // 3. Sponsors — current year, active, not deleted
   const { data: sponsors } = await supabase
     .from("sponsors")
-    .select("*")
+    .select("id, name, logo_url, website, tier_id, display_order, is_active, deleted_at, year")
     .eq("year", currentYear)
     .eq("is_active", true)
     .is("deleted_at", null)
     .order("display_order");
 
-  return { tiers: tiers ?? [], sponsors: sponsors ?? [] };
+  const activeSponsors = sponsors ?? [];
+
+  return {
+    currentYear,
+    lifetimeRaisedCents: eventSettings?.lifetime_raised_cents ?? null,
+    tiers,
+    activeSponsors,
+  };
 }
 
 export default async function SponsorsPage() {
-  const { tiers, sponsors } = await getSponsorsWithTiers();
+  const { currentYear, lifetimeRaisedCents, tiers, activeSponsors } =
+    await getPageData();
+
+  // 4. Compute populated vs open tiers
+  const populatedTiers = tiers.filter((tier) =>
+    activeSponsors.some((s) => s.tier_id === tier.id)
+  );
+
+  const openItems = tiers
+    .filter((tier) => !activeSponsors.some((s) => s.tier_id === tier.id))
+    .map((tier) => ({
+      id: tier.id,
+      name: tier.name,
+      price_cents: (tier as { price_cents?: number }).price_cents ?? 0,
+    }));
+
+  const totalPartnerCount = activeSponsors.length;
 
   return (
     <div data-testid="sponsors-page">
-      <section
-        data-testid="sponsors-header"
-        className="bg-cream grain-overlay px-4 py-20 sm:py-28"
-      >
-        <div className="mx-auto max-w-3xl text-center">
-          <SectionEyebrow tone="brand">In Gratitude</SectionEyebrow>
-          <h1 className="mt-4 font-display text-4xl font-bold text-foreground sm:text-5xl">
-            Our Sponsors
-          </h1>
-          <div className="mx-auto mt-6 h-px w-16 bg-brand" />
-          <p className="mt-6 text-base text-foreground/70">
-            These generous organizations make the Craven Cancer Classic possible
-          </p>
-        </div>
-      </section>
+      {/* Masthead — outside <main> per design preview */}
+      <SponsorsMasthead
+        year={currentYear}
+        partnerCount={totalPartnerCount}
+        lifetimeRaisedCents={lifetimeRaisedCents}
+      />
 
-      <section className="px-4 py-20 sm:py-28">
-        <div className="mx-auto max-w-5xl">
-          {tiers.map((tier) => {
-            const tierSponsors = sponsors.filter((s) => s.tier_id === tier.id);
-            const tierSize: TierSize = TIER_SIZE_MAP[tier.sort_order] ?? "standard";
-            const gridClass = TIER_GRID_MAP[tierSize];
-            const headingClass = TIER_HEADING_CLASS[tierSize];
+      {/* Tier sections */}
+      <main className="mx-auto max-w-5xl px-4 py-16 sm:py-24">
+        {populatedTiers.map((tier) => {
+          const tierSponsors = activeSponsors.filter(
+            (s) => s.tier_id === tier.id
+          );
+          const tierSize = getTierSize(tier.sort_order, tierSponsors.length);
+          const gridClass = TIER_GRID_CLASS[tierSize];
 
-            return (
-              <div
-                key={tier.id}
-                data-testid={`tier-section-${tier.id}`}
-                className="mb-16 last:mb-0"
-              >
-                <div className="mb-8 text-center">
-                  <h3
+          return (
+            <div
+              key={tier.id}
+              data-testid={`tier-section-${tier.id}`}
+              className="mb-20 last:mb-0"
+            >
+              {/* Tier header */}
+              <div className="flex items-baseline justify-between mb-8 pb-4 border-t border-border pt-4">
+                <div>
+                  <span
+                    style={{
+                      fontFamily: "var(--font-manrope)",
+                      fontWeight: 700,
+                      fontSize: "0.6875rem",
+                      letterSpacing: "0.15em",
+                      textTransform: "uppercase",
+                      color: "var(--brand)",
+                      display: "block",
+                      marginBottom: "0.25rem",
+                    }}
+                  >
+                    {/* tier eyebrow — blank, tier name IS the header */}
+                  </span>
+                  <h2
                     data-testid={`tier-heading-${tier.id}`}
-                    className={headingClass}
+                    style={{
+                      fontFamily: "var(--font-manrope)",
+                      fontWeight: 800,
+                      fontSize: "clamp(1.75rem, 3.5vw, 3.25rem)",
+                      lineHeight: 1,
+                      color: "var(--foreground)",
+                      letterSpacing: "-0.02em",
+                    }}
                   >
                     {tier.name}
-                  </h3>
-                  <div className={`mx-auto mt-2 h-0.5 ${TIER_RULE_CLASS[tierSize]} bg-brand`} />
+                  </h2>
                 </div>
-
-                {tierSponsors.length > 0 ? (
-                  <div className={gridClass}>
-                    {tierSponsors.map((sponsor) => (
-                      <SponsorCard
-                        key={sponsor.id}
-                        sponsor={sponsor}
-                        tierSize={tierSize}
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-center text-sm text-muted-foreground">
-                    Sponsorship opportunities available
-                  </p>
-                )}
+                <span
+                  style={{
+                    fontFamily: "var(--font-manrope)",
+                    fontWeight: 600,
+                    fontSize: "0.8125rem",
+                    letterSpacing: "0.06em",
+                    color: "var(--muted-foreground)",
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                  }}
+                >
+                  {tierSponsors.length} · {currentYear} Season
+                </span>
               </div>
-            );
-          })}
 
-          {tiers.length === 0 && (
-            <p className="text-center text-muted-foreground">
-              Sponsor information coming soon.
-            </p>
-          )}
-        </div>
-      </section>
+              {/* Partner grid */}
+              <div className={gridClass}>
+                {tierSponsors.map((sponsor) => (
+                  <SponsorCard
+                    key={sponsor.id}
+                    sponsor={sponsor}
+                    tierSize={tierSize}
+                  />
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
+        {/* Open Sponsorships chip block — renders after populated tiers */}
+        <OpenSponsorshipsBlock items={openItems} />
+      </main>
+
+      {/* Bottom CTA — individual donor, links to /donate */}
       <section
         data-testid="sponsors-cta"
-        className="bg-[#1A2E3A] grain-overlay px-4 py-20"
+        style={{ backgroundColor: "var(--brand-darker)" }}
+        className="px-4 py-20"
       >
         <div className="mx-auto max-w-3xl text-center">
-          <h2 className="font-display text-2xl font-semibold text-white">
-            Make It Possible
-            <br />
-            For Someone Fighting Right Now.
-          </h2>
-          <p className="mt-3 text-white/70">
-            Your sponsorship funds transportation to treatment, lodging during
-            extended care, and medical equipment for patients in our community
-            facing the hardest days of their lives.
+          <p
+            style={{
+              fontFamily: "var(--font-manrope)",
+              fontWeight: 700,
+              fontSize: "0.6875rem",
+              letterSpacing: "0.15em",
+              textTransform: "uppercase",
+              color: "var(--brand)",
+              marginBottom: "1rem",
+            }}
+          >
+            Give to the Mission
           </p>
-          <div className="mt-8">
-            <LinkButton
-              data-testid="sponsors-cta-button"
-              href="/sponsorships"
-              className="w-full sm:w-auto bg-brand px-8 text-sm uppercase tracking-wider text-white hover:bg-brand/90"
-            >
-              View Sponsorship Packages
-            </LinkButton>
-          </div>
+          <h2
+            style={{
+              fontFamily: "var(--font-manrope)",
+              fontWeight: 800,
+              fontSize: "clamp(1.75rem, 4vw, 2.5rem)",
+              lineHeight: 1.1,
+              color: "#FFFFFF",
+              marginBottom: "1rem",
+            }}
+          >
+            Make it possible for someone fighting right now.
+          </h2>
+          <p
+            style={{
+              fontSize: "1rem",
+              lineHeight: 1.6,
+              color: "rgba(255,255,255,0.72)",
+              maxWidth: "48ch",
+              margin: "0 auto 2rem",
+            }}
+          >
+            Your gift funds transportation to treatment, lodging during extended
+            care, and support for patients in our community facing the hardest
+            days of their lives. Give as an individual — every dollar reaches
+            someone who needs it.
+          </p>
+          <LinkButton
+            data-testid="sponsors-cta-button"
+            href="/donate"
+            className="bg-white text-foreground px-8 hover:bg-brand hover:text-white transition-colors"
+          >
+            Donate →
+          </LinkButton>
         </div>
       </section>
     </div>

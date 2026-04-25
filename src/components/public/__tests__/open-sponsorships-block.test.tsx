@@ -27,7 +27,6 @@
 import React from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, it, expect } from "vitest";
-// @ts-expect-error — module does not exist yet; Bolt creates it in PR B
 import { OpenSponsorshipsBlock } from "@/components/public/open-sponsorships-block";
 
 type OpenSponsorshipsItem = { id: string; name: string; price_cents: number };

@@ -1,0 +1,724 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Our Sponsors — Direction 2: The Almanac</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400;1,9..144,500&family=Manrope:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --cream: #f9f4ec;
+        --cream-deep: #f3ecdf;
+        --foreground: #1a2e3a;
+        --muted-foreground: #5f7a87;
+        --brand: #5797a6;
+        --brand-dark: #3a6b83;
+        --brand-muted: #e8f0f4;
+        --border: #dae3e8;
+
+        /* NEW: Almanac palette extension */
+        --sage: #738b6e;
+        --sage-deep: #4f6549;
+        --sage-muted: #e6ece2;
+      }
+
+      html {
+        font-family: "Manrope", system-ui, sans-serif;
+        color: var(--foreground);
+        background: var(--cream);
+        -webkit-font-smoothing: antialiased;
+        font-variant-numeric: oldstyle-nums;
+      }
+
+      .font-display {
+        font-family: "Fraunces", serif;
+      }
+
+      /* Subtle paper texture — the almanac is printed on warm rag paper */
+      body {
+        background-image:
+          repeating-linear-gradient(
+            90deg,
+            transparent 0,
+            transparent 49.95%,
+            rgba(115, 139, 110, 0.025) 49.95%,
+            rgba(115, 139, 110, 0.025) 50.05%,
+            transparent 50.05%,
+            transparent 100%
+          ),
+          url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='2' seed='3'/><feColorMatrix values='0 0 0 0 0.45 0 0 0 0 0.55 0 0 0 0 0.43 0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        background-size: auto, 240px 240px;
+        background-blend-mode: multiply, multiply;
+      }
+
+      /* Hero — the almanac frontispiece */
+      .frontispiece {
+        padding: 6rem 1.5rem 4rem;
+        text-align: center;
+        position: relative;
+      }
+      @media (min-width: 768px) {
+        .frontispiece {
+          padding: 8rem 2rem 6rem;
+        }
+      }
+
+      .almanac-stamp {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.34em;
+        font-size: 0.6875rem;
+        color: var(--sage-deep);
+        font-weight: 600;
+      }
+      .almanac-stamp::before,
+      .almanac-stamp::after {
+        content: "";
+        width: 24px;
+        height: 1px;
+        background: var(--sage);
+      }
+
+      .frontispiece-title {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 144;
+        font-weight: 400;
+        font-size: clamp(3.5rem, 11vw, 7rem);
+        line-height: 0.92;
+        letter-spacing: -0.018em;
+        color: var(--foreground);
+        margin-top: 1.75rem;
+      }
+
+      .frontispiece-edition {
+        margin-top: 2rem;
+        display: inline-block;
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-style: italic;
+        font-weight: 400;
+        font-size: 1.125rem;
+        color: var(--sage-deep);
+        position: relative;
+        padding: 0 1.5rem;
+      }
+      .frontispiece-edition::before,
+      .frontispiece-edition::after {
+        content: "❦";
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--sage);
+        font-size: 0.875rem;
+      }
+      .frontispiece-edition::before {
+        left: 0;
+      }
+      .frontispiece-edition::after {
+        right: 0;
+      }
+
+      .frontispiece-body {
+        max-width: 38ch;
+        margin: 2.5rem auto 0;
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-weight: 400;
+        font-size: 1.0625rem;
+        line-height: 1.65;
+        color: var(--foreground);
+        opacity: 0.85;
+      }
+
+      /* Chapter (tier) marker */
+      .chapter {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        align-items: center;
+        gap: 1.25rem;
+        margin-bottom: 3rem;
+        padding-bottom: 0;
+      }
+      @media (max-width: 640px) {
+        .chapter {
+          grid-template-columns: auto 1fr;
+          row-gap: 0.5rem;
+        }
+        .chapter-stamp {
+          grid-column: 2;
+          justify-self: end;
+        }
+      }
+
+      .chapter-numeral {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 144;
+        font-weight: 400;
+        font-style: italic;
+        font-size: 3.5rem;
+        line-height: 1;
+        color: var(--sage);
+        padding-right: 0.25rem;
+      }
+
+      .chapter-name-block {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .chapter-name {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-weight: 500;
+        font-size: 2rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+        line-height: 1;
+        color: var(--foreground);
+      }
+      .chapter-rule {
+        height: 1px;
+        background: var(--foreground);
+        opacity: 0.85;
+        position: relative;
+      }
+      .chapter-rule::after {
+        content: "";
+        position: absolute;
+        top: 3px;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--foreground);
+        opacity: 0.25;
+      }
+
+      .chapter-stamp {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.28em;
+        font-size: 0.6875rem;
+        color: var(--muted-foreground);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+
+      /* Record cell — the universal sponsor entry */
+      .record {
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        color: inherit;
+        background: var(--cream-deep);
+        border: 1px solid rgba(26, 46, 58, 0.12);
+        position: relative;
+      }
+      .record::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--sage);
+        opacity: 0.85;
+      }
+      .record:hover::before {
+        background: var(--brand);
+        opacity: 1;
+      }
+
+      .record-logo-cell {
+        background: #ffffff;
+        border-bottom: 1px solid rgba(26, 46, 58, 0.1);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .record-logo-cell img {
+        max-width: 86%;
+        max-height: 78%;
+        object-fit: contain;
+      }
+
+      .record-name-cell {
+        padding: 0.75rem 1rem;
+        text-align: center;
+        background: var(--cream-deep);
+      }
+
+      .record-name {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-weight: 600;
+        color: var(--foreground);
+        font-size: 0.6875rem;
+        line-height: 1.4;
+      }
+      .record-sub {
+        margin-top: 0.375rem;
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 9;
+        font-style: italic;
+        font-weight: 400;
+        color: var(--muted-foreground);
+        font-size: 0.75rem;
+        letter-spacing: 0.02em;
+      }
+
+      /* Tier-specific scaling */
+      .record[data-tier="champion"] .record-logo-cell {
+        aspect-ratio: 4 / 3;
+      }
+      .record[data-tier="champion"] .record-name {
+        font-size: 0.8125rem;
+        letter-spacing: 0.2em;
+      }
+      .record[data-tier="champion"] .record-name-cell {
+        padding: 1rem 1.25rem 1.125rem;
+      }
+
+      .record[data-tier="eagle"] .record-logo-cell {
+        aspect-ratio: 4 / 3;
+      }
+      .record[data-tier="eagle"] .record-name {
+        font-size: 0.6875rem;
+      }
+
+      .record[data-tier="standard"] .record-logo-cell {
+        aspect-ratio: 3 / 2;
+      }
+      .record[data-tier="standard"] .record-name {
+        font-size: 0.625rem;
+        letter-spacing: 0.14em;
+      }
+
+      .record[data-tier="compact"] .record-logo-cell {
+        aspect-ratio: 2 / 1;
+      }
+      .record[data-tier="compact"] .record-name {
+        font-size: 0.5625rem;
+        letter-spacing: 0.12em;
+      }
+      .record[data-tier="compact"] .record-name-cell {
+        padding: 0.5rem 0.625rem;
+      }
+
+      /* Mike Evans — typeset name in logo cell */
+      .typeset-name {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-style: italic;
+        font-weight: 400;
+        text-align: center;
+        color: var(--foreground);
+        line-height: 1.05;
+        padding: 0 1rem;
+      }
+      .record[data-tier="champion"] .typeset-name {
+        font-size: 2.5rem;
+      }
+      .record[data-tier="eagle"] .typeset-name {
+        font-size: 1.625rem;
+      }
+
+      /* Vacancy notice — empty tier */
+      .vacancy {
+        background: var(--cream-deep);
+        border: 1px solid var(--sage);
+        border-top: 3px double var(--sage);
+        padding: 2rem 2rem 1.75rem;
+        position: relative;
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 2rem;
+        align-items: center;
+      }
+      @media (max-width: 768px) {
+        .vacancy {
+          grid-template-columns: 1fr;
+          text-align: center;
+          padding: 2rem 1.5rem 1.75rem;
+          gap: 1.5rem;
+        }
+      }
+      .vacancy-tag {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.28em;
+        font-size: 0.6875rem;
+        color: var(--sage-deep);
+        background: var(--sage-muted);
+        padding: 0.5rem 0.875rem;
+        border: 1px solid var(--sage);
+        font-weight: 600;
+        white-space: nowrap;
+      }
+      .vacancy-body {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-weight: 400;
+        font-size: 1.0625rem;
+        line-height: 1.6;
+        color: var(--foreground);
+      }
+      .vacancy-body strong {
+        font-weight: 500;
+        color: var(--sage-deep);
+      }
+      .vacancy-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        color: var(--brand-dark);
+        text-decoration: none;
+        padding: 0.875rem 1.5rem;
+        border: 1px solid var(--brand-dark);
+        font-weight: 600;
+        white-space: nowrap;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .vacancy-cta:hover {
+        background: var(--brand-dark);
+        color: var(--cream);
+      }
+
+      /* fadeUp page-load */
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .fadeUp { opacity: 0; animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .stagger-1 { animation-delay: 0.05s; }
+      .stagger-2 { animation-delay: 0.12s; }
+      .stagger-3 { animation-delay: 0.19s; }
+      .stagger-4 { animation-delay: 0.26s; }
+      .stagger-5 { animation-delay: 0.33s; }
+
+      /* CTA section — almanac-style colophon */
+      .colophon {
+        margin-top: 5rem;
+        padding: 5rem 1.5rem;
+        background: var(--foreground);
+        color: var(--cream);
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .colophon-eyebrow {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.34em;
+        font-size: 0.75rem;
+        color: var(--sage);
+        font-weight: 600;
+      }
+      .colophon-title {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-weight: 400;
+        font-size: clamp(1.875rem, 5vw, 2.625rem);
+        margin-top: 1.5rem;
+        line-height: 1.15;
+        letter-spacing: 0.005em;
+        color: var(--cream);
+      }
+      .colophon-body {
+        max-width: 40ch;
+        margin: 1.25rem auto 0;
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-style: italic;
+        font-size: 1rem;
+        line-height: 1.65;
+        color: rgba(249, 244, 236, 0.75);
+      }
+      .colophon-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        margin-top: 2.25rem;
+        padding: 1rem 2rem;
+        background: transparent;
+        border: 1px solid var(--sage);
+        color: var(--cream);
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .colophon-button:hover {
+        background: var(--sage);
+        border-color: var(--sage);
+        color: var(--foreground);
+      }
+
+      .direction-label {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--foreground);
+        color: var(--cream);
+        padding: 0.5rem 0.875rem;
+        font-family: "Manrope", sans-serif;
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        z-index: 100;
+        font-weight: 600;
+      }
+
+      /* Section spacing */
+      .chapter-section {
+        padding: 0 1.5rem 4.5rem;
+      }
+      @media (min-width: 768px) {
+        .chapter-section {
+          padding: 0 2rem 5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="direction-label">Direction 2 · The Almanac</div>
+
+    <!-- Frontispiece -->
+    <section class="frontispiece">
+      <div class="almanac-stamp fadeUp">Annual Register · Sponsors</div>
+      <h1 class="frontispiece-title fadeUp stagger-1">Our Sponsors</h1>
+      <div class="frontispiece-edition fadeUp stagger-2">Edition MMXXVI</div>
+      <p class="frontispiece-body fadeUp stagger-3">
+        The names below are entered in our annual register for the 2026 season.
+        Each makes possible the next round of care, transport, and treatment for
+        patients in our community.
+      </p>
+    </section>
+
+    <!-- CHAPTER I — CHAMPION -->
+    <section class="chapter-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="chapter">
+          <div class="chapter-numeral fadeUp">I</div>
+          <div class="chapter-name-block">
+            <div class="chapter-name fadeUp stagger-1">Champion</div>
+            <div class="chapter-rule fadeUp stagger-2"></div>
+          </div>
+          <div class="chapter-stamp fadeUp stagger-3">Entered · Four · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-8">
+          <a href="#" class="record fadeUp stagger-1" data-tier="champion">
+            <div class="record-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1629596078630-4PR6HEVF8B1XEM10T28E/carolinaeast-feature.jpeg" alt="Carolina East Health" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Carolina East Health</div>
+              <div class="record-sub">Entered · MMXXVI</div>
+            </div>
+          </a>
+
+          <a href="#" class="record fadeUp stagger-2" data-tier="champion">
+            <div class="record-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/23606448-6e61-4bff-b952-c09be947ee00/Fuel-Market-Metallic-Oval-logo.jpg" alt="Fuel Market" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Fuel Market</div>
+              <div class="record-sub">Entered · MMXXVI</div>
+            </div>
+          </a>
+
+          <a href="#" class="record fadeUp stagger-3" data-tier="champion">
+            <div class="record-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785236362-vienko9zqoa.webp" alt="Lynne Davenport — Century 21 Zaytoun Raines" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Lynne Davenport · Century 21 Zaytoun Raines</div>
+              <div class="record-sub">Entered · MMXXVI</div>
+            </div>
+          </a>
+
+          <!-- MIKE EVANS — typeset name in identical record cell -->
+          <div class="record fadeUp stagger-4" data-tier="champion">
+            <div class="record-logo-cell">
+              <span class="typeset-name">Mike&nbsp;Evans</span>
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Mike Evans</div>
+              <div class="record-sub">Without Insignia · Patron · MMXXVI</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER II — EAGLE -->
+    <section class="chapter-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="chapter">
+          <div class="chapter-numeral fadeUp">II</div>
+          <div class="chapter-name-block">
+            <div class="chapter-name fadeUp stagger-1">Eagle</div>
+            <div class="chapter-rule fadeUp stagger-2"></div>
+          </div>
+          <div class="chapter-stamp fadeUp stagger-3">Entered · Five · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-5 gap-y-6">
+          <a href="#" class="record fadeUp stagger-1" data-tier="eagle">
+            <div class="record-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1662990372442-P51HLP0LPA5Q9ZHG6JF5/Chick-fil-A+White+Script+Logo+on+PMS+186+Large_master.jpg" alt="Chick-fil-A" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Chick-fil-A</div>
+            </div>
+          </a>
+
+          <a href="#" class="record fadeUp stagger-2" data-tier="eagle">
+            <div class="record-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464031909-4HREHIUBP20JXWBB34LA/BSH_logo.jpg" alt="BSH" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">BSH</div>
+            </div>
+          </a>
+
+          <a href="#" class="record fadeUp stagger-3" data-tier="eagle">
+            <div class="record-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694463378634-V0OPBPQC2V0EC7LTY1AS/sportsconnection.png" alt="Sports Connection" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Sports Connection</div>
+            </div>
+          </a>
+
+          <a href="#" class="record fadeUp stagger-4" data-tier="eagle">
+            <div class="record-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785296666-0bizlqnstv9g.webp" alt="Scottie Davenport — Shopmonkey" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Scottie Davenport · Shopmonkey</div>
+            </div>
+          </a>
+
+          <a href="#" class="record fadeUp stagger-5" data-tier="eagle">
+            <div class="record-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785381187-2hzylaxgtc.webp" alt="Urethane Innovators" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">Urethane Innovators</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER III — STANDARD -->
+    <section class="chapter-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="chapter">
+          <div class="chapter-numeral fadeUp">III</div>
+          <div class="chapter-name-block">
+            <div class="chapter-name fadeUp stagger-1">Standard</div>
+            <div class="chapter-rule fadeUp stagger-2"></div>
+          </div>
+          <div class="chapter-stamp fadeUp stagger-3">Entered · One · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <a href="#" class="record fadeUp stagger-1" data-tier="standard">
+            <div class="record-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785339860-r8kqhblykq.webp" alt="The Insurance Center" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">The Insurance Center</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAPTER IV — COMPACT -->
+    <section class="chapter-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="chapter">
+          <div class="chapter-numeral fadeUp">IV</div>
+          <div class="chapter-name-block">
+            <div class="chapter-name fadeUp stagger-1">Compact</div>
+            <div class="chapter-rule fadeUp stagger-2"></div>
+          </div>
+          <div class="chapter-stamp fadeUp stagger-3">Entered · One · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          <a href="#" class="record fadeUp stagger-1" data-tier="compact">
+            <div class="record-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785090396-u33w81pd5f.jpg" alt="ThinkCode" />
+            </div>
+            <div class="record-name-cell">
+              <div class="record-name">ThinkCode</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- EMPTY TIER EXAMPLE -->
+    <section class="chapter-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="chapter">
+          <div class="chapter-numeral fadeUp" style="color: var(--sage); opacity: 0.55;">II</div>
+          <div class="chapter-name-block">
+            <div class="chapter-name fadeUp stagger-1" style="opacity: 0.55;">Eagle <span style="font-style: italic; font-weight: 300; font-size: 0.875em; color: var(--sage-deep);">— vacancy example</span></div>
+            <div class="chapter-rule fadeUp stagger-2" style="opacity: 0.55;"></div>
+          </div>
+          <div class="chapter-stamp fadeUp stagger-3" style="color: var(--sage-deep);">Open · Five Vacancies · MMXXVI</div>
+        </div>
+
+        <div class="vacancy fadeUp stagger-1">
+          <div class="vacancy-tag">Vacant</div>
+          <div class="vacancy-body">
+            The <strong>Eagle Sponsorship</strong> is open for the 2026 season at <strong>$2,500</strong>. Includes
+            premium course signage, recognition at the awards reception, and a foursome
+            in the tournament field.
+          </div>
+          <a href="#" class="vacancy-cta">Inquire to Enter →</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Colophon (CTA) -->
+    <section class="colophon">
+      <div class="mx-auto max-w-3xl">
+        <div class="colophon-eyebrow fadeUp">Become an Entry</div>
+        <h2 class="colophon-title fadeUp stagger-1">
+          Enter the register<br />for the 2026 season.
+        </h2>
+        <p class="colophon-body fadeUp stagger-2">
+          Your sponsorship funds transportation to treatment, lodging during
+          extended care, and medical equipment for patients in our community
+          facing the hardest days of their lives.
+        </p>
+        <a href="#" class="colophon-button fadeUp stagger-3">View Sponsorship Packages →</a>
+      </div>
+    </section>
+  </body>
+</html>

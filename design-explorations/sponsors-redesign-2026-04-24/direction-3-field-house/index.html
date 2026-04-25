@@ -1,0 +1,914 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Our Sponsors — Direction 3: The Field House</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;0,9..144,800;0,9..144,900;1,9..144,400;1,9..144,500&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --cream: #f9f4ec;
+        --cream-warm: #f3ebd9;
+        --foreground: #1a2e3a;
+        --muted-foreground: #5f7a87;
+        --brand: #5797a6;
+        --brand-dark: #3a6b83;
+        --brand-muted: #e8f0f4;
+        --border: #dae3e8;
+
+        /* NEW: Field House palette extension */
+        --heritage: #5c2a2f;
+        --heritage-deep: #3f1c20;
+        --heritage-muted: #8d5a5e;
+      }
+
+      html {
+        font-family: "Manrope", system-ui, sans-serif;
+        color: var(--foreground);
+        background: var(--cream);
+        -webkit-font-smoothing: antialiased;
+        font-variant-numeric: oldstyle-nums;
+      }
+      body {
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.78' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.42 0 0 0 0 0.3 0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        background-size: 220px 220px;
+      }
+
+      /* HERO — pennant masthead */
+      .masthead {
+        background: var(--heritage);
+        color: var(--cream);
+        padding: 5.5rem 1.5rem 5rem;
+        position: relative;
+        overflow: hidden;
+        text-align: center;
+      }
+      @media (min-width: 768px) {
+        .masthead {
+          padding: 7rem 2rem 6.5rem;
+        }
+      }
+      .masthead::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 0.95 0 0 0 0 0.85 0 0 0 0.06 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        opacity: 0.5;
+        mix-blend-mode: screen;
+        pointer-events: none;
+      }
+      .masthead::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 12px;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            var(--cream) 0,
+            var(--cream) 8px,
+            var(--heritage) 8px,
+            var(--heritage) 16px
+          );
+      }
+      .masthead-content {
+        position: relative;
+        z-index: 1;
+        max-width: 48rem;
+        margin: 0 auto;
+      }
+      .masthead-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.36em;
+        font-size: 0.6875rem;
+        color: var(--cream);
+        opacity: 0.78;
+        font-weight: 700;
+      }
+      .masthead-eyebrow::before,
+      .masthead-eyebrow::after {
+        content: "";
+        width: 28px;
+        height: 1px;
+        background: var(--cream);
+        opacity: 0.55;
+      }
+      .masthead-title {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 144;
+        font-weight: 700;
+        font-size: clamp(3.5rem, 11vw, 6.5rem);
+        line-height: 0.92;
+        letter-spacing: 0.005em;
+        margin-top: 1.5rem;
+        text-transform: uppercase;
+        text-shadow:
+          0 1px 0 rgba(0, 0, 0, 0.2),
+          0 -1px 0 rgba(255, 255, 255, 0.04);
+      }
+      .masthead-edition {
+        display: inline-flex;
+        margin-top: 1.75rem;
+        padding: 0.5rem 1.25rem;
+        border: 1px solid rgba(249, 244, 236, 0.45);
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.32em;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        color: var(--cream);
+      }
+      .masthead-body {
+        max-width: 38ch;
+        margin: 2.25rem auto 0;
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-weight: 400;
+        font-size: 1.0625rem;
+        line-height: 1.6;
+        color: rgba(249, 244, 236, 0.85);
+      }
+
+      /* LETTERMAN BLOCK — tier header */
+      .letterman {
+        background: var(--heritage);
+        color: var(--cream);
+        padding: 1.5rem 2rem;
+        margin-bottom: 2.5rem;
+        position: relative;
+        text-align: center;
+      }
+      /* Corner ornaments — small triangles in each corner */
+      .letterman::before,
+      .letterman::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 12px;
+        background:
+          linear-gradient(
+            135deg,
+            var(--cream) 0,
+            var(--cream) 6px,
+            transparent 6px,
+            transparent 100%
+          ),
+          linear-gradient(
+            225deg,
+            var(--cream) 0,
+            var(--cream) 6px,
+            transparent 6px,
+            transparent 100%
+          );
+        background-position: top, bottom;
+        background-size: 100% 50%;
+        background-repeat: no-repeat;
+      }
+      .letterman::before {
+        left: 0;
+        background:
+          linear-gradient(
+            135deg,
+            var(--cream) 0,
+            var(--cream) 6px,
+            transparent 6px,
+            transparent 100%
+          )
+          top no-repeat,
+          linear-gradient(
+            45deg,
+            var(--cream) 0,
+            var(--cream) 6px,
+            transparent 6px,
+            transparent 100%
+          )
+          bottom no-repeat;
+        background-size: 100% 50%;
+      }
+      .letterman::after {
+        right: 0;
+        background:
+          linear-gradient(
+            225deg,
+            var(--cream) 0,
+            var(--cream) 6px,
+            transparent 6px,
+            transparent 100%
+          )
+          top no-repeat,
+          linear-gradient(
+            315deg,
+            var(--cream) 0,
+            var(--cream) 6px,
+            transparent 6px,
+            transparent 100%
+          )
+          bottom no-repeat;
+        background-size: 100% 50%;
+      }
+      .letterman-name {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.16em;
+        font-size: clamp(1.5rem, 4vw, 2rem);
+        line-height: 1;
+      }
+      .letterman-stamp {
+        margin-top: 0.625rem;
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.3em;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: rgba(249, 244, 236, 0.78);
+      }
+
+      /* Letterman variant — Compact tier (no block, just a heritage rule) */
+      .letterman-rule {
+        margin-bottom: 2rem;
+        text-align: center;
+      }
+      .letterman-rule-line {
+        height: 3px;
+        background: var(--heritage);
+        position: relative;
+        margin: 0 auto;
+        width: 100%;
+      }
+      .letterman-rule-line::after {
+        content: "";
+        position: absolute;
+        top: 6px;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: var(--heritage);
+      }
+      .letterman-rule-name {
+        margin-top: 1.25rem;
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 36;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
+        font-size: 0.875rem;
+        color: var(--heritage);
+      }
+      .letterman-rule-stamp {
+        display: block;
+        margin-top: 0.375rem;
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.28em;
+        font-size: 0.625rem;
+        color: var(--muted-foreground);
+        font-weight: 600;
+      }
+
+      /* VARSITY CARD — sponsor entry */
+      .varsity-card {
+        background: var(--cream-warm);
+        border: 1px solid var(--heritage);
+        position: relative;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        color: inherit;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .varsity-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 18px -8px rgba(92, 42, 47, 0.25);
+      }
+      /* Corner ornaments — heritage triangles in each corner */
+      .varsity-card::before,
+      .varsity-card::after {
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: var(--heritage);
+        z-index: 2;
+      }
+      .varsity-card::before {
+        top: 0;
+        left: 0;
+        clip-path: polygon(0 0, 100% 0, 0 100%);
+      }
+      .varsity-card::after {
+        top: 0;
+        right: 0;
+        clip-path: polygon(0 0, 100% 0, 100% 100%);
+      }
+      .varsity-card .corner-bl,
+      .varsity-card .corner-br {
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: var(--heritage);
+        z-index: 2;
+      }
+      .varsity-card .corner-bl {
+        bottom: 0;
+        left: 0;
+        clip-path: polygon(0 0, 0 100%, 100% 100%);
+      }
+      .varsity-card .corner-br {
+        bottom: 0;
+        right: 0;
+        clip-path: polygon(100% 0, 100% 100%, 0 100%);
+      }
+
+      .varsity-logo-cell {
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem 1rem;
+        border-bottom: 1px solid rgba(92, 42, 47, 0.25);
+        position: relative;
+        overflow: hidden;
+      }
+      .varsity-logo-cell img {
+        max-width: 88%;
+        max-height: 84%;
+        object-fit: contain;
+      }
+      .varsity-name-cell {
+        padding: 1rem 1rem 0.875rem;
+        text-align: center;
+        background: var(--cream-warm);
+      }
+      .varsity-name {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 36;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--foreground);
+        line-height: 1.25;
+        font-size: 0.875rem;
+      }
+      .varsity-ornament {
+        margin-top: 0.5rem;
+        color: var(--heritage);
+        font-size: 0.75rem;
+        line-height: 1;
+      }
+      .varsity-sub {
+        margin-top: 0.375rem;
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.24em;
+        font-size: 0.625rem;
+        color: var(--muted-foreground);
+        font-weight: 600;
+      }
+
+      /* Tier-specific scaling */
+      .varsity-card[data-tier="champion"] .varsity-logo-cell {
+        aspect-ratio: 4 / 3;
+        padding: 1.75rem 1.5rem;
+      }
+      .varsity-card[data-tier="champion"] .varsity-name-cell {
+        padding: 1.125rem 1.25rem 1rem;
+      }
+      .varsity-card[data-tier="champion"] .varsity-name {
+        font-size: 1rem;
+        letter-spacing: 0.14em;
+      }
+
+      .varsity-card[data-tier="eagle"] .varsity-logo-cell {
+        aspect-ratio: 4 / 3;
+      }
+      .varsity-card[data-tier="eagle"] .varsity-name {
+        font-size: 0.8125rem;
+      }
+
+      .varsity-card[data-tier="standard"] .varsity-logo-cell {
+        aspect-ratio: 3 / 2;
+        padding: 1rem 0.875rem;
+      }
+      .varsity-card[data-tier="standard"] .varsity-name-cell {
+        padding: 0.75rem 0.75rem 0.625rem;
+      }
+      .varsity-card[data-tier="standard"] .varsity-name {
+        font-size: 0.75rem;
+        letter-spacing: 0.1em;
+      }
+      .varsity-card[data-tier="standard"] .varsity-ornament {
+        display: none;
+      }
+
+      .varsity-card[data-tier="compact"] .varsity-logo-cell {
+        aspect-ratio: 2 / 1;
+        padding: 0.75rem;
+      }
+      .varsity-card[data-tier="compact"] .varsity-name-cell {
+        padding: 0.5rem 0.625rem;
+      }
+      .varsity-card[data-tier="compact"] .varsity-name {
+        font-size: 0.625rem;
+        letter-spacing: 0.08em;
+      }
+      .varsity-card[data-tier="compact"] .varsity-ornament {
+        display: none;
+      }
+
+      /* MONOGRAM — Mike Evans treatment */
+      .monogram {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        border: 2px solid var(--heritage);
+        color: var(--heritage);
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        background: var(--cream);
+        position: relative;
+      }
+      .monogram::after {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        border-radius: 50%;
+        border: 1px solid var(--heritage);
+        opacity: 0.4;
+      }
+      .varsity-card[data-tier="champion"] .monogram {
+        width: 7rem;
+        height: 7rem;
+        font-size: 2.25rem;
+      }
+      .varsity-card[data-tier="eagle"] .monogram {
+        width: 5rem;
+        height: 5rem;
+        font-size: 1.625rem;
+      }
+
+      /* OPEN POSITION CARD — empty tier */
+      .open-card {
+        background: var(--cream-warm);
+        border: 1px dashed var(--heritage);
+        position: relative;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .open-card::before,
+      .open-card::after {
+        content: "";
+        position: absolute;
+        width: 10px;
+        height: 10px;
+        background: var(--heritage-muted);
+        z-index: 2;
+      }
+      .open-card::before {
+        top: 0;
+        left: 0;
+        clip-path: polygon(0 0, 100% 0, 0 100%);
+      }
+      .open-card::after {
+        top: 0;
+        right: 0;
+        clip-path: polygon(0 0, 100% 0, 100% 100%);
+      }
+      .open-card .corner-bl,
+      .open-card .corner-br {
+        background: var(--heritage-muted);
+      }
+      .open-card .open-logo-cell {
+        background: rgba(255, 255, 255, 0.5);
+        aspect-ratio: 4 / 3;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        border-bottom: 1px dashed var(--heritage-muted);
+        text-align: center;
+        gap: 0.875rem;
+      }
+      .open-mark {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-style: italic;
+        font-weight: 500;
+        font-size: 1.5rem;
+        line-height: 1;
+        color: var(--heritage);
+        letter-spacing: 0.02em;
+      }
+      .open-package {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.6875rem;
+        color: var(--foreground);
+        font-weight: 700;
+      }
+      .open-package strong {
+        color: var(--heritage);
+      }
+      .open-cta-cell {
+        padding: 1rem 1.25rem 0.875rem;
+        text-align: center;
+      }
+      .open-cta {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        color: var(--heritage);
+        font-weight: 700;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+      }
+      .open-cta:hover {
+        color: var(--heritage-deep);
+      }
+
+      /* fadeUp page-load */
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .fadeUp { opacity: 0; animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .stagger-1 { animation-delay: 0.05s; }
+      .stagger-2 { animation-delay: 0.12s; }
+      .stagger-3 { animation-delay: 0.19s; }
+      .stagger-4 { animation-delay: 0.26s; }
+      .stagger-5 { animation-delay: 0.33s; }
+
+      /* CTA — back-of-program section */
+      .program-back {
+        margin-top: 4rem;
+        background:
+          repeating-linear-gradient(
+            45deg,
+            var(--heritage) 0,
+            var(--heritage) 14px,
+            var(--heritage-deep) 14px,
+            var(--heritage-deep) 28px
+          );
+        padding: 2px 0;
+      }
+      .program-back-inner {
+        background: var(--foreground);
+        padding: 5rem 1.5rem;
+        text-align: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .program-back-inner::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        opacity: 0.4;
+        mix-blend-mode: screen;
+        pointer-events: none;
+      }
+      .program-back-content {
+        position: relative;
+        z-index: 1;
+        max-width: 40rem;
+        margin: 0 auto;
+      }
+      .program-back-eyebrow {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.34em;
+        font-size: 0.75rem;
+        color: var(--heritage-muted);
+        font-weight: 700;
+      }
+      .program-back-title {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-weight: 600;
+        font-size: clamp(1.875rem, 5vw, 2.5rem);
+        margin-top: 1.25rem;
+        line-height: 1.15;
+        color: var(--cream);
+      }
+      .program-back-body {
+        max-width: 40ch;
+        margin: 1.25rem auto 0;
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-style: italic;
+        font-size: 1rem;
+        line-height: 1.65;
+        color: rgba(249, 244, 236, 0.78);
+      }
+      .program-back-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        margin-top: 2rem;
+        padding: 1rem 2.25rem;
+        background: var(--heritage);
+        border: none;
+        color: var(--cream);
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .program-back-button:hover {
+        background: var(--heritage-deep);
+      }
+
+      .direction-label {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--heritage);
+        color: var(--cream);
+        padding: 0.5rem 0.875rem;
+        font-family: "Manrope", sans-serif;
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        z-index: 100;
+        font-weight: 700;
+      }
+
+      .tier-section {
+        padding: 0 1.5rem 4rem;
+      }
+      @media (min-width: 768px) {
+        .tier-section {
+          padding: 0 2rem 4.5rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="direction-label">Direction 3 · The Field House</div>
+
+    <!-- Masthead -->
+    <section class="masthead">
+      <div class="masthead-content">
+        <div class="masthead-eyebrow fadeUp">Programme · Sponsors</div>
+        <h1 class="masthead-title fadeUp stagger-1">Our Sponsors</h1>
+        <div class="masthead-edition fadeUp stagger-2">2026 Season Edition</div>
+        <p class="masthead-body fadeUp stagger-3">
+          Our partners on the course and in the community. Their support funds
+          transportation, lodging, and care for patients fighting cancer in
+          eastern North Carolina.
+        </p>
+      </div>
+    </section>
+
+    <!-- CHAMPION -->
+    <section class="tier-section pt-12 sm:pt-16">
+      <div class="mx-auto max-w-6xl">
+        <div class="letterman fadeUp">
+          <div class="letterman-name">Champion Partners</div>
+          <div class="letterman-stamp">Founding Tier · 2026 Season</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7">
+          <a href="#" class="varsity-card fadeUp stagger-1" data-tier="champion">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1629596078630-4PR6HEVF8B1XEM10T28E/carolinaeast-feature.jpeg" alt="Carolina East Health" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Carolina East Health</div>
+              <div class="varsity-ornament">◆</div>
+              <div class="varsity-sub">Champion · 2026</div>
+            </div>
+          </a>
+
+          <a href="#" class="varsity-card fadeUp stagger-2" data-tier="champion">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/23606448-6e61-4bff-b952-c09be947ee00/Fuel-Market-Metallic-Oval-logo.jpg" alt="Fuel Market" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Fuel Market</div>
+              <div class="varsity-ornament">◆</div>
+              <div class="varsity-sub">Champion · 2026</div>
+            </div>
+          </a>
+
+          <a href="#" class="varsity-card fadeUp stagger-3" data-tier="champion">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785236362-vienko9zqoa.webp" alt="Lynne Davenport — Century 21 Zaytoun Raines" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Lynne Davenport · Century 21 Zaytoun Raines</div>
+              <div class="varsity-ornament">◆</div>
+              <div class="varsity-sub">Champion · 2026</div>
+            </div>
+          </a>
+
+          <!-- MIKE EVANS — monogram treatment -->
+          <div class="varsity-card fadeUp stagger-4" data-tier="champion">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <span class="monogram">M.E.</span>
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Mike Evans</div>
+              <div class="varsity-ornament">◆</div>
+              <div class="varsity-sub">Champion Patron · 2026</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EAGLE -->
+    <section class="tier-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="letterman fadeUp" style="background: var(--heritage); padding: 1.25rem 2rem;">
+          <div class="letterman-name" style="font-size: clamp(1.25rem, 3.5vw, 1.625rem);">Eagle Partners</div>
+          <div class="letterman-stamp" style="font-size: 0.625rem;">Five · 2026 Season</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-5">
+          <a href="#" class="varsity-card fadeUp stagger-1" data-tier="eagle">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1662990372442-P51HLP0LPA5Q9ZHG6JF5/Chick-fil-A+White+Script+Logo+on+PMS+186+Large_master.jpg" alt="Chick-fil-A" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Chick-fil-A</div>
+              <div class="varsity-ornament">◆</div>
+            </div>
+          </a>
+
+          <a href="#" class="varsity-card fadeUp stagger-2" data-tier="eagle">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464031909-4HREHIUBP20JXWBB34LA/BSH_logo.jpg" alt="BSH" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">BSH</div>
+              <div class="varsity-ornament">◆</div>
+            </div>
+          </a>
+
+          <a href="#" class="varsity-card fadeUp stagger-3" data-tier="eagle">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694463378634-V0OPBPQC2V0EC7LTY1AS/sportsconnection.png" alt="Sports Connection" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Sports Connection</div>
+              <div class="varsity-ornament">◆</div>
+            </div>
+          </a>
+
+          <a href="#" class="varsity-card fadeUp stagger-4" data-tier="eagle">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785296666-0bizlqnstv9g.webp" alt="Scottie Davenport — Shopmonkey" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Scottie Davenport · Shopmonkey</div>
+              <div class="varsity-ornament">◆</div>
+            </div>
+          </a>
+
+          <a href="#" class="varsity-card fadeUp stagger-5" data-tier="eagle">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785381187-2hzylaxgtc.webp" alt="Urethane Innovators" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">Urethane Innovators</div>
+              <div class="varsity-ornament">◆</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- STANDARD -->
+    <section class="tier-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="letterman fadeUp" style="background: var(--heritage); padding: 1rem 2rem;">
+          <div class="letterman-name" style="font-size: 1.25rem;">Standard Partners</div>
+          <div class="letterman-stamp" style="font-size: 0.625rem; margin-top: 0.375rem;">One · 2026 Season</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          <a href="#" class="varsity-card fadeUp stagger-1" data-tier="standard">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785339860-r8kqhblykq.webp" alt="The Insurance Center" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">The Insurance Center</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPACT — uses letterman-rule variant -->
+    <section class="tier-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="letterman-rule">
+          <div class="letterman-rule-line fadeUp"></div>
+          <div class="letterman-rule-name fadeUp stagger-1">Friends of the Tournament</div>
+          <span class="letterman-rule-stamp fadeUp stagger-2">One · 2026 Season</span>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3">
+          <a href="#" class="varsity-card fadeUp stagger-1" data-tier="compact">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="varsity-logo-cell">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785090396-u33w81pd5f.jpg" alt="ThinkCode" />
+            </div>
+            <div class="varsity-name-cell">
+              <div class="varsity-name">ThinkCode</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- EMPTY TIER EXAMPLE -->
+    <section class="tier-section">
+      <div class="mx-auto max-w-6xl">
+        <div class="letterman fadeUp" style="background: var(--heritage-muted); padding: 1.25rem 2rem;">
+          <div class="letterman-name" style="font-size: clamp(1.25rem, 3.5vw, 1.625rem);">Eagle Partners <span style="font-style: italic; font-weight: 500; opacity: 0.85;">— vacancy example</span></div>
+          <div class="letterman-stamp" style="font-size: 0.625rem;">Open · 2026 Season</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-5 sm:gap-7 max-w-3xl mx-auto">
+          <a href="#" class="open-card fadeUp stagger-1">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="open-logo-cell">
+              <span class="open-mark">Open Position</span>
+              <span class="open-package">Eagle Partner · <strong>$2,500</strong></span>
+            </div>
+            <div class="open-cta-cell">
+              <span class="open-cta">Claim This Slot →</span>
+            </div>
+          </a>
+          <a href="#" class="open-card fadeUp stagger-2">
+            <div class="corner-bl"></div><div class="corner-br"></div>
+            <div class="open-logo-cell">
+              <span class="open-mark">Open Position</span>
+              <span class="open-package">Eagle Partner · <strong>$2,500</strong></span>
+            </div>
+            <div class="open-cta-cell">
+              <span class="open-cta">Claim This Slot →</span>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="program-back">
+      <div class="program-back-inner">
+        <div class="program-back-content">
+          <div class="program-back-eyebrow fadeUp">Become a Partner</div>
+          <h2 class="program-back-title fadeUp stagger-1">
+            Make it possible<br />for someone fighting right now.
+          </h2>
+          <p class="program-back-body fadeUp stagger-2">
+            Your sponsorship funds transportation to treatment, lodging during
+            extended care, and medical equipment for patients in our community
+            facing the hardest days of their lives.
+          </p>
+          <a href="#" class="program-back-button fadeUp stagger-3">View Sponsorship Packages →</a>
+        </div>
+      </div>
+    </section>
+  </body>
+</html>

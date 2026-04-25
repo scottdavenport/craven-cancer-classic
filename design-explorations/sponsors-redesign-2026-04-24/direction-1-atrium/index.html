@@ -1,0 +1,753 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Our Sponsors — Direction 1: The Atrium</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&family=Manrope:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        /* Foundation */
+        --cream: #f9f4ec;
+        --stone: #ede5d5;
+        --stone-deep: #ddd0b8;
+        --foreground: #1a2e3a;
+        --muted-foreground: #5f7a87;
+        --brand: #5797a6;
+        --brand-dark: #3a6b83;
+        --brand-muted: #e8f0f4;
+
+        /* NEW: Atrium palette extension */
+        --brass: #8c6e3f;
+        --brass-light: #b8965a;
+        --brass-deep: #6b5530;
+
+        /* Composite shadows (engraved depth) */
+        --plaque-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.85) inset,
+          0 -1px 0 rgba(107, 85, 48, 0.18) inset,
+          0 12px 24px -16px rgba(26, 46, 58, 0.18),
+          0 2px 6px -2px rgba(26, 46, 58, 0.08);
+        --window-shadow:
+          0 1px 0 rgba(0, 0, 0, 0.04) inset,
+          0 -1px 0 rgba(255, 255, 255, 0.6) inset;
+      }
+
+      html {
+        font-family: "Manrope", system-ui, sans-serif;
+        color: var(--foreground);
+        background: var(--cream);
+        -webkit-font-smoothing: antialiased;
+        font-variant-numeric: oldstyle-nums;
+      }
+
+      .font-display {
+        font-family: "Fraunces", serif;
+      }
+
+      /* Stone grain — denser than the standard grain-overlay */
+      .stone-grain {
+        position: relative;
+      }
+      .stone-grain::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='240' height='240'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.92' numOctaves='2' seed='9'/><feColorMatrix values='0 0 0 0 0.55 0 0 0 0 0.43 0 0 0 0 0.25 0 0 0 0.05 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        mix-blend-mode: multiply;
+        opacity: 0.55;
+        z-index: 1;
+      }
+      .stone-grain > * {
+        position: relative;
+        z-index: 2;
+      }
+
+      /* Engraved type — subtle dual shadow that reads as etched */
+      .engraved {
+        text-shadow:
+          0 1px 0 rgba(255, 255, 255, 0.55),
+          0 -1px 0 rgba(107, 85, 48, 0.22);
+      }
+      .engraved-sm {
+        text-shadow:
+          0 0.5px 0 rgba(255, 255, 255, 0.4),
+          0 -0.5px 0 rgba(107, 85, 48, 0.18);
+      }
+
+      /* Chiseled hero caps */
+      .chiseled {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 144;
+        font-weight: 500;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      /* Plaque — the universal sponsor frame */
+      .plaque {
+        background:
+          linear-gradient(to bottom, #fbf7f0 0%, #f4ecde 100%);
+        border: 2px solid var(--brass);
+        outline: 1px solid rgba(140, 110, 63, 0.28);
+        outline-offset: 4px;
+        border-radius: 2px;
+        box-shadow: var(--plaque-shadow);
+        position: relative;
+        padding: 1.5rem 1.25rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        color: inherit;
+        transition: box-shadow 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .plaque:hover {
+        box-shadow:
+          var(--plaque-shadow),
+          0 18px 36px -22px rgba(26, 46, 58, 0.32);
+      }
+      .plaque[data-tier="champion"] {
+        padding: 2rem 1.75rem 1.5rem;
+        outline-offset: 5px;
+      }
+      .plaque[data-tier="eagle"] {
+        padding: 1.5rem 1.25rem 1.125rem;
+        outline-offset: 4px;
+      }
+      .plaque[data-tier="standard"] {
+        padding: 1.25rem 1rem 1rem;
+        outline-offset: 3px;
+      }
+      .plaque[data-tier="compact"] {
+        padding: 0.875rem 0.75rem 0.75rem;
+        outline-offset: 2px;
+      }
+
+      /* Viewing window — equal-aspect crate where logos and engraved names live */
+      .window {
+        background: var(--stone);
+        border: 1px solid var(--brass);
+        border-radius: 1px;
+        padding: 1rem;
+        box-shadow: var(--window-shadow);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        overflow: hidden;
+      }
+      .plaque[data-tier="champion"] .window {
+        aspect-ratio: 5 / 3;
+        padding: 1.5rem;
+      }
+      .plaque[data-tier="eagle"] .window {
+        aspect-ratio: 4 / 3;
+        padding: 1rem;
+      }
+      .plaque[data-tier="standard"] .window {
+        aspect-ratio: 3 / 2;
+        padding: 0.875rem;
+      }
+      .plaque[data-tier="compact"] .window {
+        aspect-ratio: 2 / 1;
+        padding: 0.625rem;
+      }
+
+      .window img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        filter: contrast(1.02);
+      }
+
+      /* Engraved name (Mike Evans treatment) */
+      .engraved-name {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-style: italic;
+        font-weight: 300;
+        text-align: center;
+        color: var(--brass-deep);
+        line-height: 1;
+      }
+      .plaque[data-tier="champion"] .engraved-name {
+        font-size: 2.75rem;
+      }
+      .plaque[data-tier="eagle"] .engraved-name {
+        font-size: 2rem;
+      }
+      .plaque[data-tier="standard"] .engraved-name {
+        font-size: 1.5rem;
+      }
+      .plaque[data-tier="compact"] .engraved-name {
+        font-size: 1.125rem;
+      }
+
+      /* Inscription line under the window — name + sub */
+      .inscription {
+        margin-top: 0.875rem;
+        padding-top: 0.875rem;
+        border-top: 1px solid rgba(140, 110, 63, 0.5);
+        text-align: center;
+      }
+      .plaque[data-tier="standard"] .inscription,
+      .plaque[data-tier="compact"] .inscription {
+        margin-top: 0.625rem;
+        padding-top: 0.625rem;
+      }
+
+      .inscription-name {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        font-weight: 600;
+        color: var(--foreground);
+        font-size: 0.6875rem;
+        line-height: 1.3;
+      }
+      .plaque[data-tier="champion"] .inscription-name {
+        font-size: 0.75rem;
+        letter-spacing: 0.22em;
+      }
+      .plaque[data-tier="compact"] .inscription-name {
+        font-size: 0.5625rem;
+        letter-spacing: 0.14em;
+      }
+
+      .inscription-sub {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 9;
+        font-style: italic;
+        color: var(--muted-foreground);
+        font-size: 0.6875rem;
+        margin-top: 0.25rem;
+        letter-spacing: 0.04em;
+      }
+
+      /* Tier heading (chapter markers, but in chiseled type) */
+      .tier-heading {
+        text-align: center;
+        margin-bottom: 2.5rem;
+      }
+      .tier-numeral {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 9;
+        font-style: italic;
+        color: var(--brass);
+        font-size: 0.75rem;
+        letter-spacing: 0.3em;
+        text-transform: uppercase;
+        margin-bottom: 0.75rem;
+      }
+      .tier-name {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 144;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        color: var(--foreground);
+      }
+      .tier-rule {
+        margin: 0.875rem auto 0;
+        height: 1px;
+        background: var(--brass);
+        position: relative;
+      }
+      .tier-rule::before,
+      .tier-rule::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 6px;
+        height: 6px;
+        background: var(--brass);
+        transform: translateY(-50%) rotate(45deg);
+      }
+      .tier-rule::before {
+        left: -8px;
+      }
+      .tier-rule::after {
+        right: -8px;
+      }
+      .tier-inscription {
+        margin-top: 1rem;
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.28em;
+        font-size: 0.6875rem;
+        color: var(--muted-foreground);
+      }
+
+      /* Empty plaque — invitation */
+      .plaque-empty {
+        background:
+          linear-gradient(to bottom, #fbf7f0 0%, #f4ecde 100%);
+        border: 2px dashed var(--brass);
+        outline: 1px dashed rgba(140, 110, 63, 0.28);
+        outline-offset: 4px;
+        border-radius: 2px;
+        padding: 2rem 1.75rem 1.5rem;
+        text-align: center;
+        position: relative;
+      }
+      .plaque-empty .window {
+        background: rgba(237, 229, 213, 0.5);
+        border: 1px dashed var(--brass);
+        aspect-ratio: 5 / 3;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .empty-mark {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-style: italic;
+        font-weight: 300;
+        color: var(--brass);
+        font-size: 1.625rem;
+        letter-spacing: 0.04em;
+        line-height: 1.1;
+      }
+      .empty-package {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.6875rem;
+        color: var(--foreground);
+        font-weight: 600;
+      }
+      .empty-package strong {
+        color: var(--brass-deep);
+        font-weight: 700;
+      }
+      .empty-cta {
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid rgba(140, 110, 63, 0.5);
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        color: var(--brass-deep);
+        font-weight: 600;
+      }
+      .empty-cta:hover {
+        color: var(--brand-dark);
+      }
+
+      /* Page-load fadeUp stagger */
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .fadeUp {
+        opacity: 0;
+        animation: fadeUp 0.7s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      }
+      .stagger-1 {
+        animation-delay: 0.05s;
+      }
+      .stagger-2 {
+        animation-delay: 0.12s;
+      }
+      .stagger-3 {
+        animation-delay: 0.19s;
+      }
+      .stagger-4 {
+        animation-delay: 0.26s;
+      }
+      .stagger-5 {
+        animation-delay: 0.33s;
+      }
+
+      /* Section hero */
+      .hero {
+        padding: 7rem 1.5rem 5rem;
+      }
+      @media (min-width: 768px) {
+        .hero {
+          padding: 9rem 2rem 6rem;
+        }
+      }
+      .hero-eyebrow {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.32em;
+        font-size: 0.75rem;
+        color: var(--brass);
+        font-weight: 600;
+      }
+      .hero-title {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 144;
+        font-weight: 400;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-size: clamp(3rem, 9vw, 6rem);
+        line-height: 0.92;
+        color: var(--foreground);
+        margin-top: 1.25rem;
+      }
+      .hero-rule {
+        width: 84px;
+        height: 1px;
+        background: var(--brass);
+        margin: 2rem auto;
+        position: relative;
+      }
+      .hero-rule::before,
+      .hero-rule::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        width: 7px;
+        height: 7px;
+        background: var(--brass);
+        transform: translateY(-50%) rotate(45deg);
+      }
+      .hero-rule::before {
+        left: -10px;
+      }
+      .hero-rule::after {
+        right: -10px;
+      }
+      .hero-body {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-style: italic;
+        font-weight: 300;
+        font-size: 1.125rem;
+        line-height: 1.6;
+        color: var(--foreground);
+        opacity: 0.85;
+        max-width: 38ch;
+        margin: 0 auto;
+      }
+
+      /* CTA section */
+      .cta-section {
+        background: var(--foreground);
+        padding: 5rem 1.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+      .cta-section::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.04 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+        opacity: 0.4;
+        mix-blend-mode: screen;
+        pointer-events: none;
+      }
+      .cta-content {
+        position: relative;
+        z-index: 1;
+        max-width: 36rem;
+        margin: 0 auto;
+        text-align: center;
+      }
+      .cta-eyebrow {
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.32em;
+        font-size: 0.75rem;
+        color: var(--brass-light);
+        font-weight: 600;
+      }
+      .cta-title {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 96;
+        font-weight: 400;
+        font-size: clamp(1.875rem, 5vw, 2.5rem);
+        color: #f9f4ec;
+        margin-top: 1.25rem;
+        line-height: 1.15;
+        letter-spacing: 0.005em;
+      }
+      .cta-body {
+        font-family: "Fraunces", serif;
+        font-variation-settings: "opsz" 14;
+        font-style: italic;
+        color: rgba(249, 244, 236, 0.7);
+        margin-top: 1rem;
+        font-size: 1rem;
+        line-height: 1.6;
+      }
+      .cta-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        margin-top: 2rem;
+        padding: 1rem 2rem;
+        background: transparent;
+        border: 1.5px solid var(--brass-light);
+        color: var(--brass-light);
+        font-family: "Manrope", sans-serif;
+        text-transform: uppercase;
+        letter-spacing: 0.22em;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .cta-button:hover {
+        background: var(--brass);
+        color: #f9f4ec;
+        border-color: var(--brass);
+      }
+
+      /* Direction label (preview-only, not for production) */
+      .direction-label {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--foreground);
+        color: var(--cream);
+        padding: 0.5rem 0.875rem;
+        font-family: "Manrope", sans-serif;
+        font-size: 0.6875rem;
+        text-transform: uppercase;
+        letter-spacing: 0.18em;
+        z-index: 100;
+        font-weight: 600;
+        border-radius: 2px;
+      }
+    </style>
+  </head>
+  <body class="stone-grain">
+    <div class="direction-label">Direction 1 · The Atrium</div>
+
+    <!-- Hero -->
+    <section class="hero text-center">
+      <div class="hero-eyebrow fadeUp">In Gratitude</div>
+      <h1 class="hero-title fadeUp engraved stagger-1">Our Sponsors</h1>
+      <div class="hero-rule fadeUp stagger-2"></div>
+      <p class="hero-body fadeUp stagger-3">
+        Their support builds the wall on which this tournament stands.
+        Inscribed in gratitude for the 2026 season.
+      </p>
+    </section>
+
+    <!-- CHAMPION -->
+    <section class="px-4 sm:px-6 pb-20">
+      <div class="mx-auto max-w-6xl">
+        <div class="tier-heading">
+          <div class="tier-numeral fadeUp">I · The Champions</div>
+          <h2 class="tier-name fadeUp stagger-1 engraved" style="font-size: 2.5rem;">Champion</h2>
+          <div class="tier-rule fadeUp stagger-2" style="width: 64px;"></div>
+          <div class="tier-inscription fadeUp stagger-3">Four · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
+          <a href="#" class="plaque fadeUp stagger-1" data-tier="champion">
+            <div class="window">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1629596078630-4PR6HEVF8B1XEM10T28E/carolinaeast-feature.jpeg" alt="Carolina East Health" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Carolina East Health</div>
+              <div class="inscription-sub">Inscribed · MMXXVI</div>
+            </div>
+          </a>
+
+          <a href="#" class="plaque fadeUp stagger-2" data-tier="champion">
+            <div class="window">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/23606448-6e61-4bff-b952-c09be947ee00/Fuel-Market-Metallic-Oval-logo.jpg" alt="Fuel Market" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Fuel Market</div>
+              <div class="inscription-sub">Inscribed · MMXXVI</div>
+            </div>
+          </a>
+
+          <a href="#" class="plaque fadeUp stagger-3" data-tier="champion">
+            <div class="window">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785236362-vienko9zqoa.webp" alt="Lynne Davenport — Century 21 Zaytoun Raines" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Lynne Davenport · Century 21 Zaytoun Raines</div>
+              <div class="inscription-sub">Inscribed · MMXXVI</div>
+            </div>
+          </a>
+
+          <!-- MIKE EVANS — name-only patron, identical plaque frame -->
+          <div class="plaque fadeUp stagger-4" data-tier="champion">
+            <div class="window">
+              <span class="engraved-name engraved">Mike&nbsp;Evans</span>
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Mike Evans</div>
+              <div class="inscription-sub">Patron · MMXXVI</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EAGLE -->
+    <section class="px-4 sm:px-6 pb-20">
+      <div class="mx-auto max-w-6xl">
+        <div class="tier-heading">
+          <div class="tier-numeral fadeUp">II · The Eagles</div>
+          <h2 class="tier-name fadeUp stagger-1 engraved" style="font-size: 2rem;">Eagle</h2>
+          <div class="tier-rule fadeUp stagger-2" style="width: 56px;"></div>
+          <div class="tier-inscription fadeUp stagger-3">Five · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 sm:gap-6">
+          <a href="#" class="plaque fadeUp stagger-1" data-tier="eagle">
+            <div class="window">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1662990372442-P51HLP0LPA5Q9ZHG6JF5/Chick-fil-A+White+Script+Logo+on+PMS+186+Large_master.jpg" alt="Chick-fil-A" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Chick-fil-A</div>
+            </div>
+          </a>
+
+          <a href="#" class="plaque fadeUp stagger-2" data-tier="eagle">
+            <div class="window">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464031909-4HREHIUBP20JXWBB34LA/BSH_logo.jpg" alt="BSH" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">BSH</div>
+            </div>
+          </a>
+
+          <a href="#" class="plaque fadeUp stagger-3" data-tier="eagle">
+            <div class="window">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694463378634-V0OPBPQC2V0EC7LTY1AS/sportsconnection.png" alt="Sports Connection" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Sports Connection</div>
+            </div>
+          </a>
+
+          <a href="#" class="plaque fadeUp stagger-4" data-tier="eagle">
+            <div class="window">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785296666-0bizlqnstv9g.webp" alt="Scottie Davenport — Shopmonkey" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Scottie Davenport · Shopmonkey</div>
+            </div>
+          </a>
+
+          <a href="#" class="plaque fadeUp stagger-5" data-tier="eagle">
+            <div class="window">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785381187-2hzylaxgtc.webp" alt="Urethane Innovators" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">Urethane Innovators</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- STANDARD -->
+    <section class="px-4 sm:px-6 pb-20">
+      <div class="mx-auto max-w-6xl">
+        <div class="tier-heading">
+          <div class="tier-numeral fadeUp">III · The Partners</div>
+          <h2 class="tier-name fadeUp stagger-1 engraved" style="font-size: 1.625rem;">Standard</h2>
+          <div class="tier-rule fadeUp stagger-2" style="width: 48px;"></div>
+          <div class="tier-inscription fadeUp stagger-3">One · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
+          <a href="#" class="plaque fadeUp stagger-1" data-tier="standard">
+            <div class="window">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785339860-r8kqhblykq.webp" alt="The Insurance Center" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">The Insurance Center</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- COMPACT -->
+    <section class="px-4 sm:px-6 pb-20">
+      <div class="mx-auto max-w-6xl">
+        <div class="tier-heading">
+          <div class="tier-numeral fadeUp">IV · The Friends</div>
+          <h2 class="tier-name fadeUp stagger-1 engraved" style="font-size: 1.375rem;">Compact</h2>
+          <div class="tier-rule fadeUp stagger-2" style="width: 40px;"></div>
+          <div class="tier-inscription fadeUp stagger-3">One · MMXXVI</div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3 max-w-4xl mx-auto">
+          <a href="#" class="plaque fadeUp stagger-1" data-tier="compact">
+            <div class="window">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785090396-u33w81pd5f.jpg" alt="ThinkCode" />
+            </div>
+            <div class="inscription">
+              <div class="inscription-name engraved-sm">ThinkCode</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- EMPTY TIER EXAMPLE -->
+    <section class="px-4 sm:px-6 pb-20">
+      <div class="mx-auto max-w-6xl">
+        <div class="tier-heading">
+          <div class="tier-numeral fadeUp" style="color: var(--brass-light);">Empty Tier · Example</div>
+          <h2 class="tier-name fadeUp stagger-1 engraved" style="font-size: 2rem; opacity: 0.5;">Eagle</h2>
+          <div class="tier-rule fadeUp stagger-2" style="width: 56px; opacity: 0.5;"></div>
+          <div class="tier-inscription fadeUp stagger-3" style="opacity: 0.5;">Awaiting dedication</div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 max-w-3xl mx-auto">
+          <a href="#" class="plaque-empty fadeUp stagger-1" style="text-decoration: none;">
+            <div class="window">
+              <span class="empty-mark">awaiting dedication</span>
+              <span class="empty-package">
+                Eagle Sponsorship · <strong>$2,500</strong>
+              </span>
+            </div>
+            <div class="empty-cta">Inquire to Inscribe →</div>
+          </a>
+          <a href="#" class="plaque-empty fadeUp stagger-2" style="text-decoration: none;">
+            <div class="window">
+              <span class="empty-mark">awaiting dedication</span>
+              <span class="empty-package">
+                Eagle Sponsorship · <strong>$2,500</strong>
+              </span>
+            </div>
+            <div class="empty-cta">Inquire to Inscribe →</div>
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="cta-section">
+      <div class="cta-content">
+        <div class="cta-eyebrow">Be Inscribed</div>
+        <h2 class="cta-title">
+          Make it possible<br />for someone fighting right now.
+        </h2>
+        <p class="cta-body">
+          Your sponsorship funds transportation to treatment, lodging during
+          extended care, and medical equipment for patients in our community
+          facing the hardest days of their lives.
+        </p>
+        <a href="#" class="cta-button">View Sponsorship Packages →</a>
+      </div>
+    </section>
+  </body>
+</html>

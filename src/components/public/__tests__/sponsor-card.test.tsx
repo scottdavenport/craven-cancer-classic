@@ -240,3 +240,61 @@ describe("SponsorCard — no grayscale filter (invariant)", () => {
     });
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprint 22 · RED — SponsorCard redesign contracts (#250)
+// Per plan: tests 13–19 from sprint-22-sponsors-redesign.md
+// Tests 13–18 are satisfied by the blocks above; test 19 is new.
+// ---------------------------------------------------------------------------
+
+describe("SponsorCard — Sprint 22 redesign contracts (#250)", () => {
+  // Test 13: logo img src
+  it("renders <img> with src={sponsor.logo_url} when logo_url is set", () => {
+    renderCard({ sponsor: BASE_SPONSOR, tierSize: "standard" });
+    const img = screen.getByRole("img", { name: BASE_SPONSOR.name });
+    expect(img).toHaveAttribute("src", BASE_SPONSOR.logo_url);
+  });
+
+  // Test 14: patron name span with data-testid when logo_url is null
+  it("renders patron name element with data-testid='patron-name' when logo_url is null", () => {
+    renderCard({ sponsor: NO_LOGO_SPONSOR, tierSize: "standard" });
+    expect(screen.getByTestId("patron-name")).toBeInTheDocument();
+    expect(screen.getByTestId("patron-name")).toHaveTextContent(NO_LOGO_SPONSOR.name);
+  });
+
+  // Test 15: <a> with href, target, rel when website is set
+  it("renders as <a> with href, target=_blank, rel=noopener noreferrer when website is set", () => {
+    const { container } = renderCard({ sponsor: BASE_SPONSOR, tierSize: "champion" });
+    const link = container.querySelector("a");
+    expect(link).not.toBeNull();
+    expect(link).toHaveAttribute("href", BASE_SPONSOR.website);
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+  });
+
+  // Test 16: non-interactive <div> when website is null
+  it("renders as non-interactive <div> (no <a>) when website is null", () => {
+    const { container } = renderCard({ sponsor: NO_WEBSITE_SPONSOR, tierSize: "champion" });
+    expect(container.querySelector("a")).toBeNull();
+    const card = screen.getByTestId(`sponsor-card-${NO_WEBSITE_SPONSOR.id}`);
+    expect(card.tagName.toLowerCase()).toBe("div");
+  });
+
+  // Test 17: card root data-testid
+  it("card root has data-testid='sponsor-card-{sponsor.id}'", () => {
+    renderCard({ sponsor: BASE_SPONSOR, tierSize: "compact" });
+    expect(screen.getByTestId(`sponsor-card-${BASE_SPONSOR.id}`)).toBeInTheDocument();
+  });
+
+  // Test 18: patron-name present when logo_url is null
+  it("data-testid='patron-name' is present in DOM when logo_url is null", () => {
+    renderCard({ sponsor: TEXT_NO_WEBSITE_SPONSOR, tierSize: "compact" });
+    expect(screen.getByTestId("patron-name")).toBeInTheDocument();
+  });
+
+  // Test 19: patron-name absent when logo_url is set (new in Sprint 22)
+  it("data-testid='patron-name' is absent from DOM when logo_url is set", () => {
+    renderCard({ sponsor: BASE_SPONSOR, tierSize: "standard" });
+    expect(screen.queryByTestId("patron-name")).not.toBeInTheDocument();
+  });
+});

@@ -78,7 +78,6 @@ vi.mock("@/components/public/sponsorship-card", () => ({
         </span>
         <span className="product-name">{item.name}</span>
         <span className="product-summary">{summary}</span>
-        <span>Tax-deductible · receipt provided</span>
         {item.max_quantity === 1 && item.sold_count === 0 && (
           <span>1 of 1 available</span>
         )}
@@ -491,6 +490,17 @@ describe("SponsorshipsPage — Sprint 23 redesign (RED)", () => {
     const { container } = render(await Page());
 
     expect(container.innerHTML).not.toContain("font-display");
+  });
+
+  // ── Sprint 24 regression: tax pill removed from all cards ──────────────────
+
+  it("S24 — no card renders 'Tax-deductible' text (per-card tax pill removed)", async () => {
+    setClient(buildSupabaseMock({ items: ALL_10_ITEMS }));
+    const Page = await loadPage();
+    const { container } = render(await Page());
+
+    expect(container.querySelectorAll('[class*="product-tax"]').length).toBe(0);
+    expect(container.textContent).not.toContain("Tax-deductible");
   });
 
   // ── Watchdog case 25: Aria-locked masthead body copy (program language) ────

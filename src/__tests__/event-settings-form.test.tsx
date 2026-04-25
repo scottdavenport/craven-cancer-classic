@@ -35,6 +35,7 @@ const mockSettings = {
   tournament_start_date: null,
   tournament_end_date: null,
   venue_name: null,
+  lifetime_raised_cents: null,
 };
 
 describe("EventSettingsForm", () => {

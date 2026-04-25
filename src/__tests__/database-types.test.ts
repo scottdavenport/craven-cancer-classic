@@ -43,6 +43,7 @@ describe("database types", () => {
       tournament_start_date: "2026-09-18",
       tournament_end_date: null,
       venue_name: "New Bern Golf & Country Club",
+      lifetime_raised_cents: null,
     };
     expect(event.name).toBe("Craven Cancer Classic");
     expect(event.registration_fee_cents).toBe(70000);

@@ -131,6 +131,7 @@ export type Database = {
           description: string | null
           hero_image_url: string | null
           id: string
+          lifetime_raised_cents: number | null
           morning_cap: number
           morning_slots: number
           name: string
@@ -148,6 +149,7 @@ export type Database = {
           description?: string | null
           hero_image_url?: string | null
           id?: string
+          lifetime_raised_cents?: number | null
           morning_cap?: number
           morning_slots?: number
           name?: string
@@ -165,6 +167,7 @@ export type Database = {
           description?: string | null
           hero_image_url?: string | null
           id?: string
+          lifetime_raised_cents?: number | null
           morning_cap?: number
           morning_slots?: number
           name?: string

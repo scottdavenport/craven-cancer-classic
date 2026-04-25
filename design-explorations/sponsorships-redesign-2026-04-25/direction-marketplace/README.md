@@ -56,7 +56,9 @@ Same tokens as Marquee:
 ## Anchor IDs
 
 Each card has an `id` matching a slugified version of the package name:
-- `#champion`, `#eagle`, `#golf-gift`, `#celebration-lunch`, `#bloody-mary`, `#golf-carts`, `#wall-sponsor`, `#thursday-night`, `#morning-biscuit`, `#shot-of-the-day`
+- `#champion`, `#eagle`, `#golf-gift`, `#celebration-lunch`, `#bloody-mary-bar`, `#golf-carts`, `#wall-sponsor`, `#thursday-night`, `#morning-biscuit-sponsor`, `#shot-of-the-day`
+
+Slug derivation: lowercase the `sponsorship_items.name` exactly as stored, replace whitespace with hyphens, strip non-alphanumeric (keep hyphens). DB name is the authority — "Morning Biscuit Sponsor" and "Wall Sponsor" both keep their "Sponsor" suffix; "Bloody Mary Bar" keeps the "Bar" suffix. Display the DB name verbatim on cards.
 
 `/sponsors` Open Sponsorships chips currently link to `/sponsorships` root. Production implementation should switch them to `/sponsorships#<slug>` so chips deep-link to the specific package. Slug derivation: lowercase the `sponsorship_items.name`, replace spaces with hyphens.
 

@@ -197,7 +197,7 @@ export function slugifyItemName(name: string): string {
 }
 ```
 
-Note: The locked anchor IDs in the plan brief assume "Bloody Mary Bar" slugifies to "bloody-mary-bar" — verify against actual `sponsorship_items.name` in prod. If the DB name is "Bloody Mary" (not "Bloody Mary Bar"), the slug is "bloody-mary". The slugify function is correct either way; Spec's unit tests must use the actual DB name strings.
+Note: DB names verified against prod 2026-04-25. The 10 active items + their slugs are locked in the Anchor ID Reference table below. DB has been renamed to "Bloody Mary Bar" (was "Bloody Mary") to match the design preview's intent.
 
 ### `src/components/public/open-sponsorships-block.tsx` — SMALL EDIT
 
@@ -235,14 +235,14 @@ Follow the exact same pattern used for `--brand-darker` in Sprint 22 (consistent
 | Eagle | `eagle` |
 | Golf Gift | `golf-gift` |
 | Celebration Lunch | `celebration-lunch` |
-| Bloody Mary (or Bloody Mary Bar — verify) | `bloody-mary` or `bloody-mary-bar` |
+| Bloody Mary Bar | `bloody-mary-bar` |
 | Golf Carts | `golf-carts` |
 | Wall Sponsor | `wall-sponsor` |
 | Thursday Night | `thursday-night` |
 | Morning Biscuit Sponsor | `morning-biscuit-sponsor` |
 | Shot of the Day | `shot-of-the-day` |
 
-**Action for Bolt before implementation:** Run `SELECT name FROM sponsorship_items WHERE active=true AND deleted_at IS NULL AND year=2026 ORDER BY price_cents DESC` against prod (via Supabase MCP) to get the exact name strings. Slugify each. Confirm the Bloody Mary name matches the design preview ("1 of 1 available" pill). Update Spec's test fixtures to match the real names.
+**Action for Bolt:** Forge already verified DB names against prod (2026-04-25). The 10 names + slugs above are authoritative — Bolt derives slug from `sponsorship_items.name` via the `slugifyItemName` util and renders the DB name verbatim on each card. No additional verification needed.
 
 ---
 
@@ -285,7 +285,7 @@ All criteria are verifiable by loading the live `/sponsorships` page after deplo
 
 ### Open Sponsorships chips (on `/sponsors`)
 22. Each chip on the Open Sponsorships block links to `/sponsorships#<slug>` (e.g. `/sponsorships#champion`, `/sponsorships#eagle`)
-23. Navigating to `/sponsorships#bloody-mary` (or the correct slug) scrolls the Bloody Mary card into view
+23. Navigating to `/sponsorships#bloody-mary-bar` scrolls the Bloody Mary Bar card into view
 
 ### PurchaseForm
 24. PurchaseForm container has a white background (not `bg-neutral-50`)
@@ -302,7 +302,7 @@ Spec writes failing tests before Bolt writes a line of implementation. TDD is th
 `slugifyItemName`:
 1. `"Champion"` → `"champion"`
 2. `"Golf Gift"` → `"golf-gift"`
-3. `"Bloody Mary Bar"` → `"bloody-mary-bar"` (or actual DB name — verify)
+3. `"Bloody Mary Bar"` → `"bloody-mary-bar"`
 4. `"Celebration Lunch"` → `"celebration-lunch"`
 5. `"Morning Biscuit Sponsor"` → `"morning-biscuit-sponsor"`
 6. `"Shot of the Day"` → `"shot-of-the-day"`
@@ -490,7 +490,7 @@ Work is NOT done at merge. After Vercel auto-deploys from main:
 - [ ] Reassurance strip "2026 Partners page" link goes to `/sponsors`
 - [ ] No purple anywhere — visual scan + `document.querySelectorAll('.bg-purple').length === 0` in console
 - [ ] No Fraunces — `document.querySelectorAll('.font-display').length === 0` in console
-- [ ] Anchor IDs work: navigate to `/sponsorships#bloody-mary` — correct card scrolls into view
+- [ ] Anchor IDs work: navigate to `/sponsorships#bloody-mary-bar` — correct card scrolls into view
 - [ ] Navigate to `/sponsorships#champion` — Champion card scrolls into view
 - [ ] Click "Select package →" on any card — PurchaseForm appears with brand-teal "Proceed to Payment" button (not purple)
 - [ ] Mobile (390px): cards go 1-up, masthead headline wraps acceptably
@@ -501,10 +501,8 @@ Work is NOT done at merge. After Vercel auto-deploys from main:
 
 ## Risks and Open Questions
 
-### Risk 1 — Bloody Mary DB name (VERIFY BEFORE IMPLEMENTATION)
-The design preview shows "Bloody Mary Bar" as the package name. The DB may store "Bloody Mary" (different slug). Bolt must query prod before writing any card code. Slug determines anchor ID and is referenced by `/sponsors` chips. Get it wrong and the deep-links break silently.
-
-**Action:** Bolt queries prod at start of implementation: `SELECT id, name, max_quantity FROM sponsorship_items WHERE active=true AND deleted_at IS NULL AND year=2026 ORDER BY price_cents DESC`.
+### Risk 1 — Resolved (DB names verified + renamed 2026-04-25)
+DB has been renamed from "Bloody Mary" to "Bloody Mary Bar" via service key (Forge, before plan PR opened). Slug = `bloody-mary-bar`. All 10 anchor slugs in the table above are authoritative. No verification work for Bolt.
 
 ### Risk 2 — 4 unverified one-line summaries (BLOCKS SHIP)
 Golf Carts, Thursday Night, Morning Biscuit Sponsor, and Shot of the Day have empty `benefits` arrays in prod. The design preview has plausible placeholder copy. This copy is **unverified** — Aria must confirm it's accurate or get Scott to provide the correct benefit language before the PR can merge.

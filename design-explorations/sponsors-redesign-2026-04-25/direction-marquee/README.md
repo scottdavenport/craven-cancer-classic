@@ -7,9 +7,15 @@ Calibrated to the two references Scott picked: **US Open Tennis Partners** and *
 - Replaced invented tier framing ("Premier Tier · Champion Partners") with the real category names from `sponsorship_items` ("Champion", "Eagle", "Thursday Night", "Morning Biscuit Sponsor", etc.). No "Tier" wording, no "Partners" suffix — the categories speak for themselves.
 
 **Updated 2026-04-25 after Scott review (round 2):**
-- Empty categories are no longer rendered as their own per-tier sections. Instead, the page renders only the **populated** tiers (Champion, Eagle, Thursday Night, Morning Biscuit Sponsor) followed by a single **"Open Sponsorships"** block at the bottom that lists every still-available category with name, one-line benefits, price, and CTA.
+- Empty categories are no longer rendered as their own per-tier sections. Instead, the page renders only the **populated** tiers (Champion, Eagle, Thursday Night, Morning Biscuit Sponsor) followed by a single **"Open Sponsorships"** block at the bottom.
 - Reason: with current data that's 4 populated tiers + 6 empty active categories. Inline empty-tier callouts at every level would have made the page read as a 10-section sales catalog. The combined block keeps the partner sections focused on celebration and consolidates the sales pitch into one block.
 - Source of truth for the open list: `sponsorship_items` where `deleted_at IS NULL` AND no rows in `sponsors` reference the tier_id. Today: Golf Gift ($2,500), Celebration Lunch ($2,000), Golf Carts ($1,000), Bloody Mary ($1,000), Wall Sponsor ($700), Shot of the Day ($500). Sorted by price descending.
+
+**Updated 2026-04-25 after Scott review (round 3):**
+- The Open Sponsorships block is now **promotional, not transactional.** Replaced the row-list-with-price-per-row pattern with a **chip grid** — one chip per open category showing name + "From $X". Chips are clickable and route to `/sponsorships` rather than completing purchase inline. A single primary CTA ("Browse all sponsorships →") sits below the chips.
+- Reason: most categories have unlimited or multi-slot inventory (only Bloody Mary has `max_quantity: 1`; everything else is `null` = unlimited). The original 6-row list with one price per row implied "6 slots remaining" which misrepresented inventory. The chip grid communicates breadth + price tiering without pretending to be a purchase flow.
+- The "From $X" framing handles the multi-slot case correctly — each row reads as "starting price for this category" rather than "single-slot price."
+- Purchase action moves entirely to `/sponsorships`. That page will need its own polish work (out of scope for this iteration) — chips currently link to the page root; deep-linking to `/sponsorships#category-slug` is a follow-up if/when /sponsorships gains anchor support.
 
 ## What changed from the 2026-04-24 explorations
 
@@ -44,7 +50,7 @@ The whole grid stays within the same 80rem max-width container, so all tiers vis
 
 This is the strongest Mike Evans solution of any direction so far: the typographic system is the same (Manrope 800), so a typeset name looks like an intentional display moment, not a fallback. No italic, no serif flourish, no "without insignia" qualifier.
 
-**Open Sponsorships block** — single full-width gradient card (brand-darker → brand-dark) at the bottom of the page, after the last populated tier section. Header pair (intro title + body) introduces the block, then a vertical list of available categories. Each row is a clickable item with name + one-line benefits on the left, price on the right, and an "Inquire →" CTA on desktop. Hover state nudges the row right and brightens the CTA color. Looks like a curated sales menu, not a "missing data" placeholder. Replaces the earlier per-empty-tier inline callout pattern (which would have made the page a 10-section sales scroll with current data).
+**Open Sponsorships block** — single full-width gradient card (brand-darker → brand-dark) at the bottom of the page, after the last populated tier section. Three stacked elements: an intro pair (title + body), a wrapping chip grid (one chip per open category showing name + "From $X"), and a single white primary CTA ("Browse all sponsorships →"). Chips are translucent white-on-teal pills with a subtle border; on hover they brighten and lift 1px. Whole block is promotional, not transactional — every link routes to `/sponsorships`, where the actual purchase flow lives. The chip pattern correctly handles multi-slot inventory (most categories accept multiple sponsors), where a row-list with one price would have implied single-slot scarcity.
 
 **Bottom CTA** — soft-gray section with the existing mission copy ("Make it possible for someone fighting right now"), Manrope 800 headline, dark-teal button. Echoes the masthead structurally but in a quieter register.
 
@@ -53,7 +59,7 @@ This is the strongest Mike Evans solution of any direction so far: the typograph
 1. **Logo normalization** — every card has a fixed-aspect logo region with consistent inner padding. Logos `object-contain` at 82%×72% bounds. The CARD does the work; the logo is the guest. Logos with white grounds (Carolina East, Chick-fil-A, BSH) sit naturally because the card's logo region is also white. No color manipulation, no cropping.
 2. **Mike Evans** — same card frame, typeset name in the logo region using the same typeface family that drives the masthead and tier headers. The system absorbs name-only patrons without flagging them as exceptions.
 3. **Tier cascade** — same card DNA at every tier. Aspect ratio flattens (16:11 → 4:3 → 4:3 → 3:2), grid density increases (2-up → 3-up → 4-up → 6-up), type scales down. Compact still has a section header, still has a name strip, still has hover state. There is no point where the design "gives up."
-4. **Empty tier** — empty categories are not rendered as their own tier sections at all. Instead, every still-available category surfaces in a single "Open Sponsorships" block at the bottom of the page (gradient teal panel with a vertical list of name/benefits/price/CTA rows). This keeps the populated partner sections focused on celebration and consolidates the sales pitch into one cohesive moment, instead of scattering empty-tier callouts throughout the scroll.
+4. **Empty tier** — empty categories are not rendered as their own tier sections at all. Instead, every still-available category surfaces as a chip in a single "Open Sponsorships" block at the bottom of the page (gradient teal panel with intro copy + chip grid + CTA). The chip grid promotes breadth without pretending to be a purchase flow — clicks route to `/sponsorships` for the actual transaction. This keeps the populated partner sections focused on celebration and consolidates the sales pitch into one promotional moment.
 
 ## Palette extension
 
@@ -68,8 +74,9 @@ No new accent color. The page deliberately runs on **brand teal + neutrals only*
 - **The 16:11 Champion logo aspect** is wider than typical sponsor cards. Tested against Lynne Davenport's wide horizontal logo and Carolina East's near-square photo — both render acceptably. May need adjustment if Scott has a champion-tier sponsor with a particularly tall narrow logo (vertical SVG icon, etc.).
 - **Stat cells in the masthead** ("11 Partners / 16 Years Running / $580K+ Raised") are placeholder values — the real numbers need to come from somewhere. If the data isn't trivially available, drop the stat row and let the masthead breathe with just the headline + body. The page works either way.
 - **"Friends of the Tournament"** as the Compact tier name is a copy nudge. Scott approved this in earlier discussion. If the actual tier name in the DB is "Compact," the section header will read "Compact Partners" instead — fine, but less warm. Either rename the tier in the DB or pass a `display_name` override at the data layer.
-- **Open Sponsorships row copy is generic.** The one-line benefits text on each row ("Logo on golf gifts · recognition on website", etc.) is derived loosely from `sponsorship_items.benefits` arrays — some rows have populated benefits in the DB, others are empty and use plausible-but-unverified copy. Aria-level copy review before ship.
-- **"Inquire →" CTA hides on mobile.** At <768px the row collapses to name/benefits/price only. The whole row is still a link, so it's reachable, but the call-to-action is implicit. If the open-sponsorships block needs to be more aggressive on mobile, surface the CTA inline below the price as a third row item.
+- **Chip wrapping at narrow widths.** With 6+ chips, the wrap pattern at iPad-portrait widths (~768px) may produce uneven row distribution (e.g. 5 on row one, 1 orphan on row two). Acceptable today; if the open-category list grows past ~10, revisit the layout.
+- **Chip count drives block weight.** As more categories sell out and the chip grid shrinks, the bottom block visual weight drops alongside it. At 1-2 remaining chips the block may feel thin against the masthead and partner grids — at that point either the intro copy bulks up or the block compresses to a more restrained "compact promo" form (which is the version we considered as Option B in the design discussion).
+- **`/sponsorships` deep-link anchors don't exist yet.** Chips currently link to the page root. Production work should add `id` anchors per category and update the chip `href` to `/sponsorships#category-slug` so clicks scroll directly to the chosen package on the destination page.
 
 ## Implementation cost
 
@@ -92,4 +99,4 @@ One Bolt PR. Estimate ~3 hours of GREEN work + Spec tests in parallel.
 open /Users/openclaw/github/craven-cancer-classic/design-explorations/sponsors-redesign-2026-04-25/direction-marquee/index.html
 ```
 
-Resize to 390px to verify mobile. Mike Evans is the 4th card in the Champion tier. The "Open Sponsorships" block is the last section before the bottom CTA — verify the row hover-nudge feels right, and check the mobile collapse (CTA hidden, price + name + benefits stacked).
+Resize to 390px to verify mobile. Mike Evans is the 4th card in the Champion tier. The "Open Sponsorships" block is the last section before the bottom CTA — verify chip hover lift feels right, the chip grid wraps cleanly at narrow widths, and the white "Browse all sponsorships →" CTA reads as the primary action against the dark teal panel.

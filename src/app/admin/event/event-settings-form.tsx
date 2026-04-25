@@ -135,6 +135,27 @@ export function EventSettingsForm({ settings }: EventSettingsFormProps) {
                 {descriptionError ?? ""}
               </p>
             </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="lifetime_raised_cents">Lifetime Raised (USD)</Label>
+              <Input
+                id="lifetime_raised_cents"
+                name="lifetime_raised_cents"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={
+                  settings?.lifetime_raised_cents != null
+                    ? (settings.lifetime_raised_cents / 100).toFixed(2)
+                    : ""
+                }
+                placeholder="580000.00"
+                aria-describedby="lifetime-raised-hint"
+              />
+              <p id="lifetime-raised-hint" className="mt-1 font-sans text-[0.75rem] text-muted-foreground">
+                Cumulative amount raised since 2010. Displayed on the public sponsors page. Leave blank to hide the stat.
+              </p>
+            </div>
           </fieldset>
         </CardContent>
       </Card>

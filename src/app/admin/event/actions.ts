@@ -54,6 +54,12 @@ export async function updateEventSettings(formData: FormData) {
     return { error: "End date must be on or after start date" };
   }
 
+  const lifetimeRaisedRaw = formData.get("lifetime_raised_cents") as string;
+  const lifetimeRaisedDollars = lifetimeRaisedRaw ? parseFloat(lifetimeRaisedRaw) : null;
+  if (lifetimeRaisedDollars !== null && (isNaN(lifetimeRaisedDollars) || lifetimeRaisedDollars < 0)) {
+    return { error: "Invalid lifetime raised amount" };
+  }
+
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
@@ -67,6 +73,9 @@ export async function updateEventSettings(formData: FormData) {
     tournament_start_date: startStr,
     tournament_end_date: endStr,
     venue_name: (formData.get("venue_name") as string) || null,
+    lifetime_raised_cents: lifetimeRaisedDollars !== null
+      ? Math.round(lifetimeRaisedDollars * 100)
+      : null,
   };
 
   const { data: existing } = await supabase

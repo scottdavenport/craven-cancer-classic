@@ -31,6 +31,7 @@ const baseSettings: EventSettings = {
   hero_image_url: null,
   year: 2026,
   updated_at: "2026-01-01T00:00:00.000Z",
+  lifetime_raised_cents: null,
 };
 
 function triggerValidationErrors() {

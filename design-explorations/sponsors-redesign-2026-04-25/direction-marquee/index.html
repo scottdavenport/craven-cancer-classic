@@ -1,0 +1,689 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Our Partners — Direction: Marquee</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --brand: #5797a6;
+        --brand-dark: #3a6b83;
+        --brand-darker: #244a5b;
+        --brand-muted: #e8f0f4;
+        --foreground: #11212a;
+        --muted-foreground: #5f7a87;
+        --surface: #ffffff;
+        --surface-soft: #f7f8f9;
+        --border: #e5ebee;
+        --border-strong: #d0dade;
+      }
+
+      * { box-sizing: border-box; }
+      html, body {
+        font-family: "Manrope", system-ui, -apple-system, sans-serif;
+        color: var(--foreground);
+        background: var(--surface);
+        -webkit-font-smoothing: antialiased;
+        margin: 0;
+      }
+
+      /* ─── MASTHEAD ─── */
+      .masthead {
+        background: var(--brand-darker);
+        color: #ffffff;
+        padding: 6rem 1.5rem 5rem;
+        position: relative;
+        overflow: hidden;
+      }
+      @media (min-width: 768px) {
+        .masthead { padding: 8rem 2.5rem 6.5rem; }
+      }
+      /* Subtle gradient overlay for depth */
+      .masthead::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 80% 0%, rgba(87, 151, 166, 0.55), transparent 70%),
+          radial-gradient(ellipse 60% 50% at 0% 100%, rgba(36, 74, 91, 0.7), transparent 60%);
+        pointer-events: none;
+      }
+      .masthead-content {
+        position: relative;
+        z-index: 1;
+        max-width: 80rem;
+        margin: 0 auto;
+      }
+      .masthead-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.78);
+      }
+      .masthead-eyebrow::before {
+        content: "";
+        width: 28px;
+        height: 1px;
+        background: var(--brand);
+      }
+      .masthead-title {
+        margin-top: 1.5rem;
+        font-size: clamp(3.5rem, 11vw, 8rem);
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        line-height: 0.92;
+        color: #ffffff;
+        text-transform: uppercase;
+      }
+      .masthead-meta {
+        margin-top: 2rem;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2rem 2.5rem;
+        align-items: flex-end;
+        max-width: 60rem;
+      }
+      .masthead-stat {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .masthead-stat-value {
+        font-size: 1.75rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: #ffffff;
+        line-height: 1;
+      }
+      .masthead-stat-label {
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.6);
+      }
+      .masthead-body {
+        margin-top: 2rem;
+        max-width: 44ch;
+        font-size: 1.0625rem;
+        line-height: 1.6;
+        color: rgba(255, 255, 255, 0.82);
+        font-weight: 400;
+      }
+
+      /* ─── PAGE ─── */
+      .page {
+        max-width: 80rem;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+      }
+      @media (min-width: 768px) {
+        .page { padding: 0 2.5rem; }
+      }
+
+      /* ─── TIER SECTION HEADER ─── */
+      .tier-section {
+        padding: 5rem 0 1rem;
+        border-top: 1px solid var(--border);
+      }
+      .tier-section:first-of-type {
+        border-top: none;
+        padding-top: 6rem;
+      }
+      @media (min-width: 768px) {
+        .tier-section { padding: 6rem 0 1rem; }
+      }
+      .tier-header {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 2rem;
+        margin-bottom: 2.5rem;
+        flex-wrap: wrap;
+      }
+      .tier-header-left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+      .tier-name {
+        font-size: clamp(2.25rem, 5vw, 3.25rem);
+        font-weight: 800;
+        letter-spacing: -0.022em;
+        line-height: 1;
+        color: var(--foreground);
+        text-transform: none;
+      }
+      .tier-count {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+        padding-bottom: 0.5rem;
+      }
+      .tier-count strong {
+        color: var(--foreground);
+        font-weight: 700;
+      }
+
+      /* ─── PARTNER CARD (universal) ─── */
+      .partner-grid {
+        display: grid;
+        gap: 1.25rem;
+        margin-bottom: 1rem;
+      }
+      .partner-grid--champion {
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 640px) {
+        .partner-grid--champion { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+      }
+      .partner-grid--eagle {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1rem;
+      }
+      @media (min-width: 768px) {
+        .partner-grid--eagle { grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+      }
+      .partner-grid--standard {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.875rem;
+      }
+      @media (min-width: 768px) {
+        .partner-grid--standard { grid-template-columns: repeat(4, 1fr); gap: 1rem; }
+      }
+      .partner-grid--compact {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.75rem;
+      }
+      @media (min-width: 768px) {
+        .partner-grid--compact { grid-template-columns: repeat(6, 1fr); gap: 0.875rem; }
+      }
+
+      .partner {
+        display: flex;
+        flex-direction: column;
+        text-decoration: none;
+        color: inherit;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        position: relative;
+        overflow: hidden;
+      }
+      .partner::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--brand);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .partner:hover {
+        border-color: var(--border-strong);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 28px -16px rgba(17, 33, 42, 0.18);
+      }
+      .partner:hover::after { transform: scaleX(1); }
+
+      .partner-logo {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--surface);
+        padding: 1.5rem 1.25rem;
+        position: relative;
+      }
+      .partner-logo img {
+        max-width: 82%;
+        max-height: 72%;
+        object-fit: contain;
+      }
+
+      /* Tier-specific scaling */
+      .partner[data-tier="champion"] .partner-logo {
+        aspect-ratio: 16 / 11;
+        padding: 2rem 2rem;
+      }
+
+      .partner[data-tier="eagle"] .partner-logo {
+        aspect-ratio: 4 / 3;
+        padding: 1.5rem 1.5rem;
+      }
+
+      .partner[data-tier="standard"] .partner-logo {
+        aspect-ratio: 4 / 3;
+        padding: 1.125rem 1rem;
+      }
+
+      .partner[data-tier="compact"] .partner-logo {
+        aspect-ratio: 3 / 2;
+        padding: 0.875rem 0.75rem;
+      }
+
+      /* ─── PATRON CARD (Mike Evans) ─── */
+      .patron-name {
+        font-weight: 800;
+        text-align: center;
+        color: var(--foreground);
+        letter-spacing: -0.025em;
+        line-height: 1;
+      }
+      .partner[data-tier="champion"] .patron-name {
+        font-size: clamp(2rem, 4.5vw, 2.75rem);
+      }
+      .partner[data-tier="eagle"] .patron-name {
+        font-size: 1.875rem;
+      }
+
+      /* ─── OPEN SPONSORSHIPS BLOCK (combined empty-tier callout) ─── */
+      .open-sponsorships-block {
+        background: linear-gradient(135deg, var(--brand-darker) 0%, var(--brand-dark) 100%);
+        color: #ffffff;
+        padding: 2.5rem 1.5rem;
+        position: relative;
+        overflow: hidden;
+      }
+      @media (min-width: 768px) {
+        .open-sponsorships-block { padding: 3rem 2.75rem; }
+      }
+      .open-sponsorships-block::before {
+        content: "";
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 60%;
+        height: 180%;
+        background: radial-gradient(ellipse at center, rgba(87, 151, 166, 0.4), transparent 60%);
+        pointer-events: none;
+      }
+      .open-sponsorships-intro {
+        position: relative;
+        z-index: 1;
+        max-width: 56ch;
+        margin-bottom: 2rem;
+      }
+      .open-sponsorships-intro-title {
+        font-size: clamp(1.5rem, 3vw, 1.875rem);
+        font-weight: 800;
+        letter-spacing: -0.022em;
+        line-height: 1.15;
+        color: #ffffff;
+        margin: 0 0 0.875rem;
+      }
+      .open-sponsorships-intro-body {
+        font-size: 0.9375rem;
+        line-height: 1.55;
+        color: rgba(255, 255, 255, 0.78);
+        margin: 0;
+      }
+      .open-sponsorships-chips {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.625rem;
+        margin-bottom: 2rem;
+      }
+      .open-sponsorship-chip {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.625rem;
+        padding: 0.75rem 1.125rem;
+        background: rgba(255, 255, 255, 0.07);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        text-decoration: none;
+        color: #ffffff;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        white-space: nowrap;
+      }
+      .open-sponsorship-chip:hover {
+        background: rgba(255, 255, 255, 0.14);
+        border-color: rgba(255, 255, 255, 0.32);
+        transform: translateY(-1px);
+      }
+      .open-sponsorship-chip-name {
+        font-size: 0.9375rem;
+        font-weight: 700;
+        letter-spacing: -0.012em;
+      }
+      .open-sponsorship-chip-price {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        color: rgba(255, 255, 255, 0.62);
+      }
+      .open-sponsorships-cta {
+        position: relative;
+        z-index: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 1rem 1.75rem;
+        background: #ffffff;
+        color: var(--brand-darker);
+        font-size: 0.8125rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .open-sponsorships-cta:hover {
+        background: var(--brand);
+        color: #ffffff;
+      }
+
+      /* ─── BOTTOM CTA ─── */
+      .bottom-cta {
+        margin-top: 6rem;
+        background: var(--surface-soft);
+        padding: 5rem 1.5rem;
+        text-align: center;
+        border-top: 1px solid var(--border);
+      }
+      @media (min-width: 768px) {
+        .bottom-cta { padding: 6rem 2.5rem; }
+      }
+      .bottom-cta-content {
+        max-width: 44rem;
+        margin: 0 auto;
+      }
+      .bottom-cta-eyebrow {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--brand);
+      }
+      .bottom-cta-title {
+        margin-top: 1.25rem;
+        font-size: clamp(2rem, 5vw, 2.875rem);
+        font-weight: 800;
+        letter-spacing: -0.022em;
+        line-height: 1.1;
+        color: var(--foreground);
+      }
+      .bottom-cta-body {
+        margin-top: 1.25rem;
+        font-size: 1.0625rem;
+        line-height: 1.55;
+        color: var(--muted-foreground);
+        max-width: 40rem;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      .bottom-cta-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 2.25rem;
+        padding: 1.125rem 2.25rem;
+        background: var(--brand-darker);
+        color: #ffffff;
+        font-size: 0.8125rem;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        text-decoration: none;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .bottom-cta-button:hover {
+        background: var(--brand);
+      }
+
+      /* ─── ANIMATIONS ─── */
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      .fadeUp { opacity: 0; animation: fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+      .stagger-1 { animation-delay: 0.04s; }
+      .stagger-2 { animation-delay: 0.10s; }
+      .stagger-3 { animation-delay: 0.16s; }
+      .stagger-4 { animation-delay: 0.22s; }
+      .stagger-5 { animation-delay: 0.28s; }
+
+      /* ─── PREVIEW LABEL ─── */
+      .direction-label {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--brand-darker);
+        color: #ffffff;
+        padding: 0.5rem 0.875rem;
+        font-size: 0.625rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        z-index: 100;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="direction-label">Direction · Marquee</div>
+
+    <!-- Masthead -->
+    <header class="masthead">
+      <div class="masthead-content">
+        <div class="masthead-eyebrow fadeUp">Our Partners</div>
+        <h1 class="masthead-title fadeUp stagger-1">2026 Partners</h1>
+        <p class="masthead-body fadeUp stagger-2">
+          The organizations and individuals who make the Craven Cancer Classic
+          possible. Their support funds transportation, lodging, and treatment
+          for patients in our community.
+        </p>
+        <div class="masthead-meta fadeUp stagger-3">
+          <div class="masthead-stat">
+            <div class="masthead-stat-value">11</div>
+            <div class="masthead-stat-label">2026 Partners</div>
+          </div>
+          <div class="masthead-stat">
+            <div class="masthead-stat-value">16</div>
+            <div class="masthead-stat-label">Years Running</div>
+          </div>
+          <div class="masthead-stat">
+            <div class="masthead-stat-value">$580K+</div>
+            <div class="masthead-stat-label">Raised to Date</div>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- CHAMPION -->
+      <section class="tier-section">
+        <div class="tier-header">
+          <div class="tier-header-left">
+            <h2 class="tier-name fadeUp">Champion</h2>
+          </div>
+          <div class="tier-count fadeUp stagger-1"><strong>4</strong> · 2026 Season</div>
+        </div>
+
+        <div class="partner-grid partner-grid--champion">
+          <a href="#" class="partner fadeUp stagger-1" data-tier="champion">
+            <div class="partner-logo">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1629596078630-4PR6HEVF8B1XEM10T28E/carolinaeast-feature.jpeg" alt="Carolina East Health" />
+            </div>
+          </a>
+
+          <a href="#" class="partner fadeUp stagger-2" data-tier="champion">
+            <div class="partner-logo">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/23606448-6e61-4bff-b952-c09be947ee00/Fuel-Market-Metallic-Oval-logo.jpg" alt="Fuel Market" />
+            </div>
+          </a>
+
+          <a href="#" class="partner fadeUp stagger-3" data-tier="champion">
+            <div class="partner-logo">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785236362-vienko9zqoa.webp" alt="Lynne Davenport — Century 21 Zaytoun Raines" />
+            </div>
+          </a>
+
+          <!-- MIKE EVANS — typeset patron name does double duty as logo + identity -->
+          <div class="partner fadeUp stagger-4" data-tier="champion" aria-label="Mike Evans, Champion Patron">
+            <div class="partner-logo">
+              <span class="patron-name">Mike Evans</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EAGLE -->
+      <section class="tier-section">
+        <div class="tier-header">
+          <div class="tier-header-left">
+            <h2 class="tier-name fadeUp">Eagle</h2>
+          </div>
+          <div class="tier-count fadeUp stagger-1"><strong>5</strong> · 2026 Season</div>
+        </div>
+
+        <div class="partner-grid partner-grid--eagle">
+          <a href="#" class="partner fadeUp stagger-1" data-tier="eagle">
+            <div class="partner-logo">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1662990372442-P51HLP0LPA5Q9ZHG6JF5/Chick-fil-A+White+Script+Logo+on+PMS+186+Large_master.jpg" alt="Chick-fil-A" />
+            </div>
+          </a>
+          <a href="#" class="partner fadeUp stagger-2" data-tier="eagle">
+            <div class="partner-logo">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694464031909-4HREHIUBP20JXWBB34LA/BSH_logo.jpg" alt="BSH" />
+            </div>
+          </a>
+          <a href="#" class="partner fadeUp stagger-3" data-tier="eagle">
+            <div class="partner-logo">
+              <img src="https://images.squarespace-cdn.com/content/v1/55871a9ce4b0c7da4911d63b/1694463378634-V0OPBPQC2V0EC7LTY1AS/sportsconnection.png" alt="Sports Connection" />
+            </div>
+          </a>
+          <a href="#" class="partner fadeUp stagger-4" data-tier="eagle">
+            <div class="partner-logo">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785296666-0bizlqnstv9g.webp" alt="Scottie Davenport — Shopmonkey" />
+            </div>
+          </a>
+          <a href="#" class="partner fadeUp stagger-5" data-tier="eagle">
+            <div class="partner-logo">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785381187-2hzylaxgtc.webp" alt="Urethane Innovators" />
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- THURSDAY NIGHT -->
+      <section class="tier-section">
+        <div class="tier-header">
+          <div class="tier-header-left">
+            <h2 class="tier-name fadeUp">Thursday Night</h2>
+          </div>
+          <div class="tier-count fadeUp stagger-1"><strong>1</strong> · 2026 Season</div>
+        </div>
+
+        <div class="partner-grid partner-grid--standard">
+          <a href="#" class="partner fadeUp stagger-1" data-tier="standard">
+            <div class="partner-logo">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785090396-u33w81pd5f.jpg" alt="ThinkCode" />
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- MORNING BISCUIT SPONSOR -->
+      <section class="tier-section">
+        <div class="tier-header">
+          <div class="tier-header-left">
+            <h2 class="tier-name fadeUp">Morning Biscuit Sponsor</h2>
+          </div>
+          <div class="tier-count fadeUp stagger-1"><strong>1</strong> · 2026 Season</div>
+        </div>
+
+        <div class="partner-grid partner-grid--standard">
+          <a href="#" class="partner fadeUp stagger-1" data-tier="standard">
+            <div class="partner-logo">
+              <img src="https://kybfsxjruczbiokucyft.supabase.co/storage/v1/object/public/logos/1776785339860-r8kqhblykq.webp" alt="The Insurance Center" />
+            </div>
+          </a>
+        </div>
+      </section>
+
+      <!-- OPEN SPONSORSHIPS — promotional chip grid, routes to /sponsorships for purchase -->
+      <section class="tier-section">
+        <div class="tier-header">
+          <div class="tier-header-left">
+            <h2 class="tier-name fadeUp">Open Sponsorships</h2>
+          </div>
+          <div class="tier-count fadeUp stagger-1"><strong>6</strong> Categories · 2026 Season</div>
+        </div>
+
+        <div class="open-sponsorships-block fadeUp stagger-1">
+          <div class="open-sponsorships-intro">
+            <h3 class="open-sponsorships-intro-title">There's still room to back the 2026 tournament.</h3>
+            <p class="open-sponsorships-intro-body">
+              Six categories are still open, with multiple slots available in most.
+              From premier packages to high-visibility add-ons, every level puts
+              your organization in front of every player and family on the course.
+            </p>
+          </div>
+
+          <div class="open-sponsorships-chips">
+            <a href="/sponsorships" class="open-sponsorship-chip">
+              <span class="open-sponsorship-chip-name">Golf Gift</span>
+              <span class="open-sponsorship-chip-price">From $2,500</span>
+            </a>
+            <a href="/sponsorships" class="open-sponsorship-chip">
+              <span class="open-sponsorship-chip-name">Celebration Lunch</span>
+              <span class="open-sponsorship-chip-price">From $2,000</span>
+            </a>
+            <a href="/sponsorships" class="open-sponsorship-chip">
+              <span class="open-sponsorship-chip-name">Golf Carts</span>
+              <span class="open-sponsorship-chip-price">From $1,000</span>
+            </a>
+            <a href="/sponsorships" class="open-sponsorship-chip">
+              <span class="open-sponsorship-chip-name">Bloody Mary</span>
+              <span class="open-sponsorship-chip-price">From $1,000</span>
+            </a>
+            <a href="/sponsorships" class="open-sponsorship-chip">
+              <span class="open-sponsorship-chip-name">Wall Sponsor</span>
+              <span class="open-sponsorship-chip-price">From $700</span>
+            </a>
+            <a href="/sponsorships" class="open-sponsorship-chip">
+              <span class="open-sponsorship-chip-name">Shot of the Day</span>
+              <span class="open-sponsorship-chip-price">From $500</span>
+            </a>
+          </div>
+
+          <a href="/sponsorships" class="open-sponsorships-cta">Browse all sponsorships →</a>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom CTA -->
+    <section class="bottom-cta">
+      <div class="bottom-cta-content">
+        <div class="bottom-cta-eyebrow fadeUp">Partner With Us</div>
+        <h2 class="bottom-cta-title fadeUp stagger-1">
+          Make it possible for someone fighting right now.
+        </h2>
+        <p class="bottom-cta-body fadeUp stagger-2">
+          Your sponsorship funds transportation to treatment, lodging during
+          extended care, and medical equipment for patients in our community
+          facing the hardest days of their lives.
+        </p>
+        <a href="#" class="bottom-cta-button fadeUp stagger-3">View Sponsorship Packages →</a>
+      </div>
+    </section>
+  </body>
+</html>

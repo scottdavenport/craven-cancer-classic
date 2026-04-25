@@ -1,10 +1,14 @@
 /**
- * OpenSponsorshipsBlock — Sprint 22
+ * OpenSponsorshipsBlock — Sprint 22, updated Sprint 23
  *
  * Promotional chip grid for sponsorship tiers that have no active sponsors.
  * Server component — receives items as props, no client state.
  * Returns null when items is empty.
+ *
+ * Sprint 23: chip hrefs updated to "/sponsorships#<slug>" deep-link anchors.
  */
+
+import { slugifyItemName } from "@/lib/sponsorship-utils";
 
 interface OpenSponsorshipsItem {
   id: string;
@@ -94,7 +98,7 @@ export function OpenSponsorshipsBlock({ items }: OpenSponsorshipsBlockProps) {
           {items.map((item) => (
             <a
               key={item.id}
-              href="/sponsorships"
+              href={`/sponsorships#${slugifyItemName(item.name)}`}
               style={{
                 display: "inline-flex",
                 alignItems: "center",

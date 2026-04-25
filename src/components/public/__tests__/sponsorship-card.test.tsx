@@ -270,3 +270,61 @@ describe("SponsorshipCard — CTA button", () => {
     expect(hasBrandDarkerClass || hasBrandDarkerVar).toBe(true);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Watchdog-added cases 13, 17, 19, 21 — inline GREEN tests
+// ---------------------------------------------------------------------------
+
+describe("SponsorshipCard — Watchdog case 13: data-testid attribute", () => {
+  it('card 13 — root element has data-testid="sponsorship-card-{item.id}"', () => {
+    const { container } = render(
+      <SponsorshipCard
+        item={BASE_ITEM as any}
+        summary="Title sponsor with premium placement."
+        onSelect={vi.fn()}
+      />
+    );
+    const card = container.querySelector('[data-testid="sponsorship-card-champion"]');
+    expect(card).not.toBeNull();
+  });
+});
+
+describe("SponsorshipCard — Watchdog case 17: inventory pill absent when sold out", () => {
+  it("card 17 — inventory pill is absent when max_quantity=1 AND sold_count=1 (sold out)", () => {
+    const { container } = render(
+      <SponsorshipCard
+        item={SOLD_OUT_ITEM as any}
+        summary="The shot-of-the-day experience."
+        onSelect={vi.fn()}
+      />
+    );
+    // Sold-out: inventory pill must NOT appear
+    expect(container.textContent).not.toMatch(/\d+ of \d+ available/);
+  });
+});
+
+describe("SponsorshipCard — Watchdog case 19: sold-out CTA text", () => {
+  it('card 19 — CTA text is exactly "Sold Out" when item is sold out', () => {
+    render(
+      <SponsorshipCard
+        item={SOLD_OUT_ITEM as any}
+        summary="The shot-of-the-day experience."
+        onSelect={vi.fn()}
+      />
+    );
+    expect(screen.getByText("Sold Out")).toBeInTheDocument();
+  });
+});
+
+describe("SponsorshipCard — Watchdog case 21: no font-display class", () => {
+  it("card 21 — no font-display class appears anywhere in the card (Fraunces regression)", () => {
+    const { container } = render(
+      <SponsorshipCard
+        item={BASE_ITEM as any}
+        summary="Title sponsor with premium placement."
+        onSelect={vi.fn()}
+      />
+    );
+    expect(container.innerHTML).not.toContain("font-display");
+  });
+});

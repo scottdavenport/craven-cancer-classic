@@ -4,6 +4,7 @@ import { SponsorshipGrid } from "./sponsorship-grid";
 import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
 import { SectionEyebrow } from "@/components/public/section-eyebrow";
 import { PublicEmptyState } from "@/components/public/public-empty-state";
+import { formatLifetimeRaised } from "@/lib/sponsors-utils";
 
 export const metadata: Metadata = {
   title: "Sponsorship Opportunities",
@@ -21,55 +22,134 @@ async function getSponsorshipItems() {
     .eq("year", currentYear)
     .eq("active", true)
     .is("deleted_at", null)
-    .order("price_cents", { ascending: false });
+    .order("price_cents", { ascending: false })
+    .order("sort_order", { ascending: true });
 
   return data ?? [];
 }
 
+async function getLifetimeRaisedCents(): Promise<number | null> {
+  const supabase = await createClient();
+  const currentYear = new Date().getFullYear();
+
+  const { data } = await supabase
+    .from("event_settings")
+    .select("lifetime_raised_cents")
+    .eq("year", currentYear)
+    .maybeSingle();
+
+  return data?.lifetime_raised_cents ?? null;
+}
+
 export default async function SponsorshipsPage() {
-  const items = await getSponsorshipItems();
+  const [items, lifetimeRaisedCents] = await Promise.all([
+    getSponsorshipItems(),
+    getLifetimeRaisedCents(),
+  ]);
+
+  const lifetimeFormatted = formatLifetimeRaised(lifetimeRaisedCents);
 
   return (
     <div>
-      {/* Header */}
-      <section className="bg-[#1A2E3A] px-4 py-20 sm:py-28">
-        <div className="mx-auto max-w-3xl text-center">
-          <SectionEyebrow tone="light">Support the Tournament</SectionEyebrow>
-          <h1 className="mt-4 font-display text-4xl font-bold text-white sm:text-5xl">
+      {/* Masthead */}
+      <section
+        style={{
+          background: [
+            "radial-gradient(ellipse 80% 60% at 20% -10%, rgba(87,151,166,0.18) 0%, transparent 70%)",
+            "radial-gradient(ellipse 60% 50% at 85% 110%, rgba(87,151,166,0.12) 0%, transparent 65%)",
+            "var(--brand-darker)",
+          ].join(", "),
+        }}
+        className="relative overflow-hidden px-6 py-20 sm:py-28"
+      >
+        <div className="relative z-10 mx-auto max-w-3xl text-center">
+          {/* Eyebrow */}
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div
+              aria-hidden="true"
+              style={{ width: 28, height: 1, backgroundColor: "var(--brand)" }}
+            />
+            <span
+              style={{
+                fontFamily: "var(--font-manrope)",
+                fontWeight: 700,
+                fontSize: "0.6875rem",
+                letterSpacing: "0.15em",
+                textTransform: "uppercase",
+                color: "var(--brand)",
+              }}
+            >
+              Support the Tournament
+            </span>
+            <div
+              aria-hidden="true"
+              style={{ width: 28, height: 1, backgroundColor: "var(--brand)" }}
+            />
+          </div>
+
+          {/* H1 — Manrope 800, no font-display */}
+          <h1
+            style={{
+              fontFamily: "var(--font-manrope)",
+              fontWeight: 800,
+              fontSize: "clamp(2.5rem, 7vw, 4.5rem)",
+              lineHeight: 1.05,
+              letterSpacing: "-0.02em",
+              color: "#FFFFFF",
+            }}
+          >
             Sponsorship Opportunities
           </h1>
-          <div className="mx-auto mt-6 h-px w-16 bg-gradient-to-r from-transparent via-brand to-transparent" />
-          <p className="mt-6 text-base text-white/70">
-            Every sponsorship directly supports cancer patients in our community
-            through the Carolina East Health Foundation.
+
+          {/* Body — Aria-approved program language */}
+          <p
+            className="mt-6 mx-auto max-w-2xl text-base leading-relaxed"
+            style={{ color: "rgba(255,255,255,0.82)" }}
+          >
+            Every sponsorship funds transportation, lodging, and medical equipment
+            for cancer patients in active treatment — people in our own community
+            facing the hardest days of their lives.
           </p>
+
+          {/* Inline stat — omitted entirely when lifetime_raised_cents is null */}
+          {lifetimeFormatted !== null && (
+            <p
+              className="mt-5 text-sm font-semibold"
+              style={{ color: "rgba(255,255,255,0.65)" }}
+            >
+              <strong className="text-white">{lifetimeFormatted}</strong>{" "}
+              raised since 2010
+            </p>
+          )}
         </div>
       </section>
 
+      {/* Grid section */}
       <section className="px-4 py-16 sm:py-24">
         <div className="mx-auto max-w-5xl">
-          {/* Mission context */}
-          <div className="mx-auto mb-16 max-w-2xl text-center">
-            <SectionEyebrow tone="light">Our Mission</SectionEyebrow>
-            <p className="font-sans text-[0.9375rem] leading-[1.8] text-muted-foreground">
-              Since 2010, the Craven Cancer Classic has raised over{" "}
-              <strong className="font-semibold text-foreground">$450,000</strong>{" "}
-              for cancer patients in Craven County. Your sponsorship funds
-              transportation to treatment, lodging during extended care, and
-              medical equipment for patients who need it most — people in our
-              own community facing the hardest days of their lives. This
-              tournament is held in their honor and in loving memory of those
-              we have lost.
-            </p>
-          </div>
-
-          {/* Section heading above grid */}
+          {/* Section header — above grid */}
           {items.length > 0 && (
             <div className="mb-10 text-center">
-              <SectionEyebrow tone="light">2026 Sponsorship Packages</SectionEyebrow>
-              <h2 className="font-display text-[1.75rem] font-semibold text-foreground">
-                Support the Classic
+              <SectionEyebrow tone="brand">
+                2026 Sponsorship Packages
+              </SectionEyebrow>
+              <h2
+                style={{
+                  fontFamily: "var(--font-manrope)",
+                  fontWeight: 800,
+                  fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
+                  lineHeight: 1.15,
+                  letterSpacing: "-0.015em",
+                  color: "var(--foreground)",
+                }}
+              >
+                Pick your level
               </h2>
+              <p className="mt-3 mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
+                Each package supports the tournament directly. Cards are listed
+                by level — choose what fits, then we&apos;ll handle the details
+                at checkout.
+              </p>
             </div>
           )}
 
@@ -89,6 +169,27 @@ export default async function SponsorshipsPage() {
                   />
                 }
               />
+            </div>
+          )}
+
+          {/* Reassurance strip — below grid, Aria-approved */}
+          {items.length > 0 && (
+            <div
+              className="mt-12 rounded-lg px-6 py-4 text-center text-sm"
+              style={{
+                backgroundColor: "var(--neutral-50)",
+                color: "var(--muted-foreground)",
+              }}
+            >
+              Selected sponsors appear on our{" "}
+              <a
+                href="/sponsors"
+                className="underline underline-offset-2 hover:no-underline"
+              >
+                2026 Partners page
+              </a>{" "}
+              alongside our other supporters. A tax receipt is emailed after
+              checkout.
             </div>
           )}
         </div>

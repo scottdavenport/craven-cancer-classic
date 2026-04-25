@@ -679,8 +679,8 @@ describe("Area 6 — SponsorshipGrid: checkout API error fallback", () => {
     );
     render(<SponsorshipGrid items={[MOCK_ITEM]} />);
 
-    // Click Select to reveal the PurchaseForm
-    const selectBtn = screen.getByRole("button", { name: /^Select$/i });
+    // Click "Select package →" to reveal the PurchaseForm (Sprint 23 renamed from "Select")
+    const selectBtn = screen.getByRole("button", { name: /select package/i });
     fireEvent.click(selectBtn);
 
     const form = document.querySelector("form");

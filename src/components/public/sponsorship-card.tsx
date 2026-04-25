@@ -85,17 +85,6 @@ export function SponsorshipCard({ item, summary, onSelect }: SponsorshipCardProp
         {summary}
       </p>
 
-      {/* Tax pill */}
-      <div
-        className="mt-4 inline-flex w-fit items-center rounded-full px-3 py-0.5 text-[0.6875rem] font-semibold"
-        style={{
-          backgroundColor: "color-mix(in srgb, var(--tax-green) 12%, transparent)",
-          color: "var(--tax-green)",
-        }}
-      >
-        Tax-deductible · receipt provided
-      </div>
-
       {/* CTA */}
       <button
         type="button"

@@ -146,8 +146,8 @@ describe("SponsorshipCard — anchor id", () => {
   });
 });
 
-describe("SponsorshipCard — tax pill", () => {
-  it('renders the tax pill with text "Tax-deductible · receipt provided"', () => {
+describe("SponsorshipCard — tax pill removed (Sprint 24)", () => {
+  it('does NOT render "Tax-deductible" text on any card (pill removed)', () => {
     render(
       <SponsorshipCard
         item={BASE_ITEM as any}
@@ -155,9 +155,7 @@ describe("SponsorshipCard — tax pill", () => {
         onSelect={vi.fn()}
       />
     );
-    expect(
-      screen.getByText("Tax-deductible · receipt provided")
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/Tax-deductible/i)).not.toBeInTheDocument();
   });
 });
 

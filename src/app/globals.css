@@ -46,7 +46,6 @@
   --color-brand-dark: var(--brand-dark);
   --color-brand-darker: var(--brand-darker);
   --color-brand-muted: var(--brand-muted);
-  --color-tax-green: var(--tax-green);
   --color-accent-gold: var(--accent-gold);
   --color-purple: var(--purple);
   --color-purple-hover: var(--purple-hover);
@@ -87,7 +86,6 @@
   --brand-dark: #3A6B83;
   --brand-darker: #244A5B;
   --brand-muted: #E8F0F4;
-  --tax-green: #2F6B50;
 
   /* Surfaces */
   --background: #FAFBFC;

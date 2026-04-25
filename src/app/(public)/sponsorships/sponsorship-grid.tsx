@@ -12,6 +12,12 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import type { SponsorshipItem } from "@/types/database";
 import { CONTACT_EMAIL, CONTACT_EMAIL_MAILTO } from "@/lib/contact";
 import { SponsorshipCard } from "@/components/public/sponsorship-card";
@@ -62,8 +68,10 @@ interface SponsorshipGridProps {
 export function SponsorshipGrid({ items }: SponsorshipGridProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
+  const selectedItem = selectedId ? items.find((i) => i.id === selectedId) ?? null : null;
+
   return (
-    <div className="space-y-12">
+    <div>
       {/* Package grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => {
@@ -74,19 +82,30 @@ export function SponsorshipGrid({ items }: SponsorshipGridProps) {
               key={item.id}
               item={item}
               summary={summary}
-              onSelect={(id) => setSelectedId(selectedId === id ? null : id)}
+              onSelect={(id) => setSelectedId(id)}
             />
           );
         })}
       </div>
 
-      {/* Inline PurchaseForm */}
-      {selectedId && (
-        <PurchaseForm
-          item={items.find((i) => i.id === selectedId)!}
-          onCancel={() => setSelectedId(null)}
-        />
-      )}
+      {/* Purchase modal */}
+      <Dialog open={selectedId !== null} onOpenChange={(open) => { if (!open) setSelectedId(null); }}>
+        <DialogContent className="sm:max-w-lg" showCloseButton={false}>
+          {selectedItem && (
+            <>
+              <DialogHeader>
+                <DialogTitle>
+                  {selectedItem.name} · ${(selectedItem.price_cents / 100).toLocaleString()}
+                </DialogTitle>
+              </DialogHeader>
+              <PurchaseForm
+                item={selectedItem}
+                onCancel={() => setSelectedId(null)}
+              />
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -155,24 +174,7 @@ function PurchaseForm({
   }
 
   return (
-    <div className="rounded-lg border border-border/60 bg-white shadow-sm p-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h3
-            className="font-sans text-xl font-semibold"
-            style={{ fontFamily: "var(--font-manrope)" }}
-          >
-            {item.name}
-          </h3>
-          <p className="text-2xl font-bold text-primary">
-            ${(item.price_cents / 100).toLocaleString()}
-          </p>
-        </div>
-        <Button variant="ghost" size="sm" onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
-
+    <div>
       {error && (
         <div className="mt-4 rounded-md bg-destructive/10 p-3 text-sm text-destructive">
           {error}
@@ -203,13 +205,18 @@ function PurchaseForm({
             <Input id="purchaser_phone" name="purchaser_phone" type="tel" />
           </div>
         </div>
-        <Button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-brand-darker text-sm uppercase tracking-wider text-white hover:bg-brand sm:w-auto"
-        >
-          {loading ? "Processing..." : "Proceed to Payment"}
-        </Button>
+        <div className="flex gap-3">
+          <Button
+            type="submit"
+            disabled={loading}
+            className="flex-1 bg-brand-darker text-sm uppercase tracking-wider text-white hover:bg-brand sm:flex-none"
+          >
+            {loading ? "Processing..." : "Proceed to Payment"}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+        </div>
       </form>
     </div>
   );

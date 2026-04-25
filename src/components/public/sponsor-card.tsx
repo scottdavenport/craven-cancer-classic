@@ -1,7 +1,24 @@
+/**
+ * SponsorCard — Sprint 22 redesign
+ *
+ * Clean white card with fixed aspect-ratio logo region.
+ * Patron-name fallback (bg-cream region) when logo_url is null.
+ *
+ * Drops from prior version:
+ *   - Tier strip headers, gold diamonds, double rules
+ *   - Fraunces opsz patron-name dance
+ *   - Cream card background, grain overlay
+ *
+ * Keeps: unified data-testid="sponsor-card-{id}", logo data-testid,
+ * patron-name data-testid, <a> vs <div> wrapper logic.
+ */
+
 import Image from "next/image";
 import type { JSX } from "react";
+import type { TierSize } from "@/lib/sponsors-utils";
 
-export type TierSize = "champion" | "eagle" | "standard" | "compact";
+// Re-export TierSize so existing imports from this path still resolve
+export type { TierSize };
 
 interface Sponsor {
   id: string;
@@ -22,11 +39,12 @@ interface CardWrapperProps {
   "data-testid": string;
 }
 
-function cn(...classes: (string | false | null | undefined)[]): string {
-  return classes.filter(Boolean).join(" ");
-}
-
-function CardWrapper({ sponsor, children, className, "data-testid": testId }: CardWrapperProps): JSX.Element {
+function CardWrapper({
+  sponsor,
+  children,
+  className,
+  "data-testid": testId,
+}: CardWrapperProps): JSX.Element {
   if (sponsor.website) {
     return (
       <a
@@ -47,147 +65,71 @@ function CardWrapper({ sponsor, children, className, "data-testid": testId }: Ca
   );
 }
 
-function LogoContent({ sponsor, tierSize }: { sponsor: Sponsor; tierSize: TierSize }): JSX.Element {
-  const maxH = {
-    champion: "max-h-24",
-    eagle: "max-h-[72px]",
-    standard: "max-h-14",
-    compact: "max-h-12",
-  }[tierSize];
+// Logo region aspect ratio + padding by tier
+const LOGO_ASPECT: Record<TierSize, React.CSSProperties> = {
+  champion: { aspectRatio: "16 / 11", padding: "2rem" },
+  eagle: { aspectRatio: "4 / 3", padding: "1.5rem" },
+  standard: { aspectRatio: "4 / 3", padding: "1.125rem 1rem" },
+  compact: { aspectRatio: "3 / 2", padding: "0.875rem 0.75rem" },
+};
 
-  const alignRight = tierSize === "eagle";
-  const wrapperAlign = alignRight ? "items-end text-right" : "items-start text-left";
-  const imgAlign = alignRight ? "object-right" : "object-left";
-
-  return (
-    <div className={cn("flex flex-col gap-3 w-full", wrapperAlign)}>
-      <Image
-        src={sponsor.logo_url!}
-        alt={sponsor.name}
-        data-testid={`sponsor-logo-${sponsor.id}`}
-        width={320}
-        height={96}
-        className={cn("object-contain w-auto", imgAlign, maxH)}
-      />
-      <p
-        aria-hidden="true"
-        style={{ letterSpacing: "0.15em" }}
-        className="font-sans text-[0.6875rem] uppercase text-muted-foreground/70"
-      >
-        {sponsor.name}
-      </p>
-    </div>
-  );
-}
-
-function PatronContent({ sponsor, tierSize }: { sponsor: Sponsor; tierSize: TierSize }): JSX.Element {
-  const nameStyles: React.CSSProperties = {
-    champion: { fontVariationSettings: "'opsz' 72", fontWeight: "500" },
-    eagle: { fontVariationSettings: "'opsz' 36", fontWeight: "400", fontStyle: "italic" },
-    standard: { fontVariationSettings: "'opsz' 36", fontWeight: "400" },
-    compact: { fontVariationSettings: "'opsz' 9", fontWeight: "400" },
-  }[tierSize];
-
-  const nameClass = {
-    champion: "font-display text-[28px] sm:text-[36px] leading-tight text-foreground",
-    eagle: "font-display italic text-[20px] sm:text-[24px] leading-snug text-foreground",
-    standard: "font-display text-[16px] leading-normal text-foreground",
-    compact: "font-display text-[13px] leading-snug text-foreground",
-  }[tierSize];
-
-  return (
-    <div className="flex flex-col items-start gap-2 w-full text-left">
-      <span
-        data-testid="patron-name"
-        style={nameStyles}
-        className={nameClass}
-      >
-        {sponsor.name}
-      </span>
-      {tierSize === "champion" && (
-        <span
-          data-testid="patron-subline"
-          aria-hidden="true"
-          style={{ letterSpacing: "0.2em" }}
-          className="font-sans text-[0.625rem] font-medium uppercase text-muted-foreground"
-        >
-          Est. 2010 · Champion Patron
-        </span>
-      )}
-    </div>
-  );
-}
-
-const TIER_STRIP_CONFIG = {
-  champion: { bg: "bg-brand", text: "text-white", label: "CHAMPION SPONSOR" },
-  eagle: { bg: "bg-brand-muted", text: "text-brand", label: "EAGLE SPONSOR" },
-  standard: null,
-  compact: null,
-} as const;
+// Patron name font-size by tier
+const PATRON_FONT_SIZE: Record<TierSize, string> = {
+  champion: "clamp(2rem, 4.5vw, 2.75rem)",
+  eagle: "1.875rem",
+  standard: "1.25rem",
+  compact: "1.25rem",
+};
 
 export function SponsorCard({ sponsor, tierSize }: SponsorCardProps): JSX.Element {
-  const tierStripConfig = TIER_STRIP_CONFIG[tierSize];
-  const showDoubleRule = tierSize === "champion" || tierSize === "eagle";
-
-  const cardClasses = cn(
-    "relative bg-cream grain-overlay rounded-md border border-border/60",
-    tierSize === "champion" && "border-t-2 border-t-brand",
-    tierSize === "eagle" && "border-t border-t-brand",
-    tierSize === "compact" && "border-l-2 border-brand/30",
-    "transition-shadow hover:shadow-sm"
-  );
+  const logoRegionStyle = LOGO_ASPECT[tierSize];
 
   return (
     <CardWrapper
       sponsor={sponsor}
-      className={cardClasses}
+      className="relative bg-white rounded-xl border border-border transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md"
       data-testid={`sponsor-card-${sponsor.id}`}
     >
-      {tierStripConfig && (
-        <div
-          data-testid="tier-strip"
-          className={cn(
-            "flex items-center justify-center gap-3 px-4 py-2",
-            tierStripConfig.bg,
-            tierStripConfig.text
-          )}
-        >
-          <span
-            data-testid="tier-strip-diamond-left"
-            aria-hidden="true"
-            style={{ color: "var(--accent-gold)" }}
-            className="text-sm"
-          >
-            ◆
-          </span>
-          <span
-            data-testid="tier-strip-label"
-            style={{ letterSpacing: "0.2em" }}
-            className="font-sans text-[0.6875rem] font-semibold uppercase"
-          >
-            {tierStripConfig.label}
-          </span>
-          <span
-            data-testid="tier-strip-diamond-right"
-            aria-hidden="true"
-            style={{ color: "var(--accent-gold)" }}
-            className="text-sm"
-          >
-            ◆
-          </span>
-        </div>
-      )}
-      {showDoubleRule && (
-        <div data-testid="double-rule" aria-hidden="true">
-          <div className="h-px bg-brand" />
-          <div className="h-px bg-brand-muted mt-0.5" />
-        </div>
-      )}
-      <div className="p-5 flex items-start">
+      {/* Logo / patron region with fixed aspect ratio */}
+      <div
+        data-tier={tierSize}
+        style={{
+          ...logoRegionStyle,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
+        }}
+      >
         {sponsor.logo_url ? (
-          <LogoContent sponsor={sponsor} tierSize={tierSize} />
+          <Image
+            src={sponsor.logo_url}
+            alt={sponsor.name}
+            data-testid={`sponsor-logo-${sponsor.id}`}
+            width={400}
+            height={300}
+            className="object-contain"
+            style={{ maxWidth: "82%", maxHeight: "72%" }}
+          />
         ) : (
-          <PatronContent sponsor={sponsor} tierSize={tierSize} />
+          /* Patron fallback — cream background, Manrope 800 name centered */
+          <div className="bg-cream w-full h-full flex items-center justify-center rounded-lg p-4">
+            <span
+              data-testid="patron-name"
+              className="font-display"
+              style={{
+                fontWeight: 800,
+                fontSize: PATRON_FONT_SIZE[tierSize],
+                letterSpacing: "-0.025em",
+                lineHeight: 1,
+                textAlign: "center",
+                color: "var(--foreground)",
+                textTransform: "uppercase",
+              }}
+            >
+              {sponsor.name}
+            </span>
+          </div>
         )}
       </div>
     </CardWrapper>

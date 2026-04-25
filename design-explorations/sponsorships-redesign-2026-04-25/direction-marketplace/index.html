@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sponsorship Opportunities — Direction: Marketplace</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --brand: #5797a6;
+        --brand-dark: #3a6b83;
+        --brand-darker: #244a5b;
+        --brand-muted: #e8f0f4;
+        --foreground: #11212a;
+        --muted-foreground: #5f7a87;
+        --surface: #ffffff;
+        --surface-soft: #f7f8f9;
+        --surface-cream: #fbfaf7;
+        --border: #e5ebee;
+        --border-strong: #d0dade;
+        --tax-green: #2f6b50;
+      }
+
+      * { box-sizing: border-box; }
+      html, body {
+        font-family: "Manrope", system-ui, -apple-system, sans-serif;
+        color: var(--foreground);
+        background: var(--surface);
+        -webkit-font-smoothing: antialiased;
+        margin: 0;
+      }
+
+      /* ─── MASTHEAD ─── */
+      .masthead {
+        background: var(--brand-darker);
+        color: #ffffff;
+        padding: 4.5rem 1.5rem 4rem;
+        position: relative;
+        overflow: hidden;
+      }
+      @media (min-width: 768px) {
+        .masthead { padding: 6rem 2.5rem 5rem; }
+      }
+      .masthead::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+          radial-gradient(ellipse 80% 60% at 80% 0%, rgba(87, 151, 166, 0.45), transparent 70%),
+          radial-gradient(ellipse 60% 50% at 0% 100%, rgba(36, 74, 91, 0.7), transparent 60%);
+        pointer-events: none;
+      }
+      .masthead-content {
+        position: relative;
+        z-index: 1;
+        max-width: 80rem;
+        margin: 0 auto;
+      }
+      .masthead-eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.625rem;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.78);
+      }
+      .masthead-eyebrow::before {
+        content: "";
+        width: 28px;
+        height: 1px;
+        background: var(--brand);
+      }
+      .masthead-title {
+        margin-top: 1.25rem;
+        font-size: clamp(2.5rem, 7vw, 4.5rem);
+        font-weight: 800;
+        letter-spacing: -0.022em;
+        line-height: 1;
+        color: #ffffff;
+      }
+      .masthead-body {
+        margin-top: 1.5rem;
+        max-width: 56ch;
+        font-size: 1.0625rem;
+        line-height: 1.55;
+        color: rgba(255, 255, 255, 0.82);
+      }
+      .masthead-stat {
+        margin-top: 2rem;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        letter-spacing: 0.06em;
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .masthead-stat strong {
+        color: #ffffff;
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        font-size: 1rem;
+      }
+
+      /* ─── PAGE ─── */
+      .page {
+        max-width: 80rem;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+      }
+      @media (min-width: 768px) {
+        .page { padding: 0 2.5rem; }
+      }
+
+      /* ─── SECTION ─── */
+      .section {
+        padding: 4.5rem 0;
+        border-top: 1px solid var(--border);
+      }
+      .section:first-of-type {
+        border-top: none;
+        padding-top: 5rem;
+      }
+      @media (min-width: 768px) {
+        .section { padding: 5.5rem 0; }
+      }
+      .section-header {
+        margin-bottom: 2.5rem;
+      }
+      .section-eyebrow {
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.32em;
+        text-transform: uppercase;
+        color: var(--brand);
+        margin-bottom: 0.625rem;
+      }
+      .section-title {
+        font-size: clamp(1.75rem, 3.5vw, 2.5rem);
+        font-weight: 800;
+        letter-spacing: -0.022em;
+        line-height: 1.1;
+        color: var(--foreground);
+        margin: 0;
+      }
+      .section-body {
+        margin-top: 0.875rem;
+        max-width: 60ch;
+        font-size: 1rem;
+        line-height: 1.55;
+        color: var(--muted-foreground);
+      }
+
+      /* ─── PRODUCT GRID ─── */
+      .product-grid {
+        display: grid;
+        gap: 1rem;
+        grid-template-columns: 1fr;
+      }
+      @media (min-width: 640px) {
+        .product-grid { grid-template-columns: repeat(2, 1fr); gap: 1.125rem; }
+      }
+      @media (min-width: 1024px) {
+        .product-grid { grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+      }
+
+      /* ─── PRODUCT CARD ─── */
+      .product-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        padding: 1.5rem 1.5rem 1.25rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        position: relative;
+        transition: all 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        text-decoration: none;
+        color: inherit;
+      }
+      .product-card::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: var(--brand);
+        transform: scaleX(0);
+        transform-origin: left;
+        transition: transform 250ms cubic-bezier(0.16, 1, 0.3, 1);
+      }
+      .product-card:hover {
+        border-color: var(--border-strong);
+        transform: translateY(-1px);
+      }
+      .product-card:hover::after { transform: scaleX(1); }
+
+      .product-inventory {
+        align-self: flex-start;
+        font-size: 0.6875rem;
+        font-weight: 700;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: var(--brand-darker);
+        background: var(--brand-muted);
+        padding: 0.25rem 0.5rem;
+        margin-bottom: -0.25rem;
+      }
+
+      .product-price {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        line-height: 1;
+        color: var(--foreground);
+      }
+
+      .product-name {
+        font-size: 1.0625rem;
+        font-weight: 700;
+        letter-spacing: -0.01em;
+        color: var(--foreground);
+        line-height: 1.2;
+      }
+
+      .product-summary {
+        font-size: 0.875rem;
+        line-height: 1.5;
+        color: var(--muted-foreground);
+        flex: 1;
+      }
+
+      .product-tax {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        color: var(--tax-green);
+        margin-top: 0.25rem;
+      }
+      .product-tax::before {
+        content: "";
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--tax-green);
+        display: inline-block;
+      }
+
+      .product-cta {
+        display: inline-flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        margin-top: 0.75rem;
+        padding: 0.75rem 1rem;
+        background: var(--brand-darker);
+        color: #ffffff;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        border: none;
+        cursor: pointer;
+        transition: background 200ms cubic-bezier(0.16, 1, 0.3, 1);
+        font-family: inherit;
+        text-decoration: none;
+      }
+      .product-cta:hover { background: var(--brand); }
+      .product-cta-arrow {
+        font-weight: 600;
+        font-size: 0.875rem;
+      }
+
+      .product-card[data-sold-out="true"] {
+        opacity: 0.55;
+        pointer-events: none;
+      }
+
+      /* ─── FUTURE / OTHER GIVING SECTION (placeholder) ─── */
+      .future-section {
+        background: var(--surface-cream);
+        margin-top: 3rem;
+        padding: 3rem 2rem;
+        border: 1px dashed var(--border-strong);
+        border-radius: 0;
+      }
+      .future-section .section-eyebrow {
+        color: var(--muted-foreground);
+      }
+      .future-section .section-title {
+        font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+      }
+      .future-body {
+        margin-top: 0.875rem;
+        font-size: 0.9375rem;
+        line-height: 1.55;
+        color: var(--muted-foreground);
+        max-width: 56ch;
+      }
+      .future-body a {
+        color: var(--brand-darker);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      /* ─── BOTTOM REASSURANCE STRIP ─── */
+      .reassurance {
+        margin-top: 4rem;
+        padding: 2rem 1.5rem;
+        background: var(--surface-soft);
+        text-align: center;
+        font-size: 0.875rem;
+        color: var(--muted-foreground);
+        line-height: 1.6;
+      }
+      .reassurance strong {
+        color: var(--foreground);
+        font-weight: 700;
+      }
+      .reassurance a {
+        color: var(--brand-darker);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+
+      /* ─── PREVIEW LABEL ─── */
+      .direction-label {
+        position: fixed;
+        top: 1rem;
+        right: 1rem;
+        background: var(--brand-darker);
+        color: #ffffff;
+        padding: 0.5rem 0.875rem;
+        font-size: 0.625rem;
+        font-weight: 700;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        z-index: 100;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="direction-label">Direction · Marketplace</div>
+
+    <!-- Masthead -->
+    <header class="masthead">
+      <div class="masthead-content">
+        <div class="masthead-eyebrow">Support the Tournament</div>
+        <h1 class="masthead-title">Sponsorship Opportunities</h1>
+        <p class="masthead-body">
+          Every sponsorship funds transportation, lodging, and medical equipment
+          for cancer patients in active treatment — people in our own community
+          facing the hardest days of their lives.
+        </p>
+        <div class="masthead-stat">
+          <strong>$500K+</strong> raised since 2010
+        </div>
+      </div>
+    </header>
+
+    <main class="page">
+      <!-- Sponsorship packages -->
+      <section class="section">
+        <div class="section-header">
+          <div class="section-eyebrow">2026 Sponsorship Packages</div>
+          <h2 class="section-title">Pick your level</h2>
+          <p class="section-body">
+            Each package supports the tournament directly. Cards are listed by
+            level — choose what fits, then we'll handle the details at checkout.
+          </p>
+        </div>
+
+        <div class="product-grid">
+          <!-- 1. Champion -->
+          <a href="#champion" id="champion" class="product-card">
+            <div class="product-price">$5,000</div>
+            <div class="product-name">Champion</div>
+            <div class="product-summary">
+              Premier signage at the event, recognition on the site, and 4 complimentary teams.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 2. Eagle -->
+          <a href="#eagle" id="eagle" class="product-card">
+            <div class="product-price">$2,500</div>
+            <div class="product-name">Eagle</div>
+            <div class="product-summary">
+              Prominent signage at the event, recognition on the site, and 2 complimentary teams.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 3. Golf Gift -->
+          <a href="#golf-gift" id="golf-gift" class="product-card">
+            <div class="product-price">$2,500</div>
+            <div class="product-name">Golf Gift</div>
+            <div class="product-summary">
+              Your logo on every player's golf gift, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 4. Celebration Lunch -->
+          <a href="#celebration-lunch" id="celebration-lunch" class="product-card">
+            <div class="product-price">$2,000</div>
+            <div class="product-name">Celebration Lunch</div>
+            <div class="product-summary">
+              Signage at the post-tournament awards lunch, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 5. Bloody Mary Bar — limited -->
+          <a href="#bloody-mary-bar" id="bloody-mary-bar" class="product-card">
+            <div class="product-inventory">1 of 1 available</div>
+            <div class="product-price">$1,000</div>
+            <div class="product-name">Bloody Mary Bar</div>
+            <div class="product-summary">
+              Signage at the morning Bloody Mary bar, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 6. Golf Carts -->
+          <a href="#golf-carts" id="golf-carts" class="product-card">
+            <div class="product-price">$1,000</div>
+            <div class="product-name">Golf Carts</div>
+            <div class="product-summary">
+              Your logo on every golf cart, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 7. Wall Sponsor -->
+          <a href="#wall-sponsor" id="wall-sponsor" class="product-card">
+            <div class="product-price">$700</div>
+            <div class="product-name">Wall Sponsor</div>
+            <div class="product-summary">
+              Your name on the on-course sponsor wall, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 8. Thursday Night -->
+          <a href="#thursday-night" id="thursday-night" class="product-card">
+            <div class="product-price">$700</div>
+            <div class="product-name">Thursday Night</div>
+            <div class="product-summary">
+              Signage at the Thursday-night kickoff event, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 9. Morning Biscuit Sponsor -->
+          <a href="#morning-biscuit-sponsor" id="morning-biscuit-sponsor" class="product-card">
+            <div class="product-price">$500</div>
+            <div class="product-name">Morning Biscuit Sponsor</div>
+            <div class="product-summary">
+              Signage at the pre-tournament breakfast, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+
+          <!-- 10. Shot of the Day -->
+          <a href="#shot-of-the-day" id="shot-of-the-day" class="product-card">
+            <div class="product-price">$500</div>
+            <div class="product-name">Shot of the Day</div>
+            <div class="product-summary">
+              Featured at the shot-of-the-day moment, plus recognition on the site.
+            </div>
+            <div class="product-tax">Tax-deductible · receipt provided</div>
+            <button class="product-cta">
+              <span>Select package</span>
+              <span class="product-cta-arrow">→</span>
+            </button>
+          </a>
+        </div>
+
+        <!-- Reassurance strip -->
+        <div class="reassurance">
+          Selected sponsors appear on our <strong><a href="/sponsors">2026 Partners page</a></strong> alongside our other supporters. A tax receipt is emailed after checkout.
+        </div>
+      </section>
+
+    </main>
+  </body>
+</html>

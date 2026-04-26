@@ -536,3 +536,104 @@ describe("SponsorsPage — redesign (Sprint 22 RED, #250)", () => {
     ).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprint 25: Open Sponsorships section header tests
+// ---------------------------------------------------------------------------
+
+describe("SponsorsPage — Open Sponsorships section header (Sprint 25)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
+  // ── Test S25-1: Header H2 renders when openItems.length > 0 ────────────────
+
+  it("S25-1 — 'Open Sponsorships' H2 renders when there are open items", async () => {
+    setClient(
+      buildSupabaseMock({
+        tiers: ALL_TIERS,
+        sponsors: ACTIVE_SPONSORS,
+      })
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    expect(
+      screen.getByTestId("open-sponsorships-heading")
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("open-sponsorships-heading")).toHaveTextContent(
+      "Open Sponsorships"
+    );
+  });
+
+  // ── Test S25-2: Count text "{N} Categories · {year} Season" ────────────────
+
+  it("S25-2 — count badge reads '{N} Categories · {year} Season' with correct count", async () => {
+    // 6 empty tiers in ALL_TIERS
+    setClient(
+      buildSupabaseMock({
+        tiers: ALL_TIERS,
+        sponsors: ACTIVE_SPONSORS,
+      })
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    const currentYear = new Date().getFullYear();
+    // EMPTY_TIERS has 6 items
+    expect(
+      screen.getByText(new RegExp(`6 Categories · ${currentYear} Season`))
+    ).toBeInTheDocument();
+  });
+
+  // ── Test S25-3: Header ABSENT when openItems is empty ──────────────────────
+
+  it("S25-3 — 'Open Sponsorships' header is absent when all tiers have sponsors", async () => {
+    // Give every tier in TIERS_WITH_SPONSORS an active sponsor — no open items
+    setClient(
+      buildSupabaseMock({
+        tiers: TIERS_WITH_SPONSORS,
+        sponsors: ACTIVE_SPONSORS,
+      })
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    expect(
+      screen.queryByTestId("open-sponsorships-heading")
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId("open-sponsorships-section")
+    ).not.toBeInTheDocument();
+  });
+
+  // ── Test S25-4: Header H2 is a sibling of OpenSponsorshipsBlock, not inside it ──
+
+  it("S25-4 — Open Sponsorships H2 is outside the OpenSponsorshipsBlock component", async () => {
+    setClient(
+      buildSupabaseMock({
+        tiers: ALL_TIERS,
+        sponsors: ACTIVE_SPONSORS,
+      })
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    const heading = screen.getByTestId("open-sponsorships-heading");
+    const block = screen.getByTestId("open-sponsorships-block");
+
+    // The heading must not be a descendant of the block
+    expect(block.contains(heading)).toBe(false);
+    // Both must be in the document
+    expect(heading).toBeInTheDocument();
+    expect(block).toBeInTheDocument();
+  });
+});

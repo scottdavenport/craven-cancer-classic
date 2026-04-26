@@ -186,15 +186,53 @@ export default async function SponsorsPage() {
           );
         })}
 
-        {/* Open Sponsorships chip block — renders after populated tiers */}
-        <OpenSponsorshipsBlock items={openItems} />
+        {/* Open Sponsorships section — header + chip block, mirrors populated-tier header pattern */}
+        {openItems.length > 0 && (
+          <div
+            data-testid="open-sponsorships-section"
+            className="mb-20 last:mb-0"
+          >
+            {/* Open Sponsorships header — same structure as populated tier headers */}
+            <div className="flex items-baseline justify-between mb-8 pb-4 border-t border-border pt-4">
+              <div>
+                <h2
+                  data-testid="open-sponsorships-heading"
+                  style={{
+                    fontFamily: "var(--font-manrope)",
+                    fontWeight: 800,
+                    fontSize: "clamp(1.75rem, 3.5vw, 3.25rem)",
+                    lineHeight: 1,
+                    color: "var(--foreground)",
+                    letterSpacing: "-0.02em",
+                  }}
+                >
+                  Open Sponsorships
+                </h2>
+              </div>
+              <span
+                style={{
+                  fontFamily: "var(--font-manrope)",
+                  fontWeight: 600,
+                  fontSize: "0.8125rem",
+                  letterSpacing: "0.06em",
+                  color: "var(--muted-foreground)",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                }}
+              >
+                {openItems.length} Categories · {currentYear} Season
+              </span>
+            </div>
+
+            <OpenSponsorshipsBlock items={openItems} />
+          </div>
+        )}
       </main>
 
       {/* Bottom CTA — individual donor, links to /donate */}
       <section
         data-testid="sponsors-cta"
-        style={{ backgroundColor: "var(--brand-darker)" }}
-        className="px-4 py-20"
+        className="bg-brand-darker px-4 py-20"
       >
         <div className="mx-auto max-w-3xl text-center">
           <p

@@ -118,7 +118,10 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
       expect(mockRefresh).toHaveBeenCalledTimes(1);
     });
 
-    it("calls toast.success('Team saved') after drawer save", async () => {
+    it("does NOT fire its own toast after drawer save (drawer owns the per-mode toast)", async () => {
+      // team-drawer.tsx fires toast.success("Team created" | "Team updated")
+      // before invoking onSuccess. team-list must NOT add another, otherwise
+      // every save stacks two toasts (Watchdog catch on PR #260).
       renderList();
 
       fireEvent.click(screen.getByText("Edit"));
@@ -127,7 +130,7 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
         fireEvent.click(screen.getByTestId("drawer-success"));
       });
 
-      expect(vi.mocked(toast.success)).toHaveBeenCalledWith("Team saved");
+      expect(vi.mocked(toast.success)).not.toHaveBeenCalled();
     });
 
     it("does NOT call window.location.reload after drawer save", async () => {

@@ -298,9 +298,10 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
 
   // After a mutation we refresh via router.refresh() so Next.js RSC re-fetches in place.
+  // Note: team-drawer fires its own per-mode toast ("Team created" / "Team updated")
+  // before calling onSuccess. Adding one here would stack two toasts on every save.
   function handleDrawerSuccess() {
     setDrawer((d) => ({ ...d, open: false }));
-    toast.success("Team saved");
     router.refresh();
   }
 

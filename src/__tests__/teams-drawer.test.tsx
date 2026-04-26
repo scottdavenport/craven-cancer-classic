@@ -16,6 +16,10 @@ import userEvent from "@testing-library/user-event";
 // Hoist mocks
 // ---------------------------------------------------------------------------
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 vi.mock("sonner", () => ({
   toast: {
     success: vi.fn(),

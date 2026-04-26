@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -290,19 +292,23 @@ type DrawerState = {
 };
 
 export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListProps) {
+  const router = useRouter();
   const [teams, setTeams] = useState<TeamWithMembers[]>(initialTeams);
   const [drawer, setDrawer] = useState<DrawerState>({ open: false, mode: "create", team: null });
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
 
-  // After a mutation we refresh by reloading the page (server component pattern)
+  // After a mutation we refresh via router.refresh() so Next.js RSC re-fetches in place.
+  // Note: team-drawer fires its own per-mode toast ("Team created" / "Team updated")
+  // before calling onSuccess. Adding one here would stack two toasts on every save.
   function handleDrawerSuccess() {
     setDrawer((d) => ({ ...d, open: false }));
-    window.location.reload();
+    router.refresh();
   }
 
   function handleMarkPaidDone() {
     setMarkingPaidId(null);
-    window.location.reload();
+    toast.success("Payment recorded");
+    router.refresh();
   }
 
   const captainName = (team: TeamWithMembers): string => {

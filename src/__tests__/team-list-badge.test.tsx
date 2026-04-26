@@ -5,6 +5,11 @@ import { render, screen } from "@testing-library/react";
 import { TeamList } from "@/app/admin/teams/team-list";
 import type { TeamWithMembers } from "@/app/admin/teams/actions";
 
+// Mock next/navigation (required since team-list.tsx uses useRouter)
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 // Mock server actions
 vi.mock("@/app/admin/teams/actions", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/app/admin/teams/actions")>();

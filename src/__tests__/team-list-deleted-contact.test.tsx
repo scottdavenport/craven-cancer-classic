@@ -16,6 +16,13 @@ import { TeamList } from "@/app/admin/teams/team-list";
 import type { TeamWithMembers, TeamMemberRow } from "@/app/admin/teams/actions";
 
 // ---------------------------------------------------------------------------
+// Mock next/navigation (required since team-list.tsx uses useRouter)
+// ---------------------------------------------------------------------------
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
+// ---------------------------------------------------------------------------
 // Mock server actions that TeamList depends on
 // ---------------------------------------------------------------------------
 vi.mock("@/app/admin/teams/actions", async (importOriginal) => {

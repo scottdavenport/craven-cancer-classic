@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -32,6 +33,7 @@ type DrawerState = {
 };
 
 export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
+  const router = useRouter();
   const [scores, setScores] = useState<Score[]>(initialScores);
   const [showCSV, setShowCSV] = useState(false);
   const [csvText, setCsvText] = useState("");
@@ -44,11 +46,9 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
   });
 
   // Re-fetch is handled by revalidatePath server-side; we close drawer + refresh
-  // via router.refresh() — but since ScoreManager receives scores as a prop from
-  // the server component, we refresh the page to pull fresh data after mutations.
-  // For now success just refreshes via window.location (simple, reliable).
+  // via router.refresh() so Next.js RSC re-fetches in place without a full reload.
   function handleSuccess() {
-    window.location.reload();
+    router.refresh();
   }
 
   async function handleCSVImport() {
@@ -79,7 +79,7 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
       if (result && "error" in result && typeof result.error === "string") {
         toast.error(result.error);
       } else {
-        toast.success("All scores cleared");
+        toast.success("Year cleared");
         handleSuccess();
       }
     } finally {

@@ -12,6 +12,10 @@ import userEvent from "@testing-library/user-event";
 // ---------------------------------------------------------------------------
 // Hoist mocks before imports
 // ---------------------------------------------------------------------------
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 vi.mock("@/app/admin/scores/actions", () => ({
   addScore: vi.fn().mockResolvedValue({ success: true }),
   updateScore: vi.fn().mockResolvedValue({ success: true }),

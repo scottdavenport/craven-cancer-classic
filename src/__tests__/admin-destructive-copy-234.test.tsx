@@ -65,6 +65,10 @@ const {
   mockToastError: vi.fn(),
 }));
 
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
+}));
+
 vi.mock("@/app/admin/sponsors/actions", () => ({
   deleteSponsor: mockDeleteSponsor,
   getSponsorContacts: mockGetSponsorContacts,

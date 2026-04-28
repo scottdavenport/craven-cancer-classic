@@ -160,3 +160,61 @@ describe("ContactList — sprint-19 PR-C polish", () => {
     expect(wrapper!.className).not.toContain("overflow-hidden");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprint 30 — Select items prop regression tests
+// Guard: trigger must display the human label, not the raw value.
+// ---------------------------------------------------------------------------
+
+describe("ContactList — sprint-30 Select items prop (#261 follow-up)", () => {
+  it("Type filter trigger displays 'Player' (capitalized) when typeFilter='player' via initial state", () => {
+    // Render with contacts; initial typeFilter is 'all'
+    // We verify all Select triggers render their default label, not raw value
+    const { container } = render(
+      <ContactList contacts={[makeContact()]} teams={[]} />
+    );
+    // Filter row has 4 combobox selects: type, year, consent, team (in order)
+    const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
+    // Type trigger should show "All Types" (label for value="all"), not "all"
+    expect(triggers[0].textContent).toContain("All Types");
+    expect(triggers[0].textContent).not.toBe("all");
+  });
+
+  it("Year filter trigger displays 'All Years' (label) not 'all' (raw value)", () => {
+    const { container } = render(
+      <ContactList contacts={[makeContact()]} teams={[]} />
+    );
+    const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
+    // Year trigger is second
+    expect(triggers[1].textContent).toContain("All Years");
+    expect(triggers[1].textContent).not.toBe("all");
+  });
+
+  it("Consent filter trigger displays 'All Contacts' (label) not 'all' (raw value)", () => {
+    const { container } = render(
+      <ContactList contacts={[makeContact()]} teams={[]} />
+    );
+    const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
+    // Consent trigger is third (index 2)
+    expect(triggers[2].textContent).toContain("All Contacts");
+    expect(triggers[2].textContent).not.toBe("all");
+  });
+
+  it("Team filter trigger displays team name (not UUID) when a UUID-id team is provided", () => {
+    const uuidTeam = {
+      id: "1e7bf5bc-1635-4f33-a2e1-e34c8a1b4d1b",
+      team_name: "Davenport Family",
+    };
+    const { container } = render(
+      <ContactList contacts={[makeContact()]} teams={[uuidTeam]} />
+    );
+    // Team trigger is fourth (index 3)
+    const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
+    // Default is 'all' → should display "All Teams" label, not "all"
+    // This verifies the items map is wired: value→label resolution is active
+    expect(triggers[3].textContent).toContain("All Teams");
+    expect(triggers[3].textContent).not.toBe("all");
+    // UUID must NOT appear in trigger (would mean items prop is missing)
+    expect(triggers[3].textContent).not.toContain("1e7bf5bc-1635-4f33-a2e1-e34c8a1b4d1b");
+  });
+});

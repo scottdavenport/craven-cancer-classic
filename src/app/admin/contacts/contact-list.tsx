@@ -391,7 +391,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
       {/* Filter controls */}
       <div className="flex flex-wrap gap-3 items-center">
         {/* Type */}
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")}>
+        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")} items={{ all: "All Types", player: "Player", sponsor: "Sponsor", donor: "Donor", other: "Other" }}>
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
@@ -405,7 +405,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         </Select>
 
         {/* Year */}
-        <Select value={yearFilter} onValueChange={(v) => setYearFilter(v ?? "all")}>
+        <Select value={yearFilter} onValueChange={(v) => setYearFilter(v ?? "all")} items={{ all: "All Years", ...Object.fromEntries(availableYears.map((y) => [String(y), String(y)])) }}>
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="All Years" />
           </SelectTrigger>
@@ -429,7 +429,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         />
 
         {/* Consent filter */}
-        <Select value={consentFilter} onValueChange={(v) => setConsentFilter(v ?? "all")}>
+        <Select value={consentFilter} onValueChange={(v) => setConsentFilter(v ?? "all")} items={{ all: "All Contacts", subscribed: "Subscribed only", unsubscribed: "Unsubscribed only" }}>
           <SelectTrigger className="w-[175px]">
             <SelectValue placeholder="All Contacts" />
           </SelectTrigger>
@@ -441,7 +441,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         </Select>
 
         {/* Team filter */}
-        <Select value={teamFilter} onValueChange={handleTeamFilterChange}>
+        <Select value={teamFilter} onValueChange={handleTeamFilterChange} items={{ all: "All Teams", ...Object.fromEntries(teams.map((t) => [t.id, t.team_name])) }}>
           <SelectTrigger className="w-[175px]">
             <SelectValue placeholder="All Teams" />
           </SelectTrigger>

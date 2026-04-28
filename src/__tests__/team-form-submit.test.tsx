@@ -283,3 +283,24 @@ describe("TeamForm — edit path (isEdit=true)", () => {
     expect(screen.getByText(/team name cannot be changed here/i)).toBeInTheDocument();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sprint 30 — Session Select items prop regression test (#261 follow-up)
+// Guard: trigger must display "Morning"/"Afternoon", not "morning"/"afternoon".
+// ---------------------------------------------------------------------------
+
+describe("TeamForm — sprint-30 Session Select items prop", () => {
+  it("Session select trigger displays 'Morning' (capitalized) not 'morning' (raw value)", () => {
+    const { container } = render(
+      <TeamForm team={null} onSuccess={vi.fn()} onCancel={vi.fn()} />
+    );
+
+    // The Session select trigger should display the human-readable label
+    const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
+    // Session is the first (and only) Select in the new-team form
+    expect(triggers.length).toBeGreaterThanOrEqual(1);
+    const sessionTrigger = triggers[0];
+    expect(sessionTrigger.textContent).toContain("Morning");
+    expect(sessionTrigger.textContent).not.toBe("morning");
+  });
+});

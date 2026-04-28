@@ -137,7 +137,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
       {/* Session */}
       <div className="space-y-1.5">
         <Label>Session</Label>
-        <Select value={session} onValueChange={(v) => setSession(v ?? "morning")}>
+        <Select value={session} onValueChange={(v) => setSession(v ?? "morning")} items={{ morning: "Morning", afternoon: "Afternoon" }}>
           <SelectTrigger className="w-[200px]">
             <SelectValue />
           </SelectTrigger>

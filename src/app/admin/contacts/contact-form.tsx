@@ -273,7 +273,11 @@ export function ContactForm({
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5 col-span-2 sm:col-span-1">
             <Label>Type</Label>
-            <Select value={type} onValueChange={(v) => setType(v as ContactInput["type"])}>
+            <Select
+              value={type}
+              onValueChange={(v) => setType(v as ContactInput["type"])}
+              items={{ player: "Player", sponsor: "Sponsor", donor: "Donor", other: "Other" }}
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
@@ -290,6 +294,7 @@ export function ContactForm({
             <Select
               value={yearFirstSeen}
               onValueChange={(v) => setYearFirstSeen(v ?? String(CURRENT_YEAR))}
+              items={Object.fromEntries(YEAR_OPTIONS.map((y) => [String(y), String(y)]))}
             >
               <SelectTrigger>
                 <SelectValue />

@@ -6,6 +6,10 @@
  * 2. Actions div no pb-4 (doubled-padding fix)
  * 3. Salutation max-w-[120px]
  *
+ * Sprint 29 — #178 base-ui Select items prop:
+ * 4. Type select trigger displays capitalized label ("Sponsor" not "sponsor")
+ * 5. Year First Seen trigger displays year string label
+ *
  * All tests are RED: they describe behaviour that PR C must implement.
  * They will fail against main at 846a6f4.
  */
@@ -100,6 +104,95 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
         salutationInput!.parentElement?.className.includes("max-w-[120px]") ?? false;
 
       expect(inputHasClass || parentHasClass).toBe(true);
+    });
+  });
+
+  // Sprint 29 — #178: base-ui Select items prop
+  // Regression guard: trigger must show human label, not raw enum value.
+  describe("Select items prop — trigger displays label not raw value (#178)", () => {
+    it("Type select trigger displays 'Sponsor' (capitalized) when type=sponsor", () => {
+      const { container } = render(
+        <ContactForm
+          initial={
+            {
+              id: "c-2",
+              full_name: "Jane Sponsor",
+              first_name: "Jane",
+              last_name: "Sponsor",
+              salutation: null,
+              email: null,
+              phone: null,
+              type: "sponsor",
+              company: null,
+              address1: null,
+              address2: null,
+              city: null,
+              state: null,
+              zip: null,
+              marketing_consent: false,
+              source: null,
+              year_first_seen: 2026,
+              notes: null,
+              created_at: new Date().toISOString(),
+              deleted_at: null,
+              deleted_by: null,
+            } as import("@/types/database").Contact
+          }
+          onSubmit={noop}
+          onCancel={noop}
+        />
+      );
+
+      // The Classification section has two SelectTriggers: Type first, Year First Seen second.
+      const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
+      expect(triggers.length).toBeGreaterThanOrEqual(1);
+      const typeTrigger = triggers[0];
+
+      // With items prop: SelectValue renders "Sponsor" (the label), not "sponsor" (the raw value).
+      expect(typeTrigger.textContent).toContain("Sponsor");
+      expect(typeTrigger.textContent).not.toBe("sponsor");
+    });
+
+    it("Year First Seen trigger displays the year string when year_first_seen=2024", () => {
+      const { container } = render(
+        <ContactForm
+          initial={
+            {
+              id: "c-3",
+              full_name: "Jane Player",
+              first_name: "Jane",
+              last_name: "Player",
+              salutation: null,
+              email: null,
+              phone: null,
+              type: "player",
+              company: null,
+              address1: null,
+              address2: null,
+              city: null,
+              state: null,
+              zip: null,
+              marketing_consent: false,
+              source: null,
+              year_first_seen: 2024,
+              notes: null,
+              created_at: new Date().toISOString(),
+              deleted_at: null,
+              deleted_by: null,
+            } as import("@/types/database").Contact
+          }
+          onSubmit={noop}
+          onCancel={noop}
+        />
+      );
+
+      // Year First Seen is the second SelectTrigger in the Classification section.
+      const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
+      expect(triggers.length).toBeGreaterThanOrEqual(2);
+      const yearTrigger = triggers[1];
+
+      // With items prop: SelectValue renders the year label string "2024".
+      expect(yearTrigger.textContent).toContain("2024");
     });
   });
 });

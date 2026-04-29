@@ -449,19 +449,33 @@ export async function bulkAddContactType(
 
   const supabase = await createClient();
 
-  // Use RPC to perform an atomic array_append without duplicates.
-  // Requires DB function: bulk_add_contact_type(p_ids uuid[], p_type text)
-  // returning { updated: int, blocked: [] }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any).rpc("bulk_add_contact_type", {
-    p_ids: ids,
-    p_type: type,
-  });
+  // Read current rows so we can compute the correct merged types array per contact.
+  const { data: rows, error: readError } = await supabase
+    .from("contacts")
+    .select("id, types")
+    .in("id", ids);
 
-  if (error) return { error: error.message };
+  if (readError) return { error: readError.message };
 
-  const result = data as { updated: number; blocked: [] } | null;
-  return result ?? { updated: ids.length, blocked: [] };
+  const contactRows = (rows ?? []) as Array<{ id: string; types: ContactType[] }>;
+
+  let updated = 0;
+  for (const row of contactRows) {
+    const newTypes = [...new Set([...row.types, type])];
+    if (newTypes.length === row.types.length) {
+      // Contact already has this type — skip the write.
+      updated++;
+      continue;
+    }
+    const { error: updateError } = await supabase
+      .from("contacts")
+      .update({ types: newTypes })
+      .eq("id", row.id);
+    if (updateError) return { error: updateError.message };
+    updated++;
+  }
+
+  return { updated, blocked: [] };
 }
 
 type BlockedContact = { id: string; reason: string };

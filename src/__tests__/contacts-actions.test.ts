@@ -55,12 +55,9 @@ import {
   deleteContact,
   bulkUpdateContacts,
   bulkDeleteContacts,
-  // Sprint 31 — will not exist until Flux delivers #265
-  // @ts-expect-error Sprint 31 RED: bulkSetContactTypes not yet exported
+  // Sprint 31 — delivered in #265
   bulkSetContactTypes,
-  // @ts-expect-error Sprint 31 RED: bulkAddContactType not yet exported
   bulkAddContactType,
-  // @ts-expect-error Sprint 31 RED: bulkRemoveContactType not yet exported
   bulkRemoveContactType,
 } from "@/app/admin/contacts/actions";
 
@@ -1625,17 +1622,21 @@ describe("Sprint 31 — bulkAddContactType", () => {
   });
 
   it("adds a type to all selected contacts without duplication, returns { updated, blocked }", async () => {
-    // The action adds 'donor' to contacts — we expect it to use an array_append or
-    // equivalent strategy. The exact Supabase call depends on implementation.
+    // The action reads current rows then updates each one individually.
     // We assert the returned shape is { updated: number, blocked: [] }.
-    const mockRpc = vi.fn().mockResolvedValue({ data: { updated: 2, blocked: [] }, error: null });
+    const seedRows = [
+      { id: "id-1", types: ["player"] },
+      { id: "id-2", types: ["sponsor"] },
+    ];
     setClient({
       from: vi.fn().mockReturnValue({
+        select: vi.fn().mockReturnValue({
+          in: vi.fn().mockResolvedValue({ data: seedRows, error: null }),
+        }),
         update: vi.fn().mockReturnValue({
-          in: vi.fn().mockResolvedValue({ error: null, count: 2 }),
+          eq: vi.fn().mockResolvedValue({ error: null }),
         }),
       }),
-      rpc: mockRpc,
     });
 
     const result = await bulkAddContactType(["id-1", "id-2"], "donor");

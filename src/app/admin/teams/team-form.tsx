@@ -95,7 +95,6 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         if ("error" in result) { setError(result.error); return; }
       } else {
         const result = await createTeam({
-          team_name: captain.full_name,
           session,
           captain_contact_id: captain.id,
           player_contact_ids: players.map((p) => p.id),

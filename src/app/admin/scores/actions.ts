@@ -51,6 +51,42 @@ export async function getScores(): Promise<ScoreWithTeam[]> {
   });
 }
 
+export type TeamDropdownOption = {
+  team_id: string;
+  captain_display_name: string;
+};
+
+export async function getActiveTeamsForDropdown(): Promise<TeamDropdownOption[]> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const currentYear = new Date().getFullYear();
+
+  const { data, error } = await supabase
+    .from("teams_active")
+    .select(
+      "id, captain:contacts!teams_captain_contact_id_fkey(first_name, last_name, full_name)"
+    )
+    .eq("year", currentYear);
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []).map((row) => {
+    const captain = row.captain as
+      | { first_name: string; last_name: string; full_name: string }
+      | null;
+    return {
+      team_id: row.id as string,
+      captain_display_name: captain?.full_name ?? "(no captain)",
+      _last_name: captain?.last_name ?? "",
+    };
+  });
+
+  // Alphabetize by captain last name, then first name (locked decision in plan).
+  rows.sort((a, b) => a._last_name.localeCompare(b._last_name) || a.captain_display_name.localeCompare(b.captain_display_name));
+
+  return rows.map(({ team_id, captain_display_name }) => ({ team_id, captain_display_name }));
+}
+
 export async function addScore(formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();

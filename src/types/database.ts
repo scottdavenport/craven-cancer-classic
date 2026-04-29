@@ -308,7 +308,6 @@ export type Database = {
           session: string | null
           source: string
           team_id: string | null
-          team_name: string
           total_score: number
           year: number
         }
@@ -319,7 +318,6 @@ export type Database = {
           session?: string | null
           source?: string
           team_id?: string | null
-          team_name: string
           total_score: number
           year?: number
         }
@@ -330,7 +328,6 @@ export type Database = {
           session?: string | null
           source?: string
           team_id?: string | null
-          team_name?: string
           total_score?: number
           year?: number
         }
@@ -647,7 +644,6 @@ export type Database = {
           payment_status: string
           session: string
           stripe_payment_id: string | null
-          team_name: string
           year: number
         }
         Insert: {
@@ -661,7 +657,6 @@ export type Database = {
           payment_status?: string
           session: string
           stripe_payment_id?: string | null
-          team_name: string
           year?: number
         }
         Update: {
@@ -675,7 +670,6 @@ export type Database = {
           payment_status?: string
           session?: string
           stripe_payment_id?: string | null
-          team_name?: string
           year?: number
         }
         Relationships: [
@@ -946,7 +940,6 @@ export type Database = {
           payment_status: string | null
           session: string | null
           stripe_payment_id: string | null
-          team_name: string | null
           year: number | null
         }
         Insert: {
@@ -960,7 +953,6 @@ export type Database = {
           payment_status?: string | null
           session?: string | null
           stripe_payment_id?: string | null
-          team_name?: string | null
           year?: number | null
         }
         Update: {
@@ -974,7 +966,6 @@ export type Database = {
           payment_status?: string | null
           session?: string | null
           stripe_payment_id?: string | null
-          team_name?: string | null
           year?: number | null
         }
         Relationships: [
@@ -1015,7 +1006,6 @@ export type Database = {
           p_captain_name: string
           p_captain_phone?: string
           p_session: string
-          p_team_name: string
         }
         Returns: Json
       }

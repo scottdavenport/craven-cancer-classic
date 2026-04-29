@@ -7,6 +7,14 @@
  * - getTeamsForFilter: returns id+team_name list
  * - createContact (S10-2 RED): happy path, validation errors, duplicate email, unauthorized
  * - updateContact (S10-2 RED): happy path partial update, normalization, duplicate email, unauthorized
+ *
+ * Sprint 31 additions (RED — fail until Flux/Bolt deliver #265 #268 #269 #270):
+ * - types[] round-trip (create + update)
+ * - volunteer type accepted
+ * - getContacts filter uses .contains('types', [type]) not .eq('type', type)
+ * - bulkSetContactTypes / bulkAddContactType / bulkRemoveContactType
+ * - type-removal guard (team_members, sponsor_contacts, volunteer no-guard)
+ * - show_on_wall round-trip
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -47,6 +55,13 @@ import {
   deleteContact,
   bulkUpdateContacts,
   bulkDeleteContacts,
+  // Sprint 31 — will not exist until Flux delivers #265
+  // @ts-expect-error Sprint 31 RED: bulkSetContactTypes not yet exported
+  bulkSetContactTypes,
+  // @ts-expect-error Sprint 31 RED: bulkAddContactType not yet exported
+  bulkAddContactType,
+  // @ts-expect-error Sprint 31 RED: bulkRemoveContactType not yet exported
+  bulkRemoveContactType,
 } from "@/app/admin/contacts/actions";
 
 // ---------------------------------------------------------------------------
@@ -1110,5 +1125,744 @@ describe("bulkDeleteContacts (S10-4)", () => {
 
       expect(result).toMatchObject({ error: "bulk delete failed" });
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): types[] round-trip on createContact
+// Fails until Flux adds `types` column + ContactInput.types + show_on_wall
+// ---------------------------------------------------------------------------
+
+/**
+ * Sprint 31 ContactInput — extends the existing shape with multi-type fields.
+ * Cast as `any` input to avoid TS errors before the source is updated.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type S31ContactInput = any;
+
+describe("Sprint 31 — createContact types[] round-trip", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("saves types: ['volunteer'] and reads back ['volunteer'] (volunteer round-trip)", async () => {
+    const insertedRow = { id: "vol-uuid-1" };
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockResolvedValue({ data: [insertedRow], error: null }),
+    });
+    setClient({ from: vi.fn().mockReturnValue({ insert: mockInsert }) });
+
+    const input: S31ContactInput = {
+      salutation: null,
+      first_name: "Val",
+      last_name: "Volunteer",
+      company: null,
+      email: "val@example.com",
+      phone: null,
+      // Sprint 31: types array replaces single `type`
+      types: ["volunteer"],
+      address1: null,
+      address2: null,
+      city: null,
+      state: null,
+      zip: null,
+      marketing_consent: false,
+      notes: null,
+      year_first_seen: 2026,
+    };
+
+    const result = await createContact(input);
+
+    // Must not return an error
+    expect(result).not.toHaveProperty("error");
+    expect(result).toMatchObject({ id: expect.any(String) });
+
+    // The insert payload must contain types: ['volunteer']
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ types: ["volunteer"] }),
+      ])
+    );
+  });
+
+  it("saves types: ['player', 'sponsor'] and inserts both in the types array", async () => {
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockResolvedValue({ data: [{ id: "ps-uuid-1" }], error: null }),
+    });
+    setClient({ from: vi.fn().mockReturnValue({ insert: mockInsert }) });
+
+    const input: S31ContactInput = {
+      salutation: null,
+      first_name: "Lacie",
+      last_name: "Doe",
+      company: "Doe Corp",
+      email: "lacie@example.com",
+      phone: null,
+      types: ["player", "sponsor"],
+      address1: null,
+      address2: null,
+      city: null,
+      state: null,
+      zip: null,
+      marketing_consent: false,
+      notes: null,
+      year_first_seen: 2026,
+    };
+
+    const result = await createContact(input);
+
+    expect(result).not.toHaveProperty("error");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ types: ["player", "sponsor"] }),
+      ])
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): types[] round-trip on updateContact
+// ---------------------------------------------------------------------------
+
+describe("Sprint 31 — updateContact types[] round-trip", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("updates types from ['player'] to ['player', 'volunteer'] and writes both", async () => {
+    const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+    setClient({ from: vi.fn().mockReturnValue({ update: mockUpdate }) });
+
+    const result = await updateContact("contact-uuid", {
+      types: ["player", "volunteer"],
+    } as S31ContactInput);
+
+    expect(result).toEqual({ ok: true });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ types: ["player", "volunteer"] })
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): show_on_wall round-trip
+// Fails until Flux adds show_on_wall column to contacts
+// ---------------------------------------------------------------------------
+
+describe("Sprint 31 — show_on_wall round-trip", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("creates a contact with show_on_wall: false and inserts that value", async () => {
+    const mockInsert = vi.fn().mockReturnValue({
+      select: vi.fn().mockResolvedValue({ data: [{ id: "donor-uuid-1" }], error: null }),
+    });
+    setClient({ from: vi.fn().mockReturnValue({ insert: mockInsert }) });
+
+    const input: S31ContactInput = {
+      salutation: null,
+      first_name: "Don",
+      last_name: "Donor",
+      company: null,
+      email: "don@example.com",
+      phone: null,
+      types: ["donor"],
+      show_on_wall: false,
+      recognition_name: "The Donor Family",
+      address1: null,
+      address2: null,
+      city: null,
+      state: null,
+      zip: null,
+      marketing_consent: false,
+      notes: null,
+      year_first_seen: 2026,
+    };
+
+    const result = await createContact(input);
+
+    expect(result).not.toHaveProperty("error");
+    expect(mockInsert).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ show_on_wall: false }),
+      ])
+    );
+  });
+
+  it("creates a contact without specifying show_on_wall and the DB applies the DEFAULT true", async () => {
+    // The DB has DEFAULT true on show_on_wall. The server action should NOT
+    // explicitly set show_on_wall=undefined/null when it's omitted — it should
+    // omit the field entirely so the DB default applies.
+    const capturedPayload: Record<string, unknown>[] = [];
+    const mockInsert = vi.fn().mockImplementation((payload: Record<string, unknown>[]) => {
+      capturedPayload.push(...payload);
+      return {
+        select: vi.fn().mockResolvedValue({ data: [{ id: "donor-uuid-2" }], error: null }),
+      };
+    });
+    setClient({ from: vi.fn().mockReturnValue({ insert: mockInsert }) });
+
+    const input: S31ContactInput = {
+      salutation: null,
+      first_name: "Ann",
+      last_name: "Other",
+      company: null,
+      email: "ann@example.com",
+      phone: null,
+      types: ["donor"],
+      // show_on_wall NOT specified — DB default true should apply
+      address1: null,
+      address2: null,
+      city: null,
+      state: null,
+      zip: null,
+      marketing_consent: false,
+      notes: null,
+      year_first_seen: 2026,
+    };
+
+    await createContact(input);
+
+    // The inserted row must not explicitly set show_on_wall to null/false
+    // (which would override the DB default). It should either be omitted or true.
+    const row = capturedPayload[0] as Record<string, unknown>;
+    if ("show_on_wall" in row) {
+      // If the action does write it, it must be true (the default)
+      expect(row.show_on_wall).toBe(true);
+    }
+    // If not present at all, DB default applies — also acceptable.
+  });
+
+  it("updates show_on_wall to false via updateContact", async () => {
+    const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+    setClient({ from: vi.fn().mockReturnValue({ update: mockUpdate }) });
+
+    const result = await updateContact("donor-uuid", { show_on_wall: false } as S31ContactInput);
+
+    expect(result).toEqual({ ok: true });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ show_on_wall: false })
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): getContacts filter uses .contains('types', [type])
+// Fails until Flux updates the getContacts query
+// ---------------------------------------------------------------------------
+
+describe("Sprint 31 — getContacts filter uses .contains not .eq", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("calls .contains('types', ['player']) when filter.type is 'player'", async () => {
+    // Build a spy chain that records which methods were called
+    const containsSpy = vi.fn().mockReturnThis();
+    const eqSpy = vi.fn().mockReturnThis();
+
+    const chain: Record<string, unknown> = {};
+    chain.then = (resolve: (v: { data: unknown[]; error: null }) => unknown, _reject: unknown) =>
+      Promise.resolve({ data: [], error: null }).then(resolve as (v: unknown) => unknown);
+    chain.order = vi.fn().mockReturnValue(chain);
+    chain.eq = eqSpy.mockReturnValue(chain);
+    chain.contains = containsSpy.mockReturnValue(chain);
+    chain.ilike = vi.fn().mockReturnValue(chain);
+    chain.in = vi.fn().mockReturnValue(chain);
+
+    setClient({
+      from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue(chain) }),
+    });
+
+    await getContacts({ type: "player" as "player" | "sponsor" | "donor" | "other" });
+
+    // Sprint 31 contract: must call .contains('types', ['player']), not .eq('type', 'player')
+    expect(containsSpy).toHaveBeenCalledWith("types", ["player"]);
+    // Must NOT use the old singular eq('type', ...) for type filtering
+    const typeEqCalls = (eqSpy.mock.calls as [string, unknown][]).filter(
+      ([col]) => col === "type"
+    );
+    expect(typeEqCalls).toHaveLength(0);
+  });
+
+  it("filter type 'volunteer' uses .contains('types', ['volunteer'])", async () => {
+    const containsSpy = vi.fn().mockReturnThis();
+
+    const chain: Record<string, unknown> = {};
+    chain.then = (resolve: (v: { data: unknown[]; error: null }) => unknown, _reject: unknown) =>
+      Promise.resolve({ data: [], error: null }).then(resolve as (v: unknown) => unknown);
+    chain.order = vi.fn().mockReturnValue(chain);
+    chain.eq = vi.fn().mockReturnValue(chain);
+    chain.contains = containsSpy.mockReturnValue(chain);
+    chain.ilike = vi.fn().mockReturnValue(chain);
+    chain.in = vi.fn().mockReturnValue(chain);
+
+    setClient({
+      from: vi.fn().mockReturnValue({ select: vi.fn().mockReturnValue(chain) }),
+    });
+
+    // 'volunteer' is not yet in ContactFilter.type — cast to any for RED test
+    await getContacts({ type: "volunteer" as S31ContactInput });
+
+    expect(containsSpy).toHaveBeenCalledWith("types", ["volunteer"]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): type-removal guard on updateContact
+// Fails until Flux adds the guard logic to updateContact
+// ---------------------------------------------------------------------------
+
+describe("Sprint 31 — type-removal guard (updateContact)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("blocks Player removal when contact is in team_members — returns error with team name", async () => {
+    // Scenario: contact was a player (types: ['player']); admin tries to set types: ['donor']
+    // team_members has a row for this contact_id with team name "Team Mulligans"
+    const teamMembersResult = {
+      data: [{ contact_id: "c-uuid-1", team: { team_name: "Team Mulligans" } }],
+      error: null,
+    };
+
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "team_members") {
+        const eqChain = vi.fn().mockResolvedValue(teamMembersResult);
+        return { select: vi.fn().mockReturnValue({ eq: eqChain }) };
+      }
+      // contacts fetch for current types
+      if (table === "contacts") {
+        const singleResult = {
+          data: { types: ["player"], full_name: "Lacie Doe" },
+          error: null,
+        };
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue(singleResult) }),
+          }),
+          update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+        };
+      }
+      return {};
+    });
+
+    setClient({ from: mockFrom });
+
+    const result = await updateContact("c-uuid-1", { types: ["donor"] } as S31ContactInput);
+
+    // Must return an error, not { ok: true }
+    expect(result).toHaveProperty("error");
+    const errMsg = (result as { error: string }).error;
+    // Error must reference the team name
+    expect(errMsg).toMatch(/Team Mulligans/i);
+    // Error must mention removing from team first
+    expect(errMsg).toMatch(/team|remove/i);
+  });
+
+  it("blocks Sponsor removal when contact is in sponsor_contacts — returns error referencing sponsorship", async () => {
+    const sponsorContactsResult = {
+      data: [{ contact_id: "c-uuid-2" }],
+      error: null,
+    };
+
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "sponsor_contacts") {
+        const eqChain = vi.fn().mockResolvedValue(sponsorContactsResult);
+        return { select: vi.fn().mockReturnValue({ eq: eqChain }) };
+      }
+      if (table === "contacts") {
+        const singleResult = {
+          data: { types: ["sponsor"], full_name: "Big Corp Rep" },
+          error: null,
+        };
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({ single: vi.fn().mockResolvedValue(singleResult) }),
+          }),
+          update: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ error: null }) }),
+        };
+      }
+      return {};
+    });
+
+    setClient({ from: mockFrom });
+
+    const result = await updateContact("c-uuid-2", { types: ["donor"] } as S31ContactInput);
+
+    expect(result).toHaveProperty("error");
+    const errMsg = (result as { error: string }).error;
+    expect(errMsg).toMatch(/sponsor|sponsorship|remove/i);
+  });
+
+  it("allows Volunteer removal — no join table guard fires", async () => {
+    // Contact has types: ['volunteer']; admin removes it to types: ['other']
+    // No team_members or sponsor_contacts check should block this.
+    const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "contacts") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              single: vi.fn().mockResolvedValue({
+                data: { types: ["volunteer"], full_name: "Val V" },
+                error: null,
+              }),
+            }),
+          }),
+          update: mockUpdate,
+        };
+      }
+      // If any guard accidentally queries team_members for volunteer — fail the test
+      if (table === "team_members") {
+        throw new Error("Guard should NOT query team_members when removing 'volunteer'");
+      }
+      return {};
+    });
+
+    setClient({ from: mockFrom });
+
+    const result = await updateContact("c-uuid-3", { types: ["other"] } as S31ContactInput);
+
+    // Volunteer removal should succeed
+    expect(result).toEqual({ ok: true });
+  });
+
+  it("allows type change when no guard-relevant types are being removed", async () => {
+    // Contact has types: ['donor', 'other']; admin keeps both — no guard needed
+    const mockEq = vi.fn().mockResolvedValue({ data: null, error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+
+    setClient({
+      from: vi.fn().mockReturnValue({ update: mockUpdate }),
+    });
+
+    const result = await updateContact("c-uuid-4", { types: ["donor", "other"] } as S31ContactInput);
+
+    expect(result).toEqual({ ok: true });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): bulkSetContactTypes
+// Fails until Flux adds this action to actions.ts
+// ---------------------------------------------------------------------------
+
+describe("Sprint 31 — bulkSetContactTypes", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("overwrites types for all selected contacts and returns { updated, blocked }", async () => {
+    const inResult: Record<string, unknown> = {};
+    inResult.then = (resolve: (v: { error: null; count: number }) => unknown, _reject: unknown) =>
+      Promise.resolve({ error: null, count: 3 }).then(resolve as (v: unknown) => unknown);
+    const mockIn = vi.fn().mockReturnValue(inResult);
+    const mockUpdate = vi.fn().mockReturnValue({ in: mockIn });
+    setClient({ from: vi.fn().mockReturnValue({ update: mockUpdate }) });
+
+    // bulkSetContactTypes doesn't exist yet — this will throw at runtime
+    const result = await bulkSetContactTypes(["id-1", "id-2", "id-3"], ["donor"]);
+
+    expect(result).toMatchObject({ updated: 3, blocked: [] });
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({ types: ["donor"] })
+    );
+  });
+
+  it("returns { error: /too many/i } when ids.length > 500", async () => {
+    setClient({ from: vi.fn() });
+
+    const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+    const result = await bulkSetContactTypes(ids, ["player"]);
+
+    expect(result).toMatchObject({ error: expect.stringMatching(/too many/i) });
+  });
+
+  it("returns { updated: 0, blocked: [] } when ids is empty", async () => {
+    setClient({ from: vi.fn() });
+
+    const result = await bulkSetContactTypes([], ["player"]);
+
+    expect(result).toMatchObject({ updated: 0, blocked: [] });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): bulkAddContactType
+// Fails until Flux adds this action to actions.ts
+// ---------------------------------------------------------------------------
+
+describe("Sprint 31 — bulkAddContactType", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("adds a type to all selected contacts without duplication, returns { updated, blocked }", async () => {
+    // The action adds 'donor' to contacts — we expect it to use an array_append or
+    // equivalent strategy. The exact Supabase call depends on implementation.
+    // We assert the returned shape is { updated: number, blocked: [] }.
+    const mockRpc = vi.fn().mockResolvedValue({ data: { updated: 2, blocked: [] }, error: null });
+    setClient({
+      from: vi.fn().mockReturnValue({
+        update: vi.fn().mockReturnValue({
+          in: vi.fn().mockResolvedValue({ error: null, count: 2 }),
+        }),
+      }),
+      rpc: mockRpc,
+    });
+
+    const result = await bulkAddContactType(["id-1", "id-2"], "donor");
+
+    // Contract: returns { updated, blocked }
+    expect(result).toMatchObject({
+      updated: expect.any(Number),
+      blocked: expect.any(Array),
+    });
+    expect((result as { blocked: unknown[] }).blocked).toHaveLength(0);
+  });
+
+  it("returns { error: /too many/i } when ids.length > 500", async () => {
+    setClient({ from: vi.fn(), rpc: vi.fn() });
+
+    const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+    const result = await bulkAddContactType(ids, "donor");
+
+    expect(result).toMatchObject({ error: expect.stringMatching(/too many/i) });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 31 (RED): bulkRemoveContactType — happy path + blocked path
+// Fails until Flux adds this action to actions.ts
+// ---------------------------------------------------------------------------
+
+describe("Sprint 31 — bulkRemoveContactType", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    process.env.NEXT_PUBLIC_SUPABASE_URL = "http://localhost:54321";
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "anon-key-test";
+    vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
+  });
+
+  it("removes type from unblocked contacts, returns { updated, blocked: [] }", async () => {
+    // No contacts are in team_members or sponsor_contacts — removal is clean
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "team_members" || table === "sponsor_contacts") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === "contacts") {
+        return {
+          update: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ error: null, count: 3 }),
+          }),
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({
+              data: [
+                { id: "id-1", full_name: "A", types: ["player"] },
+                { id: "id-2", full_name: "B", types: ["player"] },
+                { id: "id-3", full_name: "C", types: ["player", "donor"] },
+              ],
+              error: null,
+            }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    setClient({ from: mockFrom });
+
+    const result = await bulkRemoveContactType(["id-1", "id-2", "id-3"], "player");
+
+    expect(result).toMatchObject({
+      updated: expect.any(Number),
+      blocked: [],
+    });
+  });
+
+  it("returns blocked contacts when removal is guarded by team_members", async () => {
+    // id-1 is in team_members (Player blocked); id-2 and id-3 are clean
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "team_members") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({
+              data: [{ contact_id: "id-1", team: { team_name: "Team Eagles" } }],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === "sponsor_contacts") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === "contacts") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({
+              data: [
+                { id: "id-1", full_name: "Blocked Person", types: ["player"] },
+                { id: "id-2", full_name: "Clean A", types: ["player"] },
+                { id: "id-3", full_name: "Clean B", types: ["player"] },
+              ],
+              error: null,
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ error: null, count: 2 }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    setClient({ from: mockFrom });
+
+    const result = await bulkRemoveContactType(["id-1", "id-2", "id-3"], "player");
+
+    // Contract shape: { updated: number, blocked: [{id, reason}] }
+    expect(result).toMatchObject({
+      updated: expect.any(Number),
+      blocked: expect.arrayContaining([
+        expect.objectContaining({ id: "id-1", reason: expect.any(String) }),
+      ]),
+    });
+    // 2 unblocked contacts were updated
+    expect((result as { updated: number }).updated).toBe(2);
+    // Exactly 1 blocked row
+    expect((result as { blocked: unknown[] }).blocked).toHaveLength(1);
+  });
+
+  it("returns blocked contacts when removal is guarded by sponsor_contacts", async () => {
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "team_members") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === "sponsor_contacts") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({
+              data: [{ contact_id: "id-a" }],
+              error: null,
+            }),
+          }),
+        };
+      }
+      if (table === "contacts") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({
+              data: [
+                { id: "id-a", full_name: "Sponsored Rep", types: ["sponsor"] },
+                { id: "id-b", full_name: "Free Agent", types: ["sponsor"] },
+              ],
+              error: null,
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ error: null, count: 1 }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    setClient({ from: mockFrom });
+
+    const result = await bulkRemoveContactType(["id-a", "id-b"], "sponsor");
+
+    expect(result).toMatchObject({
+      updated: 1,
+      blocked: expect.arrayContaining([
+        expect.objectContaining({ id: "id-a", reason: expect.any(String) }),
+      ]),
+    });
+  });
+
+  it("removes 'volunteer' from contacts without checking any join table", async () => {
+    // Volunteer has no guard — removal must succeed without querying team_members
+    const teamMembersSpy = vi.fn();
+
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "team_members") {
+        teamMembersSpy(table);
+        // If this is ever called, the test will detect it below
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        };
+      }
+      if (table === "contacts") {
+        return {
+          select: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({
+              data: [{ id: "v-1", full_name: "Vera Vol", types: ["volunteer"] }],
+              error: null,
+            }),
+          }),
+          update: vi.fn().mockReturnValue({
+            in: vi.fn().mockResolvedValue({ error: null, count: 1 }),
+          }),
+        };
+      }
+      return {};
+    });
+
+    setClient({ from: mockFrom });
+
+    const result = await bulkRemoveContactType(["v-1"], "volunteer");
+
+    expect(result).toMatchObject({ updated: 1, blocked: [] });
+    // Volunteer guard decision #6 + #7: no join table queried for volunteer
+    expect(teamMembersSpy).not.toHaveBeenCalled();
+  });
+
+  it("returns { error: /too many/i } when ids.length > 500", async () => {
+    setClient({ from: vi.fn() });
+
+    const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
+    const result = await bulkRemoveContactType(ids, "player");
+
+    expect(result).toMatchObject({ error: expect.stringMatching(/too many/i) });
   });
 });

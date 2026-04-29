@@ -159,7 +159,7 @@ function TeamsTab({ initial }: { initial: TrashTeam[] }) {
   return (
     <TrashTable
       rows={rows}
-      columns={{ header: "Team Name", renderName: (row) => row.captain_display_name || "(unknown captain)" }}
+      columns={{ header: "Team Name", renderName: (row) => row.captain_display_name || "(no captain)" }}
       onRestore={handleRestore}
     />
   );

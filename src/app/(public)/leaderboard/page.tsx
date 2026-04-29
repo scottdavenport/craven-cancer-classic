@@ -29,6 +29,7 @@ async function getScores(): Promise<ScoreRow[]> {
       "id, total_score, session, team:teams(captain:contacts!teams_captain_contact_id_fkey(full_name))"
     )
     .eq("year", currentYear)
+    .not("team_id", "is", null)
     .order("total_score", { ascending: true });
 
   return (data ?? []).map((row) => {

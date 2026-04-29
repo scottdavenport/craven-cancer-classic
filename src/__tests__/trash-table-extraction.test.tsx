@@ -68,6 +68,8 @@ function makeContact(overrides: Partial<WithDeletedByName<Contact>> = {}): WithD
 function makeTeam(overrides: Partial<WithDeletedByName<Team>> = {}): WithDeletedByName<Team> {
   return {
     id: "team-1",
+    // @ts-expect-error Sprint 32: team_name dropped from Team type; assertion at line 230 still depends on this fixture value pending Phase 2/3 captain-derived display
+    team_name: "Eagle Squad",
     session: "morning",
     payment_status: "pending",
     amount_paid_cents: 0,
@@ -227,6 +229,9 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
       />
     );
     fireEvent.click(screen.getByRole("tab", { name: /teams/i }));
+    // Sprint 32: assertion preserved per feedback_forge_collateral_test_changes;
+    // makeTeam() default fixture still includes team_name="Eagle Squad" via @ts-expect-error
+    // pending Phase 2/3 captain-derived display.
     expect(screen.getByText("Eagle Squad")).toBeInTheDocument();
   });
 

@@ -1,8 +1,15 @@
 /**
- * #170 — TeamForm submit path coverage
+ * #170 + Sprint 32 (#282) — TeamForm submit path coverage
  *
  * Tests the create and edit submit paths, validation gates, and isEdit render
  * branch in TeamForm (src/app/admin/teams/team-form.tsx).
+ *
+ * Sprint 32 contract changes (RED phase — fail until Bolt ships Phase 2):
+ * - team_name field removed from TeamInput and TeamForm
+ * - Captain selection is the primary required identity field
+ * - createTeam payload must NOT include team_name
+ * - "Team name is required" validation gone (field dropped)
+ * - Captain-is-required validation is the primary gate
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -53,9 +60,10 @@ function makeContact(id: string, name: string) {
 }
 
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
+  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-abc",
-    team_name: "The Birdies",
+    // team_name omitted — Sprint 32 contract drop
     year: 2026,
     captain_contact_id: "contact-captain",
     payment_status: "pending",
@@ -128,22 +136,19 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// 1. Create path — captain + full roster
+// 1. Create path — captain + full roster (Sprint 32: no team_name)
 // ---------------------------------------------------------------------------
 
-describe("TeamForm — create path", () => {
-  it("calls createTeam with correct payload when captain and players are set", async () => {
+describe("TeamForm — create path (Sprint 32)", () => {
+  it("creates team via captain selection — payload has captain_contact_id, NO team_name", async () => {
+    // RED: createTeam's TeamInput type will drop team_name. Until Bolt ships Phase 2,
+    // the current form still sends team_name, causing this assertion to fail.
     vi.mocked(teamsActions.createTeam).mockResolvedValue({ team_id: "new-team-id" });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onSuccess } = renderNew();
 
-    // Fill team name
-    const nameInput = screen.getByLabelText(/team name/i);
-    await user.clear(nameInput);
-    await user.type(nameInput, "The Birdies");
-
-    // Select captain
+    // Select captain — captain is the team identity
     await selectCaptain(user, makeContact("cap-1", "Captain Jack"));
 
     // Submit
@@ -152,23 +157,24 @@ describe("TeamForm — create path", () => {
     await waitFor(() => {
       expect(teamsActions.createTeam).toHaveBeenCalledWith(
         expect.objectContaining({
-          team_name: "The Birdies",
           captain_contact_id: "cap-1",
         })
       );
+      // team_name must NOT be in the payload
+      const callArg = vi.mocked(teamsActions.createTeam).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(callArg).not.toHaveProperty("team_name");
       expect(onSuccess).toHaveBeenCalled();
     });
   });
 
-  it("calls createTeam with empty player_contact_ids when only captain is set", async () => {
+  it("createTeam payload does not include team_name even when captain and players are set", async () => {
     vi.mocked(teamsActions.createTeam).mockResolvedValue({ team_id: "new-team-id" });
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
-    const { onSuccess } = renderNew();
-
-    const nameInput = screen.getByLabelText(/team name/i);
-    await user.clear(nameInput);
-    await user.type(nameInput, "Solo Team");
+    renderNew();
 
     await selectCaptain(user, makeContact("cap-2", "Lone Ranger"));
 
@@ -177,12 +183,15 @@ describe("TeamForm — create path", () => {
     await waitFor(() => {
       expect(teamsActions.createTeam).toHaveBeenCalledWith(
         expect.objectContaining({
-          team_name: "Solo Team",
           captain_contact_id: "cap-2",
           player_contact_ids: [],
         })
       );
-      expect(onSuccess).toHaveBeenCalled();
+      const callArg = vi.mocked(teamsActions.createTeam).mock.calls[0][0] as Record<
+        string,
+        unknown
+      >;
+      expect(callArg).not.toHaveProperty("team_name");
     });
   });
 
@@ -191,10 +200,6 @@ describe("TeamForm — create path", () => {
 
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const { onSuccess } = renderNew();
-
-    const nameInput = screen.getByLabelText(/team name/i);
-    await user.clear(nameInput);
-    await user.type(nameInput, "Error Team");
 
     await selectCaptain(user, makeContact("cap-3", "Error Captain"));
 
@@ -208,38 +213,23 @@ describe("TeamForm — create path", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 2. Validation errors
+// 2. Validation errors (Sprint 32)
 // ---------------------------------------------------------------------------
 
-describe("TeamForm — validation", () => {
-  it("shows error and does NOT call createTeam when team name is empty", async () => {
+describe("TeamForm — validation (Sprint 32)", () => {
+  it("form does NOT have a team name input field", () => {
+    // Sprint 32 RED: team_name input must be absent from the form.
+    // Today (pre-Phase 2) this fails because the input still exists.
     renderNew();
 
-    // Ensure team name input is blank
-    const nameInput = screen.getByLabelText(/team name/i);
-    fireEvent.change(nameInput, { target: { value: "" } });
-
-    // Use fireEvent.submit to bypass native required attribute validation in jsdom
-    const form = nameInput.closest("form")!;
-    fireEvent.submit(form);
-
-    await waitFor(() => {
-      expect(screen.getByText(/team name is required/i)).toBeInTheDocument();
-    });
-    expect(teamsActions.createTeam).not.toHaveBeenCalled();
+    expect(screen.queryByLabelText(/^team name$/i)).not.toBeInTheDocument();
   });
 
   it("shows error and does NOT call createTeam when no captain is selected", async () => {
-    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     renderNew();
 
-    // Fill team name but leave captain empty
-    const nameInput = screen.getByLabelText(/team name/i);
-    await user.clear(nameInput);
-    await user.type(nameInput, "Captainless Team");
-
-    // Use fireEvent.submit to bypass native required attribute validation in jsdom
-    const form = nameInput.closest("form")!;
+    // Submit without captain
+    const form = document.querySelector("form")!;
     fireEvent.submit(form);
 
     await waitFor(() => {
@@ -275,12 +265,11 @@ describe("TeamForm — edit path (isEdit=true)", () => {
     });
   });
 
-  it("team name input is disabled in edit mode and shows 'cannot be changed' note", () => {
+  it("edit form does not render a team name input (field is dropped)", () => {
+    // Sprint 32 RED: team name field must not appear in edit mode either.
     renderEdit(makeTeam());
 
-    const nameInput = screen.getByLabelText(/team name/i);
-    expect(nameInput).toBeDisabled();
-    expect(screen.getByText(/team name cannot be changed here/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/^team name$/i)).not.toBeInTheDocument();
   });
 });
 

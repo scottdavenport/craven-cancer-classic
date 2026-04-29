@@ -56,9 +56,10 @@ function makeMember(overrides: Partial<TeamMemberRow> = {}): TeamMemberRow {
 }
 
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
+  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-uuid-1",
-    team_name: "Test Team",
+    // team_name omitted — Sprint 32 contract drop
     year: 2026,
     captain_contact_id: "contact-uuid-1",
     payment_status: "pending",
@@ -193,10 +194,13 @@ describe("TeamList — deleted contact placeholder", () => {
       expect(screen.getByText("No teams yet")).toBeInTheDocument();
     });
 
-    it("renders correctly when a team has no members at all", () => {
+    it("renders correctly when a team has no members at all (no crash)", () => {
+      // Sprint 32: team_name is gone; display = captain name from members join.
+      // With 0 members, no captain name appears — but the component must not crash.
       const team = makeTeam({ members: [], member_count: 0, open_slots: 4 });
-      render(<TeamList teams={[team]} defaultFeeDollars={400} />);
-      expect(screen.getByText("Test Team")).toBeInTheDocument();
+      const { container } = render(<TeamList teams={[team]} defaultFeeDollars={400} />);
+      // Component renders at least one table row (the team row)
+      expect(container.querySelector("tr")).toBeTruthy();
     });
   });
 });

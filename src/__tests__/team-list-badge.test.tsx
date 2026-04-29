@@ -1,5 +1,5 @@
 // RED: OpenSlotsBadge token bypass — #236
-// Fails until Bolt replaces bg-amber-100/text-amber-700 with bg-warning-muted/text-warning.
+// Sprint 32 (#282): team_name dropped; display = captain full name via JOIN
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { TeamList } from "@/app/admin/teams/team-list";
@@ -21,7 +21,12 @@ vi.mock("@/app/admin/teams/actions", async (importOriginal) => {
   };
 });
 
-// Mock TeamDrawer (sheet component — not under test here)
+// Sprint 32: TeamModal replaces TeamDrawer
+vi.mock("@/app/admin/teams/team-modal", () => ({
+  TeamModal: () => null,
+}));
+
+// Fallback: also mock team-drawer in case the old file is still present
 vi.mock("@/app/admin/teams/team-drawer", () => ({
   TeamDrawer: () => null,
 }));
@@ -32,9 +37,10 @@ vi.mock("sonner", () => ({
 }));
 
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
+  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-1",
-    team_name: "Eagle Squad",
+    // team_name omitted — Sprint 32 contract drop
     session: "morning",
     payment_status: "pending",
     amount_paid_cents: 0,
@@ -54,10 +60,9 @@ function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
   };
 }
 
-describe("OpenSlotsBadge — token classes", () => {
+describe("OpenSlotsBadge — token classes (Sprint 32)", () => {
   it("renders a badge for a team with open slots", () => {
     render(<TeamList teams={[makeTeam({ open_slots: 2 })]} defaultFeeDollars={700} />);
-    // Badge should render with text like "2 open"
     expect(screen.getByText(/2 open/i)).toBeInTheDocument();
   });
 
@@ -77,9 +82,33 @@ describe("OpenSlotsBadge — token classes", () => {
 
   it("no badge renders when team is full (open_slots = 0)", () => {
     render(<TeamList teams={[makeTeam({ open_slots: 0 })]} defaultFeeDollars={700} />);
-    // "N open" badge should not render; "Open Slots" column header is OK to exist
     expect(screen.queryByText(/\d+ open/i)).not.toBeInTheDocument();
-    // "Full" text should be present instead
     expect(screen.getByText("Full")).toBeInTheDocument();
+  });
+});
+
+describe("TeamList display — captain name (Sprint 32 RED)", () => {
+  it("displays captain full name as team identity (not a team_name column)", () => {
+    // RED until Bolt updates team-list.tsx to read captain from members JOIN
+    render(
+      <TeamList
+        teams={[makeTeam({ members: [{ contact_id: "c1", full_name: "Alice Smith", role: "captain", slot: 1 }] })]}
+        defaultFeeDollars={700}
+      />
+    );
+    // Captain's full name should appear in the list as the team identifier
+    expect(screen.getByText("Alice Smith")).toBeInTheDocument();
+  });
+
+  it("team list row does NOT render a raw team_name string", () => {
+    // The old Eagle Squad team_name must not appear — display is captain-derived
+    render(
+      <TeamList
+        teams={[makeTeam({ members: [{ contact_id: "c1", full_name: "Alice Smith", role: "captain", slot: 1 }] })]}
+        defaultFeeDollars={700}
+      />
+    );
+    // "Eagle Squad" was the old team_name fixture — it must not appear
+    expect(screen.queryByText("Eagle Squad")).not.toBeInTheDocument();
   });
 });

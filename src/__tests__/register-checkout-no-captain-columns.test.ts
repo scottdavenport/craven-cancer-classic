@@ -158,7 +158,7 @@ function makeRegisterRequest(overrides: Record<string, unknown> = {}) {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      team_name: "Fairway Warriors",
+      // team_name omitted — Sprint 32 contract drop; captain IS the team identity
       captain_name: "Bob Golfer",
       captain_email: "bob@golf.com",
       captain_phone: "555-1111",
@@ -198,7 +198,9 @@ describe("S11-2 /api/checkout regression: teams row has no captain_* columns (RE
       expect(json.url).toContain("stripe.com");
     });
 
-    it("calls register_team RPC with p_captain_name / p_captain_email (params still exist)", async () => {
+    it("calls register_team RPC with p_captain_name / p_captain_email — p_team_name NOT present (Sprint 32 RED)", async () => {
+      // Sprint 32: p_team_name is dropped from the RPC call.
+      // Backwards-compat p_captain_* params still exist per S11-2.
       const { POST } = await import("@/app/api/checkout/route");
 
       await POST(makeRegisterRequest());
@@ -209,9 +211,11 @@ describe("S11-2 /api/checkout regression: teams row has no captain_* columns (RE
           p_captain_name: "Bob Golfer",
           p_captain_email: "bob@golf.com",
           p_session: "morning",
-          p_team_name: "Fairway Warriors",
         })
       );
+      // Sprint 32 RED: p_team_name must NOT be in the RPC args
+      const rpcArg = mockRpc.mock.calls[0][1] as Record<string, unknown>;
+      expect(rpcArg).not.toHaveProperty("p_team_name");
     });
   });
 
@@ -390,7 +394,8 @@ describe("S11-2 /api/checkout regression: teams row has no captain_* columns (RE
         new Request("http://localhost/api/checkout", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ team_name: "Incomplete Team" }),
+          // team_name omitted — Sprint 32; missing captain fields should return 400
+          body: JSON.stringify({ session: "morning" }),
         })
       );
 

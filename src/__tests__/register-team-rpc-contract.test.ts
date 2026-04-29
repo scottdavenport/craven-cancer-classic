@@ -124,13 +124,16 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 
 describe("S11-2 register_team RPC contract (RED phase)", () => {
-  describe("RPC call shape: backwards-compat p_captain_* params preserved", () => {
-    it("admin createTeam still calls register_team RPC with p_session and p_team_name", async () => {
+  describe("RPC call shape: p_team_name dropped, p_captain_* params preserved (Sprint 32)", () => {
+    it("admin createTeam calls register_team RPC with p_session — p_team_name must NOT be in args", async () => {
+      // Sprint 32: p_team_name is dropped from the RPC signature.
+      // The assertion `expect(args.p_team_name).toBe(...)` that existed here
+      // is intentionally removed (plan amendment 2026-04-29 correction).
       const { client, capturedRpcCalls } = makeClientWithSpies();
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "Test Team Alpha",
         session: "morning",
         captain_contact_id: "cap-uuid-001",
         player_contact_ids: [],
@@ -141,9 +144,14 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
 
       const args = rpcCall!.args as Record<string, unknown>;
       expect(args.p_session).toBe("morning");
-      expect(args.p_team_name).toBe("Test Team Alpha");
+
+      // Sprint 32 RED: p_team_name must NOT be passed to the RPC.
+      // This FAILS today (current code still sends p_team_name) and
+      // passes after Flux drops it from the RPC call in Phase 2.
+      expect("p_team_name" in args).toBe(false);
 
       // Backwards-compat: p_captain_* params still exist in the RPC signature call
+      // per S11-2 contract — DO NOT remove these assertions
       expect("p_captain_name" in args).toBe(true);
       expect("p_captain_email" in args).toBe(true);
     });
@@ -154,8 +162,9 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-001");
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "Column Drop Team",
+        // team_name omitted — Sprint 32 contract drop
         session: "afternoon",
         captain_contact_id: "cap-uuid-002",
         player_contact_ids: ["p1"],
@@ -182,8 +191,9 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-002");
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "No Text Column Team",
+        // team_name omitted — Sprint 32 contract drop
         session: "morning",
         captain_contact_id: "cap-uuid-003",
         player_contact_ids: [],
@@ -202,8 +212,9 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-003");
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "No Email Column",
+        // team_name omitted — Sprint 32 contract drop
         session: "morning",
         captain_contact_id: "cap-uuid-004",
         player_contact_ids: [],
@@ -219,8 +230,9 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-004");
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "No Phone Column",
+        // team_name omitted — Sprint 32 contract drop
         session: "morning",
         captain_contact_id: "cap-uuid-005",
         player_contact_ids: [],
@@ -238,8 +250,9 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-005");
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "Captain Members Test",
+        // team_name omitted — Sprint 32 contract drop
         session: "morning",
         captain_contact_id: "cap-uuid-006",
         player_contact_ids: ["player-uuid-001"],
@@ -263,8 +276,9 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-006");
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "Contact ID Only",
+        // team_name omitted — Sprint 32 contract drop
         session: "afternoon",
         captain_contact_id: "cap-uuid-007",
         player_contact_ids: [],
@@ -290,8 +304,9 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-007");
       setClient(client);
 
+      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
-        team_name: "Insert Check Team",
+        // team_name omitted — Sprint 32 contract drop
         session: "morning",
         captain_contact_id: "cap-uuid-008",
         player_contact_ids: [],

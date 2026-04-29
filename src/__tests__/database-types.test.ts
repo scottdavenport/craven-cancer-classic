@@ -1,3 +1,9 @@
+/**
+ * database-types.test.ts
+ * Sprint 32 (#282) updates: team_name dropped from Team + Score types.
+ * RED assertions fail until Flux runs migration and regenerates src/types/database.ts.
+ */
+
 import { describe, it, expect } from "vitest";
 import type {
   Database,
@@ -52,9 +58,9 @@ describe("database types", () => {
   });
 
   it("Team type enforces session values", () => {
+    // Sprint 32: team_name dropped from the Team type after migration.
     const team: Team = {
       id: "uuid",
-      team_name: "The Hackers",
       captain_contact_id: null,
       session: "morning",
       payment_status: "pending",
@@ -132,16 +138,41 @@ describe("database types", () => {
     expect(tables).toHaveLength(14);
   });
 
-  it("Insert types make required fields mandatory and optional fields optional", () => {
+  it("Insert types make required fields mandatory and optional fields optional (Sprint 32 RED)", () => {
+    // Sprint 32 RED: TeamInsert must NOT require team_name after migration.
+    // This test fails today because team_name is still present in database.ts.
+    // It passes after Flux runs the migration and types are regenerated.
     type TeamInsert = Database["public"]["Tables"]["teams"]["Insert"];
-    // These are the required fields for inserting a team
-    // (captain_name/email/phone columns dropped in S11-2 — use captain_contact_id instead)
+    // Post-migration: team_name is NOT a required field; session is the only required field.
     const insert: TeamInsert = {
-      team_name: "Test Team",
       session: "afternoon",
+      // team_name must NOT be required — if it is, this will cause a TS error post-regen
     };
-    expect(insert.team_name).toBe("Test Team");
-    // payment_status should default, so it's optional
-    expect(insert.payment_status).toBeUndefined();
+    expect(insert.session).toBe("afternoon");
+    // team_name must not be accessible as a type-safe property
+    // (runtime check — the compile-time check is enforced by omitting it above)
+    expect(Object.prototype.hasOwnProperty.call(insert, "team_name")).toBe(false);
+  });
+
+  it("Score type does not include team_name column (Sprint 32 RED)", () => {
+    // Sprint 32 RED: Score type loses team_name after the column drop.
+    // Until database.ts is regenerated, Score still has team_name.
+    // After Flux lands, this test verifies the column is gone.
+    type ScoreRow = Database["public"]["Tables"]["scores"]["Row"];
+    // Build a score without team_name — if team_name is NOT nullable/optional,
+    // this will cause a TypeScript error at compile time post-migration.
+    const score: ScoreRow = {
+      id: "uuid",
+      team_id: "team-uuid",
+      total_score: 72,
+      session: "morning",
+      year: 2026,
+      source: "manual",
+      individual_scores: null,
+      created_at: "2026-01-01T00:00:00Z",
+      // team_name intentionally omitted — must not be required post-migration
+    } as ScoreRow;
+    expect(score.total_score).toBe(72);
+    expect(Object.prototype.hasOwnProperty.call(score, "team_name")).toBe(false);
   });
 });

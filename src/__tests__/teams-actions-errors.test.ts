@@ -72,8 +72,9 @@ describe("createTeam — error paths", () => {
 
     setClient({ from: mockFrom, rpc: mockRpc });
 
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
-      team_name: "Bad Team",
+      // team_name omitted — Sprint 32 contract drop
       session: "morning",
       captain_contact_id: "cap-uuid",
       player_contact_ids: [],
@@ -96,8 +97,9 @@ describe("createTeam — error paths", () => {
 
     setClient({ from: mockFrom, rpc: mockRpc });
 
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
-      team_name: "Update-Fail Team",
+      // team_name omitted — Sprint 32 contract drop
       session: "afternoon",
       captain_contact_id: "cap-uuid",
       player_contact_ids: ["p1"],
@@ -274,5 +276,69 @@ describe("getTeams — edge cases", () => {
     });
 
     await expect(getTeams(2026)).rejects.toThrow("teams error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 32 (#282): Server action errors must NOT reference team_name
+// RED until Flux updates createTeam to remove team_name from TeamInput
+// ---------------------------------------------------------------------------
+
+describe("Sprint 32 — server action errors do not reference team_name", () => {
+  it("createTeam error from RPC does not mention team_name in the error object", async () => {
+    const mockRpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "session full" },
+    });
+    const mockFrom = vi.fn().mockReturnValue({});
+
+    setClient({ from: mockFrom, rpc: mockRpc });
+
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
+    const result = await createTeam({
+      // team_name omitted — Sprint 32 contract drop
+      session: "morning",
+      captain_contact_id: "cap-uuid",
+      player_contact_ids: [],
+    });
+
+    expect(result).toMatchObject({ error: "session full" });
+    // The error string must not reference team_name as a DB column
+    if (typeof (result as { error: string }).error === "string") {
+      expect((result as { error: string }).error).not.toMatch(/team_name/i);
+    }
+  });
+
+  it("createTeam does not pass team_name to the RPC (Sprint 32 RED)", async () => {
+    // RED: current code passes p_team_name. After Flux lands, this assertion holds.
+    const capturedArgs: Record<string, unknown>[] = [];
+    const mockRpc = vi.fn().mockImplementation((_fn: string, args: unknown) => {
+      capturedArgs.push(args as Record<string, unknown>);
+      return Promise.resolve({ data: { team_id: "team-xyz" }, error: null });
+    });
+    const mockInsert = vi.fn().mockResolvedValue({ error: null });
+    const mockUpdateEq = vi.fn().mockResolvedValue({ error: null });
+    const mockUpdate = vi.fn().mockReturnValue({ eq: mockUpdateEq });
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "team_members") return { insert: mockInsert };
+      if (table === "teams") return { update: mockUpdate };
+      return {};
+    });
+
+    setClient({ from: mockFrom, rpc: mockRpc });
+
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
+    await createTeam({
+      // team_name omitted — Sprint 32 contract drop
+      session: "morning",
+      captain_contact_id: "cap-uuid",
+      player_contact_ids: [],
+    });
+
+    expect(capturedArgs.length).toBeGreaterThan(0);
+    // p_team_name must NOT be in the RPC args
+    for (const args of capturedArgs) {
+      expect(args).not.toHaveProperty("p_team_name");
+    }
   });
 });

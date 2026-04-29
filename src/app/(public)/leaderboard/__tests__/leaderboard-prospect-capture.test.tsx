@@ -51,9 +51,12 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import * as serverModule from "@/lib/supabase/server";
 
+// Sprint 32: ScoreRow no longer has team_name; display = team→captain JOIN
 type ScoreRow = {
   id: string;
-  team_name: string;
+  // team_name omitted — Sprint 32 contract drop
+  team_id: string | null;
+  captain_full_name?: string; // derived via JOIN at read time
   total_score: number;
   session: "morning" | "afternoon";
   year: number;
@@ -69,9 +72,10 @@ function buildSupabaseMock(rows: ScoreRow[]) {
   } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>);
 }
 
+// Sprint 32: fixtures use captain_full_name (via JOIN), not team_name
 const SAMPLE_SCORES: ScoreRow[] = [
-  { id: "1", team_name: "Eagles", total_score: 62, session: "morning", year: 2026 },
-  { id: "2", team_name: "Birdies", total_score: 65, session: "afternoon", year: 2026 },
+  { id: "1", team_id: "team-1", captain_full_name: "Mike Smith", total_score: 62, session: "morning", year: 2026 },
+  { id: "2", team_id: "team-2", captain_full_name: "Carol Jones", total_score: 65, session: "afternoon", year: 2026 },
 ];
 
 // ---------------------------------------------------------------------------

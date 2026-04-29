@@ -139,7 +139,7 @@ describe("getTeams", () => {
     const teamsData = [
       {
         id: "team-1",
-        team_name: "Eagles",
+        // team_name omitted — Sprint 32 contract drop
         year: 2026,
         captain_contact_id: "cap-uuid",
         payment_status: "pending",
@@ -167,7 +167,7 @@ describe("getTeams", () => {
     const teamsData = [
       {
         id: "team-2",
-        team_name: "Falcons",
+        // team_name omitted — Sprint 32 contract drop
         year: 2026,
         captain_contact_id: null,
         payment_status: "pending",
@@ -257,8 +257,9 @@ describe("createTeam", () => {
     // No client needed — validation fires before any DB call
     setClient(makeClient());
 
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
-      team_name: "Over Team",
+      // team_name omitted — Sprint 32 contract drop
       session: "morning",
       captain_contact_id: "cap-uuid",
       player_contact_ids: ["p1", "p2", "p3", "p4"],
@@ -267,12 +268,15 @@ describe("createTeam", () => {
     expect(result).toMatchObject({ error: expect.stringContaining("Too many players") });
   });
 
-  it("calls register_team RPC with correct args", async () => {
+  it("calls register_team RPC with p_session but NOT p_team_name (Sprint 32 RED)", async () => {
+    // RED: current code passes p_team_name to the RPC. After Flux drops it (Phase 1/2),
+    // this assertion becomes the new contract.
     const client = makeClient();
     setClient(client);
 
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
-      team_name: "Alpha Team",
+      // team_name omitted — Sprint 32 contract drop
       session: "morning",
       captain_contact_id: "cap-uuid",
       player_contact_ids: ["p1", "p2"],
@@ -282,9 +286,14 @@ describe("createTeam", () => {
       "register_team",
       expect.objectContaining({
         p_session: "morning",
-        p_team_name: "Alpha Team",
       })
     );
+    // Sprint 32: p_team_name must NOT be in the RPC call
+    const rpcArg = (client.rpc as ReturnType<typeof vi.fn>).mock.calls[0][1] as Record<
+      string,
+      unknown
+    >;
+    expect(rpcArg).not.toHaveProperty("p_team_name");
     expect(result).toMatchObject({ team_id: "new-team-uuid" });
   });
 
@@ -304,8 +313,9 @@ describe("createTeam", () => {
       { from: mockFrom, rpc: mockRpc } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
     );
 
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     await createTeam({
-      team_name: "Alpha Team",
+      // team_name omitted — Sprint 32 contract drop
       session: "morning",
       captain_contact_id: "cap-uuid",
       player_contact_ids: ["p1", "p2"],
@@ -324,8 +334,9 @@ describe("createTeam", () => {
     });
     setClient(client);
 
+    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
-      team_name: "Full Team",
+      // team_name omitted — Sprint 32 contract drop
       session: "morning",
       captain_contact_id: "cap-uuid",
       player_contact_ids: [],

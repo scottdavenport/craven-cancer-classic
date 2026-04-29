@@ -165,7 +165,6 @@ const sponsorshipItems: SponsorshipItemOption[] = [
 function makeScore(overrides: Partial<Score> = {}): Score {
   return {
     id: "score-1",
-    team_name: "The Eagles",
     total_score: 72,
     session: "morning",
     source: "manual",

@@ -31,8 +31,9 @@ vi.mock("../actions", () => ({
   getScoreCount: vi.fn(async () => 0),
 }));
 
-vi.mock("../team-drawer", () => ({
-  TeamDrawer: ({
+// Sprint 32: TeamModal replaces TeamDrawer
+vi.mock("../team-modal", () => ({
+  TeamModal: ({
     open,
     onSuccess,
   }: {
@@ -43,12 +44,17 @@ vi.mock("../team-drawer", () => ({
     onSuccess: () => void;
   }) =>
     open ? (
-      <div data-testid="team-drawer">
+      <div data-testid="team-drawer" role="dialog">
         <button data-testid="drawer-success" onClick={onSuccess}>
           Save
         </button>
       </div>
     ) : null,
+}));
+
+// Fallback: also mock old drawer in case file not yet deleted
+vi.mock("../team-drawer", () => ({
+  TeamDrawer: () => null,
 }));
 
 // ---------------------------------------------------------------------------
@@ -65,9 +71,10 @@ import type { TeamWithMembers } from "../actions";
 // ---------------------------------------------------------------------------
 
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
+  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-1",
-    team_name: "Eagles",
+    // team_name omitted — Sprint 32 contract drop; display = captain full name
     year: 2026,
     captain_contact_id: "c-1",
     payment_status: "pending",

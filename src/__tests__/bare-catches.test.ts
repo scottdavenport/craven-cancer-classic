@@ -23,6 +23,11 @@ const SRC_ROOT = resolve(__dirname, "../../src");
 // with explanatory comments for Next.js redirect() throws.
 const ALLOWLISTED_FILES = [
   "app/auth/login/login-form.tsx",
+  // Sprint 31 (PR #276): runTypeRemovalGuard in contacts/actions.ts uses a bare catch {}
+  // as an intentional fail-open. If the guard itself throws (e.g. unexpected DB shape),
+  // the action proceeds rather than blocking the contact update. Spec's tests for
+  // bulkRemoveContactType rely on this fail-open behavior being in place.
+  "app/admin/contacts/actions.ts",
 ];
 
 // ---------------------------------------------------------------------------

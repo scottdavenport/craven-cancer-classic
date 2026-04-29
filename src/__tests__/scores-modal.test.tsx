@@ -28,8 +28,8 @@ vi.mock("@/app/admin/scores/actions", () => ({
   deleteAllScores: vi.fn().mockResolvedValue({ success: true }),
   importScoresFromCSV: vi.fn().mockResolvedValue({ success: true, count: 3 }),
   getActiveTeamsForDropdown: vi.fn().mockResolvedValue([
-    { id: "team-1", captain_full_name: "Smith, Alice" },
-    { id: "team-2", captain_full_name: "Jones, Bob" },
+    { team_id: "team-1", captain_display_name: "Alice Smith" },
+    { team_id: "team-2", captain_display_name: "Bob Jones" },
   ]),
 }));
 
@@ -147,7 +147,7 @@ describe("ScoreManager Add Score button — modal with team dropdown (Sprint 32)
 
     // There must be a team selector element
     const teamSelect =
-      screen.queryAllByRole("combobox")[0] ??
+      screen.queryByRole("combobox", { name: /select team/i }) ??
       screen.queryByLabelText(/^team$/i) ??
       screen.queryByLabelText(/select team/i);
     expect(teamSelect).toBeInTheDocument();

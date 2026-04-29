@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScoreForm } from "./score-form";
 import { addScore, updateScore, deleteScore } from "./actions";
-import type { ActiveTeamForDropdown } from "./actions";
+import type { TeamDropdownOption } from "./actions";
 import type { Score } from "@/types/database";
 
 interface ScoreModalProps {
@@ -21,7 +21,7 @@ interface ScoreModalProps {
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
   score?: Score | null;
-  teams: ActiveTeamForDropdown[];
+  teams: TeamDropdownOption[];
   onSuccess: () => void;
 }
 
@@ -46,7 +46,11 @@ export function ScoreModal({
     setLoading(true);
     try {
       if (mode === "create") {
-        const result = await addScore(values);
+        const fd = new FormData();
+        if (values.team_id) fd.set("team_id", values.team_id);
+        fd.set("total_score", String(values.total_score));
+        if (values.session) fd.set("session", values.session);
+        const result = await addScore(fd);
         if (result && "error" in result) {
           toast.error(result.error);
           return;

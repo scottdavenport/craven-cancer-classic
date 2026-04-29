@@ -21,11 +21,11 @@ import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { importScoresFromCSV, deleteAllScores } from "./actions";
 import { ScoreModal } from "./score-modal";
 import type { Score } from "@/types/database";
-import type { ActiveTeamForDropdown } from "./actions";
+import type { TeamDropdownOption } from "./actions";
 
 interface ScoreManagerProps {
   scores: Score[];
-  teams?: ActiveTeamForDropdown[];
+  teams?: TeamDropdownOption[];
 }
 
 type ModalState = {
@@ -89,8 +89,8 @@ export function ScoreManager({ scores: initialScores, teams = [] }: ScoreManager
 
   function getTeamDisplay(score: Score): string {
     if (!score.team_id) return "(no team)";
-    const match = teams.find((t) => t.id === score.team_id);
-    return match?.captain_full_name ?? "(no team)";
+    const match = teams.find((t) => t.team_id === score.team_id);
+    return match?.captain_display_name ?? "(no team)";
   }
 
   return (

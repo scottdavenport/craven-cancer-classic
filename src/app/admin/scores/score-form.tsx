@@ -12,7 +12,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Score } from "@/types/database";
-import type { ActiveTeamForDropdown } from "./actions";
+import type { TeamDropdownOption } from "./actions";
 
 export interface ScoreFormValues {
   team_id: string | null;
@@ -22,7 +22,7 @@ export interface ScoreFormValues {
 
 interface ScoreFormProps {
   defaultValues?: Score;
-  teams: ActiveTeamForDropdown[];
+  teams: TeamDropdownOption[];
   onSubmit: (values: ScoreFormValues) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -67,10 +67,6 @@ export function ScoreForm({
     });
   }
 
-  const teamItems = Object.fromEntries(
-    teams.map((t) => [t.id, t.captain_full_name])
-  );
-
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-1.5">
@@ -79,15 +75,14 @@ export function ScoreForm({
           value={teamId}
           onValueChange={(v) => setTeamId(v ?? "")}
           disabled={loading}
-          items={teamItems}
         >
           <SelectTrigger id="sf-team" className="w-full" aria-label="Select team">
             <SelectValue placeholder="Select a team" />
           </SelectTrigger>
           <SelectContent>
             {teams.map((team) => (
-              <SelectItem key={team.id} value={team.id}>
-                {team.captain_full_name}
+              <SelectItem key={team.team_id} value={team.team_id}>
+                {team.captain_display_name}
               </SelectItem>
             ))}
           </SelectContent>

@@ -22,7 +22,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { exportContactsCSV, getContacts, bulkUpdateContacts, bulkDeleteContacts } from "./actions";
-import { ContactDrawer } from "./contact-drawer";
+import { ContactModal } from "./contact-modal";
 import type { Contact } from "@/types/database";
 import type { ContactFilter, TeamFilterOption } from "./actions";
 import { toast } from "sonner";
@@ -691,7 +691,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         </table>
       </div>
 
-      <ContactDrawer
+      <ContactModal
         open={drawer.open}
         mode={drawer.mode}
         contact={drawer.contact}

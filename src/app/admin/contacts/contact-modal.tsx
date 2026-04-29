@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ContactForm } from "./contact-form";
@@ -16,7 +16,7 @@ import { createContact, updateContact, deleteContact } from "./actions";
 import type { ContactInput } from "./actions";
 import type { Contact } from "@/types/database";
 
-interface ContactDrawerProps {
+interface ContactModalProps {
   open: boolean;
   mode: "create" | "edit";
   contact: Contact | null;
@@ -25,14 +25,14 @@ interface ContactDrawerProps {
   onDelete?: (contact: Contact) => void;
 }
 
-export function ContactDrawer({
+export function ContactModal({
   open,
   mode,
   contact,
   onOpenChange,
   onSuccess,
   onDelete,
-}: ContactDrawerProps) {
+}: ContactModalProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const title =
@@ -70,15 +70,14 @@ export function ContactDrawer({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="sm:max-w-[480px] flex flex-col overflow-hidden p-0"
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="sm:max-w-[800px] flex flex-col overflow-hidden p-0"
           showCloseButton={false}
         >
-          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
-            <SheetTitle>{title}</SheetTitle>
-          </SheetHeader>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <ContactForm
@@ -90,7 +89,7 @@ export function ContactDrawer({
           </div>
 
           {mode === "edit" && contact && (
-            <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+            <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -99,10 +98,10 @@ export function ContactDrawer({
               >
                 Delete contact
               </Button>
-            </SheetFooter>
+            </DialogFooter>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={confirmOpen}

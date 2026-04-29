@@ -123,15 +123,17 @@ function norm(value: string): string | null {
 
 /**
  * Derive suggested_type from golfer flag and company presence.
+ * Returns a single-element array. 'volunteer' is never returned — it requires
+ * manual tagging post-import (no CSV column maps to volunteer status).
  */
 function deriveSuggestedType(
   golfer: "Yes" | "No" | "",
   company: string | null
-): "player" | "sponsor" | "donor" | "other" {
-  if (golfer === "Yes") return "player";
-  if (golfer === "No" && company) return "sponsor";
-  if (golfer === "No" && !company) return "donor";
-  return "other"; // blank golfer field
+): ("player" | "sponsor" | "donor" | "other")[] {
+  if (golfer === "Yes") return ["player"];
+  if (golfer === "No" && company) return ["sponsor"];
+  if (golfer === "No" && !company) return ["donor"];
+  return ["other"]; // blank golfer field
 }
 
 /**
@@ -198,7 +200,8 @@ export function parseCSV(csvText: string): ParsedRow[] {
     }
 
     const full_name = deriveFullName(first_name, last_name, company);
-    const suggested_type = deriveSuggestedType(golfer, company);
+    const derivedTypes = deriveSuggestedType(golfer, company);
+    const suggested_type = derivedTypes[0];
 
     // Initial status is 'new'; dedupe check in previewImport will update it
     const row: ParsedRow = {

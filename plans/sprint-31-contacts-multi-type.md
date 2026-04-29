@@ -18,20 +18,25 @@ Everything else (catalog cleanup, team naming, donor history) is its own work, c
 ## What you'll experience after this ships
 
 ### Browsing the contacts list
-Each row shows one or more colored chips for what that contact is — Player (teal), Sponsor (purple), Donor (green), Other (gray) — always in that order. Filter by "Player" and you see every player, including people who are also sponsors. Search and the rest of the list works the same as today.
+Each row shows one or more colored chips for what that contact is — Player (teal), Sponsor (purple), Donor (green), Volunteer (amber), Other (gray) — always in that order. Filter by "Player" and you see every player, including people who are also sponsors. Search and the rest of the list works the same as today.
 
 ### Editing a contact
-Click any row → a centered window opens (used to slide in from the right). Up top: the basics you already have — name, email, phone, address. Then a row of four checkboxes: **Player / Sponsor / Donor / Other**. Check whichever apply.
+Click any row → a centered window opens (used to slide in from the right). Up top: the basics you already have — name, email, phone, address. Then a row of five checkboxes: **Player / Sponsor / Donor / Volunteer / Other**. Check whichever apply.
 
-When you check **Player**, a small section appears with two new fields:
-- **Handicap** — their current golf handicap
-- **Shirt size** — pick from S, M, L, XL, 2XL, 3XL
+When you check **Player**, a small section appears with two fields:
+- **Handicap** — their current golf handicap (integer 0–54, blank allowed)
+- **Shirt size** — dropdown: S, M, L, XL, 2XL, 3XL (blank allowed)
 
-When you check **Donor**, a section appears with two new fields:
-- **Show name publicly** — toggle for anonymous-by-default donors
-- **Recognition name** — what to print on a tribute wall, e.g. "The Smith Family" instead of "John Smith". If left blank, we use their full name.
+When you check **Volunteer**, a small section appears with one field:
+- **Shirt size** — same dropdown as Player. The field is shared between roles. If a contact is both Player and Volunteer, you see one Shirt Size field, not two.
+
+When you check **Donor**, a section appears with two fields:
+- **Show name on tribute wall** — toggle, defaulted ON. Uncheck to keep this contact's name off the public wall. (The other donor data is still stored either way.)
+- **Recognition name** — what to print on the public wall, e.g. "The Smith Family" instead of "John Smith". If left blank, we use the contact's full name.
 
 **Sponsor** and **Other** are just checkboxes — no extra fields. (Sponsor data lives on the sponsorship itself, not on the contact.)
+
+If you uncheck a type that had values entered (Player, Volunteer, or Donor), those values are kept in the database — the form section just disappears. Re-check the type later and the values reappear. No nulling, no warning prompt.
 
 ### A safety net you didn't have before
 You can't accidentally remove someone's Player type if they're still on a team. The system blocks it and tells you why:
@@ -46,6 +51,8 @@ Today: select rows, set their type to one value. After: three actions instead of
 - **Add a type** — e.g. select 50 people who bought balloons last year, click *Add type → Donor*
 - **Remove a type** — runs the same safety check, tells you which ones it had to skip and why
 
+When a bulk action has to skip rows (someone is on a team or linked to a sponsorship), an inline alert appears below the bulk-action bar listing every skipped contact by name + reason. It stays visible until dismissed.
+
 500-row cap per bulk action stays.
 
 ### Importing CSVs
@@ -53,24 +60,32 @@ The CSV importer keeps doing what it does — guessing types from the GOLFER col
 
 ---
 
-## Decisions you and I locked in this conversation
+## Decisions locked for Sprint 31
+
+This is the consolidated current-state table. It reflects everything locked across the original plan conversation AND the 2026-04-29 amendments pass. The "Plan amendments — 2026-04-29" section below is the audit trail of what changed when; this table is the single source of truth for what the build is targeting.
 
 | What | Decision |
 |---|---|
 | Contacts can hold multiple types | ✅ |
+| Type vocabulary | Player, Sponsor, Donor, Volunteer, Other (5 types) |
 | Edit window | Centered, ~800px wide |
-| Player fields on the contact | Handicap, shirt size |
+| Player fields on the contact | Handicap, shirt size (shirt size shared with Volunteer) |
+| Volunteer fields on the contact | Shirt size (shared with Player) |
 | Sponsor fields on the contact | None (data lives on the sponsorship) |
-| Donor fields on the contact | Anonymous toggle, recognition name |
+| Donor fields on the contact | "Show name on tribute wall" toggle (default ON), recognition name |
 | Other fields on the contact | None |
+| Add Contact form default | Nothing pre-checked. Save disabled until ≥1 type checkbox is checked |
+| Type-specific values when type unchecked | Preserved in the DB; form section just hides. Re-checking the type restores the values |
 | Removing a type that's in use | Blocked with a clear message |
-| List display | Stacked chips per contact |
-| Bulk update | Set / Add / Remove |
+| List display | Stacked chips per contact, in canonical order Player → Sponsor → Donor → Volunteer → Other |
+| Bulk update | Set / Add / Remove. Blocked rows surface in an inline `<Alert>` below the bulk-action bar |
 | Pattern rule going forward | Centered window is the standard for admin CRUD edits. Side drawer is retired. Other admin forms (sponsors, teams, registrations) migrate to the new pattern as they're next touched in regular work — no sweeping refactor. |
 
 ---
 
 ## Plan amendments — 2026-04-29 (locked decisions before build)
+
+> *Convention: this section is the audit trail of what changed between the original plan approval (PR #267) and build kickoff. The user-facing narrative + decisions table above have been updated in-place to reflect current state — read those for what we're building, this section for the why-and-when. Future amendments follow the same pattern: rewrite the live spec to match, append a new amendments section as the change log.*
 
 After approving the plan, Scott and Forge worked through 12 follow-up decisions before spawning builders. The biggest is adding a Volunteer type to the same sprint — it was on the fence and Scott pulled it in. Six others sharpen UX details: how the form save button should behave, what happens to type-specific field values when a type is unchecked, how blocked bulk-action rows surface to the admin, what the default Donor toggle should look like, and how the public tribute wall falls back when a recognition name is left blank. Three answer the original parked questions (shirt size, handicap range, recognition-name fallback). Two are housekeeping conventions baked in before build (chip display order on the contacts list, recognition-name field visibility inside the Donor section).
 
@@ -94,24 +109,19 @@ After approving the plan, Scott and Forge worked through 12 follow-up decisions 
 - **Chip display order on the contacts list:** `Player → Sponsor → Donor → Volunteer → Other`. Preserves the existing 4-type visual order, appends Volunteer before the catch-all. Implement as a client-side sort against this canonical order array — do not depend on DB array order.
 - **`recognition_name` field visibility:** ALWAYS visible inside the Donor section (not gated on `show_on_wall`). Lets admin pre-fill "The Smith Family" before flipping visibility on. Same parent rule (Donor section visible iff Donor checked); inside the Donor section, both fields render regardless of `show_on_wall` state.
 
-### What you'll experience after this ships — amendments only
+### What changed in the live spec above (audit pointer)
 
-These deltas are additive to the "What you'll experience" section above; re-read that section first.
+Per the convention note at the top of this section, the user-facing narrative + decisions table earlier in the document have been rewritten in-place to reflect the 12 amendments. The deltas applied to the live spec:
 
-**Editing a contact — 5th checkbox and shared Shirt Size:**
-The checkbox row now reads **Player / Sponsor / Donor / Volunteer / Other**. The Shirt Size field appears when *either* Player or Volunteer is checked — it belongs to both roles. Handicap remains Player-only.
-
-**Editing a contact — Donor toggle wording:**
-The Donor section toggle reads **"Show name on tribute wall"** (checked by default). Unchecking it means the contact's name stays private on the public wall; their recognition name and all other fields are still stored and still editable regardless.
-
-**Add Contact — save discipline:**
-When adding a new contact, the Save button stays disabled until at least one type checkbox is checked. There is no pre-selected default — the admin makes an explicit choice every time.
-
-**Unchecking a type — nothing is lost:**
-If you uncheck Player, the Shirt Size and Handicap fields disappear from view but the values are not erased from the database. Re-check Player and they return. Same for Volunteer (Shirt Size) and Donor (toggle + recognition name). Forgiving by design.
-
-**Bulk actions — blocked rows surface inline:**
-After a bulk Set/Add/Remove that skips some contacts due to active team or sponsor links, an inline `<Alert>` appears below the bulk-action bar listing every skipped contact by name and reason. It stays until dismissed.
+- Chip color list (Browsing the contacts list) — added Volunteer (amber) in canonical order
+- Checkbox row (Editing a contact) — 4 → 5 checkboxes, Volunteer added
+- Player section — Handicap range stated explicitly; Shirt Size noted as a dropdown with blank allowed
+- New Volunteer section in the form narrative (Shirt Size, shared with Player)
+- Donor section — toggle renamed "Show name on tribute wall" (default ON), recognition name fallback to full name spelled out
+- New paragraph after the type-specific sections — uncheck preservation rule
+- Bulk actions — inline alert for blocked rows added to the narrative
+- Decisions table — restructured as the consolidated current-state source of truth
+- Saturday-checklist — added Volunteer-alone step
 
 ---
 
@@ -131,7 +141,7 @@ Plain-English checklist someone could run on a Saturday:
 
 1. Find a contact who's both a player and a sponsor. Confirm both chips show on the list.
 2. Open the edit window. Confirm it's centered and comfortable on your laptop.
-3. Check Player and Donor. The two new sections appear inline.
+3. Check Player and Donor. The two new sections appear inline. Then check Volunteer alone on a fresh contact — Shirt Size appears even without Player, confirming the field is shared.
 4. Pick someone you know is on a team. Try to uncheck Player. Confirm the error message names the team and the change is blocked.
 5. Filter the list by Player. Confirm multi-type contacts still show up.
 6. Bulk-add Donor to three test rows. Confirm they all update.

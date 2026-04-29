@@ -79,7 +79,6 @@ export function RegistrationForm({
     const formData = new FormData(form);
 
     const body = {
-      team_name: formData.get("team_name"),
       captain_name: formData.get("captain_name"),
       captain_email: formData.get("captain_email"),
       captain_phone: formData.get("captain_phone"),
@@ -200,10 +199,6 @@ export function RegistrationForm({
           <CardTitle as="h3">Team Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="team_name">Team Name</Label>
-            <Input id="team_name" name="team_name" required />
-          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="captain_name">Your Name (Captain)</Label>

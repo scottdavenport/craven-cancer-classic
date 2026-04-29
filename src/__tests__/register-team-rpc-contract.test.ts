@@ -132,7 +132,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, capturedRpcCalls } = makeClientWithSpies();
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         session: "morning",
         captain_contact_id: "cap-uuid-001",
@@ -162,7 +161,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-001");
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         // team_name omitted — Sprint 32 contract drop
         session: "afternoon",
@@ -191,7 +189,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-002");
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         // team_name omitted — Sprint 32 contract drop
         session: "morning",
@@ -212,7 +209,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-003");
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         // team_name omitted — Sprint 32 contract drop
         session: "morning",
@@ -230,7 +226,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-004");
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         // team_name omitted — Sprint 32 contract drop
         session: "morning",
@@ -250,7 +245,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-005");
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         // team_name omitted — Sprint 32 contract drop
         session: "morning",
@@ -276,7 +270,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-006");
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         // team_name omitted — Sprint 32 contract drop
         session: "afternoon",
@@ -304,7 +297,6 @@ describe("S11-2 register_team RPC contract (RED phase)", () => {
       const { client, spies } = makeClientWithSpies("new-team-uuid-007");
       setClient(client);
 
-      // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
       await createTeam({
         // team_name omitted — Sprint 32 contract drop
         session: "morning",

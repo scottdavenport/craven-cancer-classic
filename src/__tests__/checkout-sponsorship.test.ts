@@ -238,7 +238,6 @@ const OPEN_SETTINGS_NULL_FEE = {
 };
 
 const validRegistrationBody = {
-  team_name: "Team Alpha",
   captain_name: "John Smith",
   captain_email: "john@example.com",
   session: "morning",
@@ -414,13 +413,6 @@ describe("POST /api/checkout — registration path (S2-7 gaps)", () => {
   });
 
   describe("missing required fields", () => {
-    it("returns 400 when team_name is missing", async () => {
-      const body = { ...validRegistrationBody } as Record<string, unknown>;
-      delete body.team_name;
-      const res = await POST(makeRequest(body));
-      expect(res.status).toBe(400);
-    });
-
     it("returns 400 when captain_name is missing", async () => {
       const body = { ...validRegistrationBody } as Record<string, unknown>;
       delete body.captain_name;

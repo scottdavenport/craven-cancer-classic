@@ -257,7 +257,6 @@ describe("createTeam", () => {
     // No client needed — validation fires before any DB call
     setClient(makeClient());
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "morning",
@@ -274,7 +273,6 @@ describe("createTeam", () => {
     const client = makeClient();
     setClient(client);
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "morning",
@@ -313,7 +311,6 @@ describe("createTeam", () => {
       { from: mockFrom, rpc: mockRpc } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
     );
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "morning",
@@ -334,7 +331,6 @@ describe("createTeam", () => {
     });
     setClient(client);
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "morning",

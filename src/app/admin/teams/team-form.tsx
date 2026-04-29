@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -41,7 +40,6 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
     return { id: member.contact_id, full_name: member.full_name, email: null, company: null };
   }
 
-  const [teamName, setTeamName] = useState(team?.team_name ?? "");
   const [session, setSession] = useState(team?.session ?? "morning");
   const [captain, setCaptain] = useState<ContactPickResult | null>(initialContact("captain", 1));
   const [player2, setPlayer2] = useState<ContactPickResult | null>(initialContact("player", 2));
@@ -80,7 +78,6 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!teamName.trim()) { setError("Team name is required."); return; }
     if (!captain) { setError("Captain is required."); return; }
 
     setError(null);
@@ -98,7 +95,6 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         if ("error" in result) { setError(result.error); return; }
       } else {
         const result = await createTeam({
-          team_name: teamName.trim(),
           session,
           captain_contact_id: captain.id,
           player_contact_ids: players.map((p) => p.id),
@@ -117,23 +113,6 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {/* Team name */}
-      <div className="space-y-1.5">
-        <Label htmlFor="team-name">Team Name</Label>
-        <Input
-          id="team-name"
-          type="text"
-          value={teamName}
-          onChange={(e) => setTeamName(e.target.value)}
-          placeholder="e.g. The Birdies"
-          disabled={isEdit} // name locked when editing — use registrations page to rename
-          required
-        />
-        {isEdit && (
-          <p className="text-xs text-muted-foreground">Team name cannot be changed here.</p>
-        )}
-      </div>
-
       {/* Session */}
       <div className="space-y-1.5">
         <Label>Session</Label>

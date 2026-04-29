@@ -56,7 +56,6 @@ function makeRequest(body: Record<string, unknown>): Request {
 }
 
 const VALID_REGISTRATION_BODY = {
-  team_name: "Team Alpha",
   captain_name: "Alice Smith",
   captain_email: "alice@example.com",
   session: "morning",
@@ -106,11 +105,10 @@ describe("S3-9 checkout session-cap (register_team RPC)", () => {
       const { POST } = await import("@/app/api/checkout/route");
       const response = await POST(makeRequest(VALID_REGISTRATION_BODY));
 
-      // The route must have called rpc with 'register_team'
+      // The route must have called rpc with 'register_team' (no p_team_name — Sprint 32)
       expect(mockRpc).toHaveBeenCalledWith(
         "register_team",
         expect.objectContaining({
-          p_team_name: expect.any(String),
           p_captain_email: expect.any(String),
           p_session: "morning",
         })

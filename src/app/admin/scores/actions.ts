@@ -4,64 +4,99 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 
-export type ActiveTeamForDropdown = {
+export type ScoreWithTeam = {
   id: string;
-  captain_full_name: string;
+  total_score: number;
+  session: string | null;
+  source: string;
+  year: number;
+  created_at: string;
+  individual_scores: import("@/types/database").Json;
+  team_id: string | null;
+  captain_display_name: string;
 };
 
-export async function getActiveTeamsForDropdown(): Promise<ActiveTeamForDropdown[]> {
-  await requireAdmin();
-  const supabase = await createClient();
-  const currentYear = new Date().getFullYear();
-
-  const { data, error } = await supabase
-    .from("teams_active")
-    .select("id, captain_contact_id, contacts!teams_captain_contact_id_fkey(full_name)")
-    .eq("year", currentYear);
-
-  if (error) throw new Error(error.message);
-
-  return (data ?? [])
-    .map((row) => {
-      const contacts = row.contacts as { full_name: string } | null;
-      const fullName = contacts?.full_name ?? "";
-      // Build "Last, First" for alphabetization; store original for display
-      const parts = fullName.trim().split(/\s+/);
-      const lastName = parts.length > 1 ? parts[parts.length - 1] : parts[0] ?? "";
-      const firstName = parts.length > 1 ? parts.slice(0, -1).join(" ") : "";
-      const sortKey = firstName ? `${lastName}, ${firstName}` : lastName;
-      return { id: row.id as string, captain_full_name: sortKey };
-    })
-    .sort((a, b) => a.captain_full_name.localeCompare(b.captain_full_name));
-}
-
-export async function getScores() {
+export async function getScores(): Promise<ScoreWithTeam[]> {
   await requireAdmin();
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
   const { data, error } = await supabase
     .from("scores")
-    .select("*")
+    .select(
+      "*, team:teams(captain_contact_id, captain:contacts!teams_captain_contact_id_fkey(full_name))"
+    )
     .eq("year", currentYear)
     .order("total_score", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data;
+
+  return (data ?? []).map((row) => {
+    const team = row.team as {
+      captain_contact_id: string | null;
+      captain: { full_name: string } | null;
+    } | null;
+    const captain_display_name = team?.captain?.full_name ?? "(no team)";
+    return {
+      id: row.id,
+      total_score: row.total_score,
+      session: row.session,
+      source: row.source,
+      year: row.year,
+      created_at: row.created_at,
+      individual_scores: row.individual_scores,
+      team_id: row.team_id,
+      captain_display_name,
+    };
+  });
 }
 
-export async function addScore(values: {
-  team_id: string | null;
-  total_score: number;
-  session: "morning" | "afternoon" | null;
-}) {
+export type TeamDropdownOption = {
+  team_id: string;
+  captain_display_name: string;
+};
+
+export async function getActiveTeamsForDropdown(): Promise<TeamDropdownOption[]> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const currentYear = new Date().getFullYear();
+
+  const { data, error } = await supabase
+    .from("teams_active")
+    .select(
+      "id, captain:contacts!teams_captain_contact_id_fkey(first_name, last_name, full_name)"
+    )
+    .eq("year", currentYear);
+
+  if (error) throw new Error(error.message);
+
+  const rows = (data ?? []).map((row) => {
+    const captain = row.captain as
+      | { first_name: string; last_name: string; full_name: string }
+      | null;
+    return {
+      team_id: row.id as string,
+      captain_display_name: captain?.full_name ?? "(no captain)",
+      _last_name: captain?.last_name ?? "",
+    };
+  });
+
+  // Alphabetize by captain last name, then first name (locked decision in plan).
+  rows.sort((a, b) => a._last_name.localeCompare(b._last_name) || a.captain_display_name.localeCompare(b.captain_display_name));
+
+  return rows.map(({ team_id, captain_display_name }) => ({ team_id, captain_display_name }));
+}
+
+export async function addScore(formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();
 
+  const teamIdRaw = formData.get("team_id") as string | null;
+
   const { error } = await supabase.from("scores").insert({
-    team_id: values.team_id || null,
-    session: values.session,
-    total_score: values.total_score,
+    team_id: teamIdRaw || null,
+    session: (formData.get("session") as "morning" | "afternoon") || null,
+    total_score: parseInt(formData.get("total_score") as string),
     source: "manual" as const,
   });
 
@@ -82,11 +117,12 @@ export async function importScoresFromCSV(csvText: string) {
   const header = lines[0].toLowerCase();
   const cols = header.split(",").map((c) => c.trim());
 
+  const teamIdx = cols.findIndex((c) => c.includes("team"));
   const scoreIdx = cols.findIndex((c) => c.includes("score") || c.includes("total"));
   const sessionIdx = cols.findIndex((c) => c.includes("session"));
 
-  if (scoreIdx === -1) {
-    return { error: "CSV must have a 'score' column" };
+  if (teamIdx === -1 || scoreIdx === -1) {
+    return { error: "CSV must have 'team' and 'score' columns" };
   }
 
   const rows = lines.slice(1).filter((l) => l.trim());

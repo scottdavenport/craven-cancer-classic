@@ -72,7 +72,6 @@ describe("createTeam — error paths", () => {
 
     setClient({ from: mockFrom, rpc: mockRpc });
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "morning",
@@ -97,7 +96,6 @@ describe("createTeam — error paths", () => {
 
     setClient({ from: mockFrom, rpc: mockRpc });
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "afternoon",
@@ -294,7 +292,6 @@ describe("Sprint 32 — server action errors do not reference team_name", () => 
 
     setClient({ from: mockFrom, rpc: mockRpc });
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     const result = await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "morning",
@@ -327,7 +324,6 @@ describe("Sprint 32 — server action errors do not reference team_name", () => 
 
     setClient({ from: mockFrom, rpc: mockRpc });
 
-    // @ts-expect-error Sprint 32: team_name dropped from CreateTeamParams post-migration
     await createTeam({
       // team_name omitted — Sprint 32 contract drop
       session: "morning",

@@ -126,7 +126,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       await waitFor(() => {
         // Modal title should reference captain's name, not a team_name field
-        expect(screen.getByText(/Captain Jane/i)).toBeInTheDocument();
+        const dialog = screen.getByRole("dialog");
+        expect(dialog).toHaveTextContent(/Captain Jane/i);
       });
     });
 

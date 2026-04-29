@@ -3,18 +3,18 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { TeamForm } from "./team-form";
 import { DeleteTeamDialog } from "./team-list";
 import type { TeamWithMembers } from "./actions";
 
-interface TeamDrawerProps {
+interface TeamModalProps {
   open: boolean;
   mode: "create" | "edit";
   team: TeamWithMembers | null;
@@ -22,17 +22,22 @@ interface TeamDrawerProps {
   onSuccess: () => void;
 }
 
-export function TeamDrawer({
+export function TeamModal({
   open,
   mode,
   team,
   onOpenChange,
   onSuccess,
-}: TeamDrawerProps) {
+}: TeamModalProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const captainMember = team?.members.find((m) => m.role === "captain");
+  const captainDisplay = captainMember?.full_name?.trim()
+    ? captainMember.full_name
+    : "(deleted contact)";
+
   const title =
-    mode === "create" ? "New Team" : `Edit Team: ${team?.team_name ?? ""}`;
+    mode === "create" ? "New Team" : `Edit Team: ${captainDisplay}`;
 
   function handleFormSuccess() {
     toast.success(mode === "create" ? "Team created" : "Team updated");
@@ -47,15 +52,14 @@ export function TeamDrawer({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="sm:max-w-[520px] flex flex-col overflow-hidden p-0"
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="sm:max-w-[800px] flex flex-col overflow-hidden p-0"
           showCloseButton={false}
         >
-          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
-            <SheetTitle>{title}</SheetTitle>
-          </SheetHeader>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <TeamForm
@@ -66,7 +70,7 @@ export function TeamDrawer({
           </div>
 
           {mode === "edit" && team && (
-            <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+            <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -75,10 +79,10 @@ export function TeamDrawer({
               >
                 Delete team
               </Button>
-            </SheetFooter>
+            </DialogFooter>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {team && (
         <DeleteTeamDialog

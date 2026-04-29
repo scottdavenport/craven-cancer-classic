@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { markTeamPaid, deleteTeam, getScoreCount } from "./actions";
-import { TeamDrawer } from "./team-drawer";
+import { TeamModal } from "./team-modal";
 import type { TeamWithMembers } from "./actions";
 
 // ---------------------------------------------------------------------------
@@ -285,7 +285,7 @@ interface TeamListProps {
   defaultFeeDollars: number;
 }
 
-type DrawerState = {
+type ModalState = {
   open: boolean;
   mode: "create" | "edit";
   team: TeamWithMembers | null;
@@ -294,14 +294,14 @@ type DrawerState = {
 export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListProps) {
   const router = useRouter();
   const [teams, setTeams] = useState<TeamWithMembers[]>(initialTeams);
-  const [drawer, setDrawer] = useState<DrawerState>({ open: false, mode: "create", team: null });
+  const [modal, setModal] = useState<ModalState>({ open: false, mode: "create", team: null });
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
 
   // After a mutation we refresh via router.refresh() so Next.js RSC re-fetches in place.
-  // Note: team-drawer fires its own per-mode toast ("Team created" / "Team updated")
+  // Note: team-modal fires its own per-mode toast ("Team created" / "Team updated")
   // before calling onSuccess. Adding one here would stack two toasts on every save.
-  function handleDrawerSuccess() {
-    setDrawer((d) => ({ ...d, open: false }));
+  function handleModalSuccess() {
+    setModal((d) => ({ ...d, open: false }));
     router.refresh();
   }
 
@@ -328,7 +328,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
         <p className="text-[0.8125rem] text-muted-foreground">
           {teams.length} team{teams.length !== 1 ? "s" : ""}
         </p>
-        <Button size="sm" onClick={() => setDrawer({ open: true, mode: "create", team: null })}>
+        <Button size="sm" onClick={() => setModal({ open: true, mode: "create", team: null })}>
           <Plus className="size-4" />
           New Team
         </Button>
@@ -428,7 +428,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => setDrawer({ open: true, mode: "edit", team })}
+                          onClick={() => setModal({ open: true, mode: "edit", team })}
                         >
                           Edit
                         </Button>
@@ -469,12 +469,12 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
         </Table>
       </div>
 
-      <TeamDrawer
-        open={drawer.open}
-        mode={drawer.mode}
-        team={drawer.team}
-        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
-        onSuccess={handleDrawerSuccess}
+      <TeamModal
+        open={modal.open}
+        mode={modal.mode}
+        team={modal.team}
+        onOpenChange={(open) => setModal((d) => ({ ...d, open }))}
+        onSuccess={handleModalSuccess}
       />
     </div>
   );

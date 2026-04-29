@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { TrashTabs } from "@/app/admin/trash/trash-tabs";
 import type { Contact, Team, Sponsor, SponsorshipItem, Photo } from "@/types/database";
-import type { WithDeletedByName } from "@/app/admin/trash/actions";
+import type { WithDeletedByName, TrashTeam } from "@/app/admin/trash/actions";
 
 // Mock server restore actions
 vi.mock("@/app/admin/trash/actions", () => ({
@@ -65,11 +65,10 @@ function makeContact(overrides: Partial<WithDeletedByName<Contact>> = {}): WithD
   };
 }
 
-function makeTeam(overrides: Partial<WithDeletedByName<Team>> = {}): WithDeletedByName<Team> {
+function makeTeam(overrides: Partial<TrashTeam> = {}): TrashTeam {
   return {
     id: "team-1",
-    // @ts-expect-error Sprint 32: team_name dropped from Team type; assertion at line 230 still depends on this fixture value pending Phase 2/3 captain-derived display
-    team_name: "Eagle Squad",
+    captain_display_name: "Eagle Squad",
     session: "morning",
     payment_status: "pending",
     amount_paid_cents: 0,
@@ -229,9 +228,7 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
       />
     );
     fireEvent.click(screen.getByRole("tab", { name: /teams/i }));
-    // Sprint 32: assertion preserved per feedback_forge_collateral_test_changes;
-    // makeTeam() default fixture still includes team_name="Eagle Squad" via @ts-expect-error
-    // pending Phase 2/3 captain-derived display.
+    // Sprint 32 Phase 3: fixture updated to captain_display_name="Eagle Squad" (captain-derived display)
     expect(screen.getByText("Eagle Squad")).toBeInTheDocument();
   });
 

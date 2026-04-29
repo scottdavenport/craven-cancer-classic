@@ -8,6 +8,8 @@ import type { Contact, Team, Sponsor, SponsorshipItem, Photo } from "@/types/dat
 
 export type WithDeletedByName<T> = T & { deleted_by_name: string | null };
 
+export type TrashTeam = WithDeletedByName<Team> & { captain_display_name: string };
+
 // ---- Helpers ----
 
 /**
@@ -66,18 +68,22 @@ export async function getTrashContacts(): Promise<WithDeletedByName<Contact>[]> 
   return augmentWithDeletedByName(rows, nameMap);
 }
 
-export async function getTrashTeams(): Promise<WithDeletedByName<Team>[]> {
+export async function getTrashTeams(): Promise<TrashTeam[]> {
   await requireAdmin();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("teams")
-    .select("*")
+    .select("*, captain:contacts!teams_captain_contact_id_fkey(full_name)")
     .not("deleted_at", "is", null)
     .order("deleted_at", { ascending: false });
   if (error) throw new Error(error.message);
-  const rows = (data ?? []) as Team[];
+  const rows = (data ?? []) as Array<Team & { captain: { full_name: string } | null }>;
   const nameMap = await resolveDeletedByNames(supabase, rows);
-  return augmentWithDeletedByName(rows, nameMap);
+  return rows.map((row) => ({
+    ...row,
+    captain_display_name: row.captain?.full_name ?? "(unknown captain)",
+    deleted_by_name: row.deleted_by ? (nameMap.get(row.deleted_by) ?? null) : null,
+  }));
 }
 
 export async function getTrashSponsors(): Promise<WithDeletedByName<Sponsor>[]> {

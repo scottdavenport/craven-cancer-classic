@@ -560,7 +560,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
           onValueChange={handleTeamFilterChange}
           items={{
             all: "All Teams",
-            ...Object.fromEntries(teams.map((t) => [t.id, t.team_name])),
+            ...Object.fromEntries(teams.map((t) => [t.id, t.captain_display_name])),
           }}
         >
           <SelectTrigger className="w-[175px]">
@@ -570,7 +570,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
             <SelectItem value="all">All Teams</SelectItem>
             {teams.map((t) => (
               <SelectItem key={t.id} value={t.id}>
-                {t.team_name}
+                {t.captain_display_name}
               </SelectItem>
             ))}
           </SelectContent>

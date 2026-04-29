@@ -96,7 +96,7 @@ Plain-English checklist someone could run on a Saturday:
 
 - **Compass** turns this plan into tickets with clear acceptance criteria.
 - **Spec** writes failing tests first (per our TDD rule).
-- **Flux** handles the database change + 3 RPC signature changes + server action updates.
+- **Flux** handles the database change + the `register_team` RPC signature change + server action updates.
 - **Bolt** builds the team modal, the score modal, the team picker dropdown, and updates every display consumer.
 - **Aria** writes the new copy for the deferred surfaces (type-removal guard, trash labels, Stripe receipt line item, leaderboard row label, null-team-id fallback string).
 - **Watchdog** reviews every PR.

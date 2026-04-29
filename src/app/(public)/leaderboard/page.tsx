@@ -12,17 +12,36 @@ export const metadata: Metadata = {
   description: "Tournament scores and standings.",
 };
 
-async function getScores() {
+type ScoreRow = {
+  id: string;
+  total_score: number;
+  session: string | null;
+  captain_display_name: string;
+};
+
+async function getScores(): Promise<ScoreRow[]> {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
   const { data } = await supabase
     .from("scores")
-    .select("*")
+    .select(
+      "id, total_score, session, team:teams(captain:contacts!teams_captain_contact_id_fkey(full_name))"
+    )
     .eq("year", currentYear)
     .order("total_score", { ascending: true });
 
-  return data ?? [];
+  return (data ?? []).map((row) => {
+    const team = row.team as {
+      captain: { full_name: string } | null;
+    } | null;
+    return {
+      id: row.id,
+      total_score: row.total_score,
+      session: row.session,
+      captain_display_name: team?.captain?.full_name ?? "(no team)",
+    };
+  });
 }
 
 export default async function LeaderboardPage() {
@@ -120,7 +139,7 @@ function ScoreTable({
 }: {
   title: string;
   flightLabel: string;
-  scores: { id: string; team_name: string; total_score: number }[];
+  scores: ScoreRow[];
 }) {
   return (
     <div>
@@ -157,7 +176,7 @@ function ScoreTable({
                   <PositionCell index={i} />
                 </td>
                 <td className="px-4 py-3 font-sans text-[0.9375rem] font-medium text-foreground">
-                  {score.team_name}
+                  {score.captain_display_name}
                 </td>
                 <td className="px-4 py-3 text-right font-mono tabular-nums lining-nums text-lg font-bold text-foreground">
                   {score.total_score}

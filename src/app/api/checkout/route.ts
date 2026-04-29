@@ -112,14 +112,12 @@ interface TeammateInput {
 
 async function handleRegistrationCheckout(body: Record<string, unknown>) {
   const {
-    team_name,
     captain_name,
     captain_email,
     captain_phone,
     session: sessionTime,
     teammates,
   } = body as {
-    team_name: string;
     captain_name: string;
     captain_email: string;
     captain_phone?: string;
@@ -127,7 +125,7 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
     teammates?: TeammateInput[];
   };
 
-  if (!team_name || !captain_name || !captain_email || !sessionTime) {
+  if (!captain_name || !captain_email || !sessionTime) {
     return NextResponse.json(
       { error: "Missing required fields" },
       { status: 400 }
@@ -154,7 +152,6 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
   // concurrent requests both see count < cap and both insert.
   const { data: rpcData, error: rpcError } = await supabase.rpc("register_team", {
     p_session: sessionTime,
-    p_team_name: team_name,
     p_captain_name: captain_name,
     p_captain_email: captain_email,
     p_captain_phone: captain_phone || undefined,
@@ -258,8 +255,8 @@ async function handleRegistrationCheckout(body: Record<string, unknown>) {
         price_data: {
           currency: "usd",
           product_data: {
-            name: "Craven Cancer Classic - Team Registration",
-            description: `Team: ${team_name} | ${sessionTime === "morning" ? "Morning" : "Afternoon"} Session`,
+            name: `Craven Cancer Classic - ${captain_name}`,
+            description: `${sessionTime === "morning" ? "Morning" : "Afternoon"} Session`,
           },
           unit_amount: registrationFeeCents,
         },

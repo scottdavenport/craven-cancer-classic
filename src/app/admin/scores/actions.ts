@@ -4,27 +4,61 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/supabase/admin";
 
-export async function getScores() {
+export type ScoreWithTeam = {
+  id: string;
+  total_score: number;
+  session: string | null;
+  source: string;
+  year: number;
+  created_at: string;
+  individual_scores: import("@/types/database").Json;
+  team_id: string | null;
+  captain_display_name: string;
+};
+
+export async function getScores(): Promise<ScoreWithTeam[]> {
   await requireAdmin();
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
   const { data, error } = await supabase
     .from("scores")
-    .select("*")
+    .select(
+      "*, team:teams(captain_contact_id, captain:contacts!teams_captain_contact_id_fkey(full_name))"
+    )
     .eq("year", currentYear)
     .order("total_score", { ascending: true });
 
   if (error) throw new Error(error.message);
-  return data;
+
+  return (data ?? []).map((row) => {
+    const team = row.team as {
+      captain_contact_id: string | null;
+      captain: { full_name: string } | null;
+    } | null;
+    const captain_display_name = team?.captain?.full_name ?? "(no team)";
+    return {
+      id: row.id,
+      total_score: row.total_score,
+      session: row.session,
+      source: row.source,
+      year: row.year,
+      created_at: row.created_at,
+      individual_scores: row.individual_scores,
+      team_id: row.team_id,
+      captain_display_name,
+    };
+  });
 }
 
 export async function addScore(formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();
 
+  const teamIdRaw = formData.get("team_id") as string | null;
+
   const { error } = await supabase.from("scores").insert({
-    team_name: formData.get("team_name") as string,
+    team_id: teamIdRaw || null,
     session: (formData.get("session") as "morning" | "afternoon") || null,
     total_score: parseInt(formData.get("total_score") as string),
     source: "manual" as const,
@@ -61,7 +95,6 @@ export async function importScoresFromCSV(csvText: string) {
     const sessionVal = sessionIdx >= 0 ? values[sessionIdx]?.toLowerCase() : null;
 
     return {
-      team_name: values[teamIdx] || "Unknown",
       total_score: parseInt(values[scoreIdx]) || 0,
       session:
         sessionVal === "morning" || sessionVal === "afternoon"
@@ -81,7 +114,7 @@ export async function importScoresFromCSV(csvText: string) {
 
 export async function updateScore(
   id: string,
-  data: { team_name: string; total_score: number; session: "morning" | "afternoon" | null }
+  data: { team_id: string | null; total_score: number; session: "morning" | "afternoon" | null }
 ) {
   await requireAdmin();
   if (!Number.isFinite(data.total_score) || data.total_score < 0 || data.total_score > 200) {
@@ -92,7 +125,7 @@ export async function updateScore(
   const { error } = await supabase
     .from("scores")
     .update({
-      team_name: data.team_name,
+      team_id: data.team_id,
       total_score: data.total_score,
       session: data.session,
     })

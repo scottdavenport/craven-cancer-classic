@@ -17,7 +17,7 @@ export type TeamMemberRow = {
 
 export type TeamWithMembers = {
   id: string;
-  team_name: string;
+  captain_display_name: string;
   year: number;
   captain_contact_id: string | null;
   payment_status: string;
@@ -62,7 +62,9 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
 
   const { data, error } = await supabase
     .from("teams_active")
-    .select("*, team_members(contact_id, role, slot, contacts(id, full_name))")
+    .select(
+      "*, captain:contacts!teams_captain_contact_id_fkey(full_name), team_members(contact_id, role, slot, contacts(id, full_name))"
+    )
     .eq("year", targetYear)
     .order("created_at", { ascending: false });
 
@@ -84,12 +86,14 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
     }));
 
     const member_count = members.length;
+    const captain = team.captain as { full_name: string } | null;
+    const captain_display_name = captain?.full_name ?? "(no captain)";
 
     // teams_active view inherits NOT NULL from underlying teams table;
     // Supabase types views as fully-nullable, so assert here.
     return {
       id: team.id!,
-      team_name: team.team_name!,
+      captain_display_name,
       year: team.year!,
       captain_contact_id: team.captain_contact_id ?? null,
       payment_status: team.payment_status!,
@@ -125,7 +129,6 @@ export async function searchContacts(query: string): Promise<ContactSearchResult
 // ---------------------------------------------------------------------------
 
 export type CreateTeamParams = {
-  team_name: string;
   session: string;
   captain_contact_id: string;
   player_contact_ids: string[];
@@ -142,11 +145,10 @@ export async function createTeam(
 
   const supabase = await createClient();
 
-  // Call register_team RPC — uses placeholder values for deprecated captain_* columns
+  // Call register_team RPC — captain params are vestigial back-compat (not used in body).
   // The admin-built flow links via captain_contact_id + team_members instead.
   const { data: rpcData, error: rpcError } = await supabase.rpc("register_team", {
     p_session: params.session,
-    p_team_name: params.team_name,
     p_captain_name: "",
     p_captain_email: "",
     p_captain_phone: undefined,

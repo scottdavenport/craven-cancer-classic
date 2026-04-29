@@ -57,7 +57,7 @@ export async function POST(request: Request) {
   const { error } = await supabase.from("contacts").insert({
     full_name: full_name.trim(),
     email: email.trim().toLowerCase(),
-    type: contactType,
+    types: [contactType],
     year_first_seen: currentYear,
     notes: notesParts.length > 0 ? notesParts.join(" | ") : null,
   });

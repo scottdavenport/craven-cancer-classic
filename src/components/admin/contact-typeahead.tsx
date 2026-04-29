@@ -157,7 +157,7 @@ export function ContactTypeahead({
         company: null,
         email: formEmail.trim() || null,
         phone: formPhone.trim() || null,
-        type: "player",
+        types: ["player"],
         address1: null,
         address2: null,
         city: null,

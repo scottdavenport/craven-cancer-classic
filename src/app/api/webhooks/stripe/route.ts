@@ -169,7 +169,7 @@ async function processDownstream(
           full_name: captainMember.contacts.full_name,
           email: captainMember.contacts.email,
           phone: captainMember.contacts.phone,
-          type: "player" as const,
+          types: ["player" as const],
         },
         { onConflict: "email" }
       );

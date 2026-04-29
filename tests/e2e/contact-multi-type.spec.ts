@@ -345,7 +345,13 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
 
     // Verify chip shows volunteer in the list
     const contactRow = page.getByRole("row").filter({ hasText: VOL_FULL });
-    await expect(contactRow.getByText(/volunteer/i)).toBeVisible();
+    const volunteerChip = contactRow.getByText(/volunteer/i);
+    await expect(volunteerChip).toBeVisible();
+
+    // Amendment #12: Volunteer chip color = amber (design-token or raw Tailwind).
+    // Pin the contract so a builder can't ship `bg-pink-100` and pass.
+    const chipClassName = await volunteerChip.evaluate((el) => el.className);
+    expect(chipClassName).toMatch(/amber/i);
 
     // Re-open and verify Volunteer checkbox is still checked
     await contactRow.click();
@@ -387,5 +393,95 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
 
     await page.keyboard.press("Escape");
     await softDeleteContact(page, PS_FULL);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test 10: Shirt Size dropdown vocabulary (amendment #1)
+  // ---------------------------------------------------------------------------
+
+  test("Shirt Size dropdown contains exactly S, M, L, XL, 2XL, 3XL — XS / XXL / 4XL not present", async ({
+    adminPage: page,
+  }) => {
+    await openAddContactModal(page);
+    await fillBasicFields(page, {
+      firstName: "ShirtVocab",
+      lastName: "Test",
+      email: `e2e-shirt-vocab-${TIMESTAMP}@example.com`,
+    });
+
+    await page.getByRole("checkbox", { name: /^player$/i }).check();
+    const shirtSelect = page.getByRole("combobox", { name: /shirt size/i });
+    await shirtSelect.click();
+
+    // Each of the 6 valid sizes must be a selectable option.
+    for (const size of ["S", "M", "L", "XL", "2XL", "3XL"]) {
+      await expect(
+        page.getByRole("option", { name: new RegExp(`^${size}$`, "i") })
+      ).toBeVisible();
+    }
+
+    // Common-but-wrong sizes must NOT be in the list.
+    for (const bad of ["XS", "XXL", "4XL"]) {
+      await expect(
+        page.getByRole("option", { name: new RegExp(`^${bad}$`, "i") })
+      ).not.toBeVisible();
+    }
+
+    await page.keyboard.press("Escape");
+    await page.keyboard.press("Escape");
+  });
+
+  // ---------------------------------------------------------------------------
+  // Test 11: Handicap range boundaries (amendment #2)
+  // ---------------------------------------------------------------------------
+
+  test("Handicap accepts 0, 54, blank — rejects 55 and -1", async ({ adminPage: page }) => {
+    const HC_FULL = "Handicap Boundary";
+
+    await openAddContactModal(page);
+    await fillBasicFields(page, {
+      firstName: "Handicap",
+      lastName: "Boundary",
+      email: `e2e-handicap-${TIMESTAMP}@example.com`,
+    });
+
+    await page.getByRole("checkbox", { name: /^player$/i }).check();
+    const handicapInput = page.getByRole("spinbutton", { name: /handicap/i });
+
+    // Lower bound: 0 must save cleanly.
+    await handicapInput.fill("0");
+    await page.getByRole("button", { name: /save/i }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(HC_FULL)).toBeVisible();
+
+    // Re-open and update through the range.
+    await page.getByText(HC_FULL).click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
+
+    // Upper bound: 54 must save cleanly.
+    await handicapInput.fill("54");
+    await page.getByRole("button", { name: /save/i }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+
+    // Out-of-range upper: 55 must surface a validation error and NOT save.
+    await page.getByText(HC_FULL).click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
+    await handicapInput.fill("55");
+    await page.getByRole("button", { name: /save/i }).click();
+    // Either client-side validation prevents close, or server rejects + dialog stays.
+    // Contract: dialog should still be open OR an error message references 0–54.
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 2_000 });
+
+    // Out-of-range lower: -1 must also be rejected.
+    await handicapInput.fill("-1");
+    await page.getByRole("button", { name: /save/i }).click();
+    await expect(page.getByRole("dialog")).toBeVisible({ timeout: 2_000 });
+
+    // Blank handicap must be acceptable (clear back to blank, save with 0 instead to close).
+    await handicapInput.fill("");
+    await page.getByRole("button", { name: /save/i }).click();
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+
+    await softDeleteContact(page, HC_FULL);
   });
 });

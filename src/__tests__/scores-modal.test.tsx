@@ -147,7 +147,7 @@ describe("ScoreManager Add Score button — modal with team dropdown (Sprint 32)
 
     // There must be a team selector element
     const teamSelect =
-      screen.queryByRole("combobox") ??
+      screen.queryAllByRole("combobox")[0] ??
       screen.queryByLabelText(/^team$/i) ??
       screen.queryByLabelText(/select team/i);
     expect(teamSelect).toBeInTheDocument();

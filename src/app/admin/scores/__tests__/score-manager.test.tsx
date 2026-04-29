@@ -30,8 +30,8 @@ vi.mock("../actions", () => ({
   deleteAllScores: vi.fn(async () => ({ success: true })),
 }));
 
-vi.mock("../score-drawer", () => ({
-  ScoreDrawer: ({
+vi.mock("../score-modal", () => ({
+  ScoreModal: ({
     onSuccess,
     open,
   }: {
@@ -39,6 +39,7 @@ vi.mock("../score-drawer", () => ({
     onOpenChange: (v: boolean) => void;
     mode: string;
     score: unknown;
+    teams: unknown[];
     onSuccess: () => void;
   }) =>
     open ? (
@@ -222,7 +223,7 @@ describe("ScoreManager — Sprint 26 router.refresh regression (#212)", () => {
       fireEvent.click(screen.getByText("Import CSV"));
 
       // Type CSV content
-      const textarea = screen.getByPlaceholderText(/team,score,session/i);
+      const textarea = screen.getByPlaceholderText(/score,session/i);
       fireEvent.change(textarea, {
         target: { value: "Eagles,72,morning" },
       });
@@ -246,7 +247,7 @@ describe("ScoreManager — Sprint 26 router.refresh regression (#212)", () => {
 
       renderManager([]);
       fireEvent.click(screen.getByText("Import CSV"));
-      const textarea = screen.getByPlaceholderText(/team,score,session/i);
+      const textarea = screen.getByPlaceholderText(/score,session/i);
       fireEvent.change(textarea, { target: { value: "Eagles,72,morning" } });
 
       await act(async () => {

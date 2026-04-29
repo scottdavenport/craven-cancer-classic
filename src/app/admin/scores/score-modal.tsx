@@ -3,52 +3,50 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ScoreForm } from "./score-form";
 import { addScore, updateScore, deleteScore } from "./actions";
+import type { ActiveTeamForDropdown } from "./actions";
 import type { Score } from "@/types/database";
 
-interface ScoreDrawerProps {
+interface ScoreModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
   score?: Score | null;
+  teams: ActiveTeamForDropdown[];
   onSuccess: () => void;
 }
 
-export function ScoreDrawer({
+export function ScoreModal({
   open,
   onOpenChange,
   mode,
   score,
+  teams,
   onSuccess,
-}: ScoreDrawerProps) {
+}: ScoreModalProps) {
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const title =
-    mode === "create" ? "Add Score" : `Edit Score: ${score?.team_name ?? ""}`;
+  const title = mode === "create" ? "Add Score" : "Edit Score";
 
   async function handleSubmit(values: {
-    team_name: string;
+    team_id: string | null;
     total_score: number;
     session: "morning" | "afternoon" | null;
   }) {
     setLoading(true);
     try {
       if (mode === "create") {
-        const formData = new FormData();
-        formData.set("team_name", values.team_name);
-        formData.set("total_score", String(values.total_score));
-        if (values.session) formData.set("session", values.session);
-        const result = await addScore(formData);
+        const result = await addScore(values);
         if (result && "error" in result) {
           toast.error(result.error);
           return;
@@ -84,19 +82,19 @@ export function ScoreDrawer({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="sm:max-w-[480px] flex flex-col overflow-hidden p-0"
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="sm:max-w-[800px] flex flex-col overflow-hidden p-0"
           showCloseButton={false}
         >
-          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
-            <SheetTitle>{title}</SheetTitle>
-          </SheetHeader>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
             <ScoreForm
               defaultValues={score ?? undefined}
+              teams={teams}
               onSubmit={handleSubmit}
               onCancel={() => onOpenChange(false)}
               loading={loading}
@@ -104,7 +102,7 @@ export function ScoreDrawer({
           </div>
 
           {mode === "edit" && score && (
-            <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+            <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
               <Button
                 type="button"
                 variant="outline"
@@ -114,15 +112,15 @@ export function ScoreDrawer({
               >
                 Delete score
               </Button>
-            </SheetFooter>
+            </DialogFooter>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       <ConfirmDialog
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={`Delete score for ${score?.team_name ?? "this team"}?`}
+        title="Delete this score?"
         description="This score will be permanently removed."
         confirmLabel="Delete"
         onConfirm={handleDeleteConfirmed}

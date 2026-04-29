@@ -21,23 +21,43 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { exportContactsCSV, getContacts, bulkUpdateContacts, bulkDeleteContacts } from "./actions";
+import {
+  exportContactsCSV,
+  getContacts,
+  bulkUpdateContacts,
+  bulkDeleteContacts,
+  bulkSetContactTypes,
+  bulkAddContactType,
+  bulkRemoveContactType,
+} from "./actions";
 import { ContactModal } from "./contact-modal";
 import type { Contact } from "@/types/database";
 import type { ContactFilter, TeamFilterOption } from "./actions";
 import { toast } from "sonner";
 
-type ContactType = "player" | "sponsor" | "donor" | "other";
+type ContactType = "player" | "sponsor" | "donor" | "volunteer" | "other";
 
 interface ContactListProps {
   contacts: Contact[];
   teams: TeamFilterOption[];
 }
 
+// Canonical display order for type chips: Player → Sponsor → Donor → Volunteer → Other
+const CANONICAL_TYPE_ORDER: ContactType[] = [
+  "player",
+  "sponsor",
+  "donor",
+  "volunteer",
+  "other",
+];
+
+// Amber path: no amber design token found in globals.css or ui components.
+// Falling back to raw Tailwind: bg-amber-100 text-amber-800.
 const TYPE_BADGE_CLASSES: Record<string, string> = {
   player: "bg-brand-muted text-brand",
   sponsor: "bg-purple-muted text-purple",
   donor: "bg-success-muted text-success",
+  volunteer: "bg-amber-100 text-amber-800",
   other: "bg-neutral-100 text-neutral-600",
 };
 
@@ -49,6 +69,24 @@ function TypeBadge({ type }: { type: string }) {
     >
       {type}
     </span>
+  );
+}
+
+function TypeBadgeList({ types }: { types: string[] | null | undefined }) {
+  const safeTypes = types ?? [];
+  const sorted = [...safeTypes].sort((a, b) => {
+    const ai = CANONICAL_TYPE_ORDER.indexOf(a as ContactType);
+    const bi = CANONICAL_TYPE_ORDER.indexOf(b as ContactType);
+    return (ai === -1 ? CANONICAL_TYPE_ORDER.length : ai) -
+      (bi === -1 ? CANONICAL_TYPE_ORDER.length : bi);
+  });
+  if (sorted.length === 0) return null;
+  return (
+    <div className="flex flex-wrap gap-1">
+      {sorted.map((t) => (
+        <TypeBadge key={t} type={t} />
+      ))}
+    </div>
   );
 }
 
@@ -105,6 +143,10 @@ type DrawerState = {
   contact: Contact | null;
 };
 
+type BlockedAlert = {
+  reasons: string[];
+};
+
 export function ContactList({ contacts: initialContacts, teams }: ContactListProps) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts);
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -126,6 +168,9 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
   const [lastSelectedIndex, setLastSelectedIndex] = useState<number | null>(null);
   const [isBulkPending, setIsBulkPending] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Inline blocked-row alert shown below bulk-action bar
+  const [blockedAlert, setBlockedAlert] = useState<BlockedAlert | null>(null);
 
   function refetch() {
     startTransition(async () => {
@@ -155,7 +200,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
   // team_id / captain_only are handled server-side via re-fetch
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
-      if (typeFilter !== "all" && c.type !== typeFilter) return false;
+      if (typeFilter !== "all" && !(c.types ?? []).includes(typeFilter)) return false;
       if (yearFilter !== "all" && c.year_first_seen !== Number(yearFilter)) return false;
       if (companyFilter.trim()) {
         const search = companyFilter.trim().toLowerCase();
@@ -174,6 +219,8 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
     consentFilter !== "all" ||
     teamFilter !== "all" ||
     captainOnly;
+
+  const overCap = selected.size > 500;
 
   // Re-fetch contacts from server when team/captain filters change
   function fetchWithServerFilter(newTeamFilter: string, newCaptainOnly: boolean) {
@@ -287,16 +334,58 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
     setLastSelectedIndex(index);
   }
 
-  // Bulk action handlers
-  async function handleBulkChangeType(type: ContactType) {
+  // Bulk action handlers — type operations
+  async function handleBulkSetTypes(types: ContactType[]) {
     const ids = Array.from(selected);
+    setBlockedAlert(null);
     setIsBulkPending(true);
     try {
-      const result = await bulkUpdateContacts(ids, { type });
+      const result = await bulkSetContactTypes(ids, types);
       if ("error" in result) {
         toast.error(result.error);
       } else {
         toast.success(`Updated ${result.updated} contact${result.updated !== 1 ? "s" : ""}`);
+        setSelected(new Set());
+        refetch();
+      }
+    } finally {
+      setIsBulkPending(false);
+    }
+  }
+
+  async function handleBulkAddType(type: ContactType) {
+    const ids = Array.from(selected);
+    setBlockedAlert(null);
+    setIsBulkPending(true);
+    try {
+      const result = await bulkAddContactType(ids, type);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        toast.success(`Updated ${result.updated} contact${result.updated !== 1 ? "s" : ""}`);
+        setSelected(new Set());
+        refetch();
+      }
+    } finally {
+      setIsBulkPending(false);
+    }
+  }
+
+  async function handleBulkRemoveType(type: ContactType) {
+    const ids = Array.from(selected);
+    setBlockedAlert(null);
+    setIsBulkPending(true);
+    try {
+      const result = await bulkRemoveContactType(ids, type);
+      if ("error" in result) {
+        toast.error(result.error);
+      } else {
+        if (result.blocked.length > 0) {
+          setBlockedAlert({ reasons: result.blocked.map((b) => b.reason) });
+        }
+        if (result.updated > 0) {
+          toast.success(`Updated ${result.updated} contact${result.updated !== 1 ? "s" : ""}`);
+        }
         setSelected(new Set());
         refetch();
       }
@@ -390,8 +479,19 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
 
       {/* Filter controls */}
       <div className="flex flex-wrap gap-3 items-center">
-        {/* Type */}
-        <Select value={typeFilter} onValueChange={(v) => setTypeFilter(v ?? "all")} items={{ all: "All Types", player: "Player", sponsor: "Sponsor", donor: "Donor", other: "Other" }}>
+        {/* Type — 5 options including Volunteer */}
+        <Select
+          value={typeFilter}
+          onValueChange={(v) => setTypeFilter(v ?? "all")}
+          items={{
+            all: "All Types",
+            player: "Player",
+            sponsor: "Sponsor",
+            donor: "Donor",
+            volunteer: "Volunteer",
+            other: "Other",
+          }}
+        >
           <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="All Types" />
           </SelectTrigger>
@@ -400,12 +500,20 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
             <SelectItem value="player">Player</SelectItem>
             <SelectItem value="sponsor">Sponsor</SelectItem>
             <SelectItem value="donor">Donor</SelectItem>
+            <SelectItem value="volunteer">Volunteer</SelectItem>
             <SelectItem value="other">Other</SelectItem>
           </SelectContent>
         </Select>
 
         {/* Year */}
-        <Select value={yearFilter} onValueChange={(v) => setYearFilter(v ?? "all")} items={{ all: "All Years", ...Object.fromEntries(availableYears.map((y) => [String(y), String(y)])) }}>
+        <Select
+          value={yearFilter}
+          onValueChange={(v) => setYearFilter(v ?? "all")}
+          items={{
+            all: "All Years",
+            ...Object.fromEntries(availableYears.map((y) => [String(y), String(y)])),
+          }}
+        >
           <SelectTrigger className="w-[140px]">
             <SelectValue placeholder="All Years" />
           </SelectTrigger>
@@ -429,7 +537,15 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         />
 
         {/* Consent filter */}
-        <Select value={consentFilter} onValueChange={(v) => setConsentFilter(v ?? "all")} items={{ all: "All Contacts", subscribed: "Subscribed only", unsubscribed: "Unsubscribed only" }}>
+        <Select
+          value={consentFilter}
+          onValueChange={(v) => setConsentFilter(v ?? "all")}
+          items={{
+            all: "All Contacts",
+            subscribed: "Subscribed only",
+            unsubscribed: "Unsubscribed only",
+          }}
+        >
           <SelectTrigger className="w-[175px]">
             <SelectValue placeholder="All Contacts" />
           </SelectTrigger>
@@ -441,7 +557,14 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         </Select>
 
         {/* Team filter */}
-        <Select value={teamFilter} onValueChange={handleTeamFilterChange} items={{ all: "All Teams", ...Object.fromEntries(teams.map((t) => [t.id, t.team_name])) }}>
+        <Select
+          value={teamFilter}
+          onValueChange={handleTeamFilterChange}
+          items={{
+            all: "All Teams",
+            ...Object.fromEntries(teams.map((t) => [t.id, t.team_name])),
+          }}
+        >
           <SelectTrigger className="w-[175px]">
             <SelectValue placeholder="All Teams" />
           </SelectTrigger>
@@ -489,28 +612,106 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
             {selected.size} selected
           </span>
 
-          {/* Change Type dropdown */}
-          <Select
-            onValueChange={(v) => {
-              if (v) handleBulkChangeType(v as ContactType);
-            }}
-          >
-            <SelectTrigger className="h-8 w-[140px] text-xs">
-              <SelectValue placeholder="Change Type" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="player">Player</SelectItem>
-              <SelectItem value="sponsor">Sponsor</SelectItem>
-              <SelectItem value="donor">Donor</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
+          {overCap ? (
+            <span className="text-[0.8125rem] text-destructive">
+              Select 500 or fewer contacts to use bulk actions.
+            </span>
+          ) : (
+            <>
+              {/* Set types — overwrites existing types for selected contacts */}
+              <Select
+                onValueChange={(v) => {
+                  if (v) handleBulkSetTypes([v as ContactType]);
+                }}
+                items={{
+                  player: "Player",
+                  sponsor: "Sponsor",
+                  donor: "Donor",
+                  volunteer: "Volunteer",
+                  other: "Other",
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-[130px] text-xs"
+                  disabled={isBulkPending}
+                  aria-label="Set types"
+                >
+                  <SelectValue placeholder="Set types" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="player">Player</SelectItem>
+                  <SelectItem value="sponsor">Sponsor</SelectItem>
+                  <SelectItem value="donor">Donor</SelectItem>
+                  <SelectItem value="volunteer">Volunteer</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Add a type */}
+              <Select
+                onValueChange={(v) => {
+                  if (v) handleBulkAddType(v as ContactType);
+                }}
+                items={{
+                  player: "Player",
+                  sponsor: "Sponsor",
+                  donor: "Donor",
+                  volunteer: "Volunteer",
+                  other: "Other",
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-[130px] text-xs"
+                  disabled={isBulkPending}
+                  aria-label="Add type"
+                >
+                  <SelectValue placeholder="Add type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="player">Player</SelectItem>
+                  <SelectItem value="sponsor">Sponsor</SelectItem>
+                  <SelectItem value="donor">Donor</SelectItem>
+                  <SelectItem value="volunteer">Volunteer</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Remove a type — blocked rows surface inline Alert below */}
+              <Select
+                onValueChange={(v) => {
+                  if (v) handleBulkRemoveType(v as ContactType);
+                }}
+                items={{
+                  player: "Player",
+                  sponsor: "Sponsor",
+                  donor: "Donor",
+                  volunteer: "Volunteer",
+                  other: "Other",
+                }}
+              >
+                <SelectTrigger
+                  className="h-8 w-[140px] text-xs"
+                  disabled={isBulkPending}
+                  aria-label="Remove type"
+                >
+                  <SelectValue placeholder="Remove type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="player">Player</SelectItem>
+                  <SelectItem value="sponsor">Sponsor</SelectItem>
+                  <SelectItem value="donor">Donor</SelectItem>
+                  <SelectItem value="volunteer">Volunteer</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </>
+          )}
 
           <Button
             size="sm"
             variant="outline"
             className="h-8 text-xs"
-            disabled={isBulkPending}
+            disabled={isBulkPending || overCap}
             onClick={handleBulkSubscribe}
           >
             Subscribe
@@ -520,7 +721,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
             size="sm"
             variant="outline"
             className="h-8 text-xs"
-            disabled={isBulkPending}
+            disabled={isBulkPending || overCap}
             onClick={handleBulkUnsubscribe}
           >
             Unsubscribe
@@ -545,6 +746,41 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
           >
             Clear
           </Button>
+        </div>
+      )}
+
+      {/* Inline blocked-row Alert — rendered below the bulk-action bar, stays until dismissed */}
+      {blockedAlert && (
+        <div
+          role="alert"
+          data-testid="bulk-blocked-alert"
+          className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-[0.8125rem]"
+        >
+          <div className="flex-1">
+            <p className="font-semibold text-destructive mb-1">
+              Some contacts could not be updated
+            </p>
+            <ul className="space-y-0.5 text-foreground">
+              {blockedAlert.reasons.map((reason, i) => (
+                <li key={i}>{reason}</li>
+              ))}
+            </ul>
+          </div>
+          <button
+            type="button"
+            aria-label="Dismiss"
+            onClick={() => setBlockedAlert(null)}
+            className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+              <path
+                d="M4 4L12 12M12 4L4 12"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+              />
+            </svg>
+          </button>
         </div>
       )}
 
@@ -656,9 +892,9 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                       {contact.email ?? <span className="text-neutral-400 italic">none</span>}
                     </td>
 
-                    {/* Type */}
+                    {/* Type — stacked chips in canonical order */}
                     <td className="px-4 py-3">
-                      <TypeBadge type={contact.type} />
+                      <TypeBadgeList types={contact.types} />
                     </td>
 
                     {/* Company */}

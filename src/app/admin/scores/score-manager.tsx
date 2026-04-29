@@ -19,34 +19,34 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { Plus, Upload, Trash2 } from "lucide-react";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { importScoresFromCSV, deleteAllScores } from "./actions";
-import { ScoreDrawer } from "./score-drawer";
+import { ScoreModal } from "./score-modal";
 import type { Score } from "@/types/database";
+import type { TeamDropdownOption } from "./actions";
 
 interface ScoreManagerProps {
   scores: Score[];
+  teams?: TeamDropdownOption[];
 }
 
-type DrawerState = {
+type ModalState = {
   open: boolean;
   mode: "create" | "edit";
   score: Score | null;
 };
 
-export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
+export function ScoreManager({ scores: initialScores, teams = [] }: ScoreManagerProps) {
   const router = useRouter();
   const [scores, setScores] = useState<Score[]>(initialScores);
   const [showCSV, setShowCSV] = useState(false);
   const [csvText, setCsvText] = useState("");
   const [loading, setLoading] = useState(false);
   const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
-  const [drawer, setDrawer] = useState<DrawerState>({
+  const [modal, setModal] = useState<ModalState>({
     open: false,
     mode: "create",
     score: null,
   });
 
-  // Re-fetch is handled by revalidatePath server-side; we close drawer + refresh
-  // via router.refresh() so Next.js RSC re-fetches in place without a full reload.
   function handleSuccess() {
     router.refresh();
   }
@@ -87,13 +87,19 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
     }
   }
 
+  function getTeamDisplay(score: Score): string {
+    if (!score.team_id) return "(no team)";
+    const match = teams.find((t) => t.team_id === score.team_id);
+    return match?.captain_display_name ?? "(no team)";
+  }
+
   return (
     <div className="space-y-6">
       {/* Actions */}
       <div className="flex flex-wrap gap-3">
         <Button
           size="sm"
-          onClick={() => setDrawer({ open: true, mode: "create", score: null })}
+          onClick={() => setModal({ open: true, mode: "create", score: null })}
         >
           <Plus className="mr-1 h-4 w-4" />
           Add Score
@@ -125,12 +131,11 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
           <CardContent className="p-8 text-center">
             <p className="mb-4 text-sm font-medium text-foreground">Import from CSV</p>
             <p className="mb-4 text-sm text-muted-foreground">
-              Paste CSV data with columns: <code>team</code>,{" "}
-              <code>score</code>, and optionally <code>session</code>.
+              Paste CSV data with columns: <code>score</code>, and optionally <code>session</code>.
             </p>
             <Textarea
               rows={8}
-              placeholder={`team,score,session\nThe Eagles,72,morning\nBirdie Kings,68,afternoon`}
+              placeholder={`score,session\n72,morning\n68,afternoon`}
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
               className="mb-4"
@@ -179,13 +184,13 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
                 <TableRow
                   key={score.id}
                   className="cursor-pointer hover:bg-neutral-50/50 transition-colors duration-100"
-                  onClick={() => setDrawer({ open: true, mode: "edit", score })}
+                  onClick={() => setModal({ open: true, mode: "edit", score })}
                 >
                   <TableCell className="font-mono tabular-nums lining-nums text-muted-foreground">
                     {i + 1}
                   </TableCell>
                   <TableCell className="font-medium">
-                    {score.team_name}
+                    {getTeamDisplay(score)}
                   </TableCell>
                   <TableCell>
                     {score.session ? (
@@ -213,11 +218,12 @@ export function ScoreManager({ scores: initialScores }: ScoreManagerProps) {
         </Table>
       </div>
 
-      <ScoreDrawer
-        open={drawer.open}
-        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
-        mode={drawer.mode}
-        score={drawer.score}
+      <ScoreModal
+        open={modal.open}
+        onOpenChange={(open) => setModal((m) => ({ ...m, open }))}
+        mode={modal.mode}
+        score={modal.score}
+        teams={teams}
         onSuccess={handleSuccess}
       />
 

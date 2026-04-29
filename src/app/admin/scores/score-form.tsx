@@ -12,15 +12,17 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { Score } from "@/types/database";
+import type { TeamDropdownOption } from "./actions";
 
 export interface ScoreFormValues {
-  team_name: string;
+  team_id: string | null;
   total_score: number;
   session: "morning" | "afternoon" | null;
 }
 
 interface ScoreFormProps {
   defaultValues?: Score;
+  teams: TeamDropdownOption[];
   onSubmit: (values: ScoreFormValues) => Promise<void>;
   onCancel: () => void;
   loading?: boolean;
@@ -28,22 +30,21 @@ interface ScoreFormProps {
 
 export function ScoreForm({
   defaultValues,
+  teams,
   onSubmit,
   onCancel,
   loading = false,
 }: ScoreFormProps) {
-  const [teamName, setTeamName] = useState(defaultValues?.team_name ?? "");
+  const [teamId, setTeamId] = useState<string>(defaultValues?.team_id ?? "");
   const [totalScore, setTotalScore] = useState(
     defaultValues?.total_score != null ? String(defaultValues.total_score) : ""
   );
-  // Store session as "" (N/A), "morning", or "afternoon"
   const [session, setSession] = useState<string>(defaultValues?.session ?? "");
 
-  const [errors, setErrors] = useState<{ teamName?: string; totalScore?: string }>({});
+  const [errors, setErrors] = useState<{ totalScore?: string }>({});
 
   function validate(): boolean {
     const next: typeof errors = {};
-    if (!teamName.trim()) next.teamName = "Team name is required";
     const parsed = parseInt(totalScore, 10);
     if (totalScore.trim() === "" || isNaN(parsed)) {
       next.totalScore = "Total score is required";
@@ -60,7 +61,7 @@ export function ScoreForm({
       session === "morning" || session === "afternoon" ? session : null;
 
     await onSubmit({
-      team_name: teamName.trim(),
+      team_id: teamId || null,
       total_score: parseInt(totalScore, 10),
       session: sessionValue,
     });
@@ -69,18 +70,23 @@ export function ScoreForm({
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       <div className="space-y-1.5">
-        <Label htmlFor="sf-team-name">Team Name</Label>
-        <Input
-          id="sf-team-name"
-          value={teamName}
-          onChange={(e) => setTeamName(e.target.value)}
-          placeholder="The Eagles"
-          aria-invalid={!!errors.teamName}
+        <Label htmlFor="sf-team">Team</Label>
+        <Select
+          value={teamId}
+          onValueChange={(v) => setTeamId(v ?? "")}
           disabled={loading}
-        />
-        {errors.teamName && (
-          <p className="text-xs text-destructive">{errors.teamName}</p>
-        )}
+        >
+          <SelectTrigger id="sf-team" className="w-full" aria-label="Select team">
+            <SelectValue placeholder="Select a team" />
+          </SelectTrigger>
+          <SelectContent>
+            {teams.map((team) => (
+              <SelectItem key={team.team_id} value={team.team_id}>
+                {team.captain_display_name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-1.5">
@@ -105,7 +111,6 @@ export function ScoreForm({
           value={session}
           onValueChange={(v) => setSession(v ?? "")}
           disabled={loading}
-          items={{ "": "N/A", morning: "Morning", afternoon: "Afternoon" }}
         >
           <SelectTrigger id="sf-session" className="w-full">
             <SelectValue placeholder="N/A" />

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getScores } from "./actions";
+import { getScores, getActiveTeamsForDropdown } from "./actions";
 import { ScoreManager } from "./score-manager";
 import { AdminPageHeading } from "@/components/admin/admin-page-heading";
 
@@ -8,7 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminScoresPage() {
-  const scores = await getScores();
+  const [scores, teams] = await Promise.all([
+    getScores(),
+    getActiveTeamsForDropdown(),
+  ]);
 
   return (
     <div>
@@ -16,7 +19,7 @@ export default async function AdminScoresPage() {
         title="Scores"
         description="Import CSV scores and manage the leaderboard data."
       />
-      <ScoreManager scores={scores} />
+      <ScoreManager scores={scores} teams={teams} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { ContactList } from "@/app/admin/contacts/contact-list";
 import type { Contact } from "@/types/database";
+import type { TeamFilterOption } from "@/app/admin/contacts/actions";
 
 function makeContact(overrides: Partial<Contact> = {}): Contact {
   return {
@@ -35,7 +36,9 @@ function makeContact(overrides: Partial<Contact> = {}): Contact {
   };
 }
 
-const defaultTeams = [{ id: "team-1", team_name: "Team Alpha" }];
+// Sprint 32: teams no longer have team_name; display = captain_full_name
+// Cast through unknown: TeamFilterOption currently requires team_name; post-migration it won't.
+const defaultTeams = [{ id: "team-1", captain_full_name: "Alpha Captain" }] as unknown as TeamFilterOption[];
 
 describe("ContactList", () => {
   it("renders contact name from first_name + last_name when available", () => {
@@ -204,11 +207,13 @@ describe("ContactList — sprint-30 Select items prop (#261 follow-up)", () => {
     expect(triggers[2].textContent).not.toBe("all");
   });
 
-  it("Team filter trigger displays team name (not UUID) when a UUID-id team is provided", () => {
+  it("Team filter trigger displays captain name (not UUID) when a UUID-id team is provided (Sprint 32)", () => {
+    // Sprint 32: team display is captain_full_name, not team_name
+    // Cast through unknown: team_name will be dropped from TeamFilterOption post-migration.
     const uuidTeam = {
       id: "1e7bf5bc-1635-4f33-a2e1-e34c8a1b4d1b",
-      team_name: "Davenport Family",
-    };
+      captain_full_name: "Scott Davenport",
+    } as unknown as TeamFilterOption;
     const { container } = render(
       <ContactList contacts={[makeContact()]} teams={[uuidTeam]} />
     );

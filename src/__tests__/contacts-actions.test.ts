@@ -408,11 +408,14 @@ describe("exportContactsCSV", () => {
 // getTeamsForFilter
 // ---------------------------------------------------------------------------
 
-describe("getTeamsForFilter", () => {
-  it("returns list of teams with id and team_name", async () => {
+describe("getTeamsForFilter (Sprint 32 RED — captain-derived display)", () => {
+  it("returns list of teams with id and captain_full_name (not team_name)", async () => {
+    // Sprint 32 RED: getTeamsForFilter must JOIN teams → contacts for captain name.
+    // After Flux updates actions.ts, the returned shape is { id, captain_full_name }.
+    // Today this fails because the action still SELECTs team_name.
     const teamsData = [
-      { id: "team-1", team_name: "Alpha Team" },
-      { id: "team-2", team_name: "Beta Team" },
+      { id: "team-1", captain_contact_id: "c1", contacts: { full_name: "Alice Smith" } },
+      { id: "team-2", captain_contact_id: "c2", contacts: { full_name: "Bob Jones" } },
     ];
 
     const mockOrder = vi.fn().mockResolvedValue({ data: teamsData, error: null });
@@ -424,10 +427,12 @@ describe("getTeamsForFilter", () => {
     const result = await getTeamsForFilter();
 
     expect(mockFrom).toHaveBeenCalledWith("teams");
-    expect(mockSelect).toHaveBeenCalledWith("id, team_name");
-    expect(mockOrder).toHaveBeenCalledWith("team_name", { ascending: true });
+    // Sprint 32: SELECT must NOT include team_name — should include captain join
+    expect(mockSelect).not.toHaveBeenCalledWith("id, team_name");
     expect(result).toHaveLength(2);
-    expect(result[0]).toMatchObject({ id: "team-1", team_name: "Alpha Team" });
+    // Result shape: { id, captain_full_name } — team_name is gone
+    expect(result[0]).not.toMatchObject({ team_name: expect.any(String) });
+    expect(result[0]).toMatchObject({ id: "team-1" });
   });
 
   it("returns empty array when no teams exist", async () => {
@@ -1433,11 +1438,15 @@ describe("Sprint 31 — type-removal guard (updateContact)", () => {
     vi.mocked(adminModule.requireAdmin).mockResolvedValue({ role: "admin" } as ReturnType<typeof adminModule.requireAdmin> extends Promise<infer T> ? T : never);
   });
 
-  it("blocks Player removal when contact is in team_members — returns error with team name", async () => {
+  it("blocks Player removal when contact is in team_members — error references captain name (Sprint 32)", async () => {
     // Scenario: contact was a player (types: ['player']); admin tries to set types: ['donor']
-    // team_members has a row for this contact_id with team name "Team Mulligans"
+    // Sprint 32: The team is identified by its captain's full name (Steve Davenport),
+    // NOT by team_name "Team Mulligans".
+    // The error message must contain the captain's first+last name.
+    // Aria writes the exact wording in Phase 4; we assert the captain name is present.
     const teamMembersResult = {
-      data: [{ contact_id: "c-uuid-1", team: { team_name: "Team Mulligans" } }],
+      // Sprint 32: team JOIN returns captain contact data, not team_name
+      data: [{ contact_id: "c-uuid-1", team: { captain: { full_name: "Steve Davenport" } } }],
       error: null,
     };
 
@@ -1469,8 +1478,14 @@ describe("Sprint 31 — type-removal guard (updateContact)", () => {
     // Must return an error, not { ok: true }
     expect(result).toHaveProperty("error");
     const errMsg = (result as { error: string }).error;
-    // Error must reference the team name
-    expect(errMsg).toMatch(/Team Mulligans/i);
+    // Sprint 32: Error must reference the CAPTAIN'S name (Steve Davenport),
+    // NOT the old team_name string "Team Mulligans".
+    // Aria will write the exact sentence in Phase 4 fixup; we pin the shape:
+    // captain's full name (first + last) must appear in the error.
+    expect(errMsg).toMatch(/Steve/i);
+    expect(errMsg).toMatch(/Davenport/i);
+    // Must NOT reference the old team_name pattern
+    expect(errMsg).not.toMatch(/Team Mulligans/i);
     // Error must mention removing from team first
     expect(errMsg).toMatch(/team|remove/i);
   });
@@ -1719,7 +1734,8 @@ describe("Sprint 31 — bulkRemoveContactType", () => {
         return {
           select: vi.fn().mockReturnValue({
             in: vi.fn().mockResolvedValue({
-              data: [{ contact_id: "id-1", team: { team_name: "Team Eagles" } }],
+              // Sprint 32: team JOIN returns captain name, not team_name
+              data: [{ contact_id: "id-1", team: { captain: { full_name: "Eagle Captain" } } }],
               error: null,
             }),
           }),

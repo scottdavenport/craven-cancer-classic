@@ -93,15 +93,15 @@ import type { Score } from "@/types/database";
 
 const SCORE: Score = {
   id: "score-1",
-  team_name: "Eagles",
+  // team_name omitted — Sprint 32 contract drop; display = team→captain JOIN
   total_score: 72,
   session: "morning",
   year: 2026,
   source: "manual",
   created_at: "2026-01-01T00:00:00Z",
-  team_id: null,
+  team_id: "team-1",
   individual_scores: null,
-};
+} as Score;
 
 function renderManager(scores: Score[] = [SCORE]) {
   return render(<ScoreManager scores={scores} />);

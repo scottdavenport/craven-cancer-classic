@@ -58,7 +58,7 @@ function makeRequest(body: Record<string, unknown>): Request {
 }
 
 const CAPTAIN = {
-  team_name: "Team Birdie",
+  // team_name omitted — Sprint 32 contract drop; captain IS the team identity
   captain_name: "Alice Smith",
   captain_email: "alice@example.com",
   captain_phone: "555-0100",
@@ -318,6 +318,35 @@ describe("S9-4a checkout teammates", () => {
       const { POST } = await import("@/app/api/checkout/route");
       const response = await POST(makeRequest({ ...CAPTAIN }));
 
+      expect(response.status).toBe(200);
+      const json = await response.json();
+      expect(json.url).toContain("stripe.com");
+    });
+  });
+
+  describe("Sprint 32 — payload shape without team_name (RED)", () => {
+    it("RPC is called without p_team_name in the args", async () => {
+      const { POST } = await import("@/app/api/checkout/route");
+
+      await POST(makeRequest({ ...CAPTAIN }));
+
+      expect(mockRpc).toHaveBeenCalledWith("register_team", expect.any(Object));
+      const rpcArg = mockRpc.mock.calls[0][1] as Record<string, unknown>;
+      // Sprint 32: p_team_name must NOT be passed to the RPC
+      expect(rpcArg).not.toHaveProperty("p_team_name");
+    });
+
+    it("request body without team_name still produces a 200 and Stripe URL", async () => {
+      const { POST } = await import("@/app/api/checkout/route");
+      const bodyWithoutTeamName = {
+        captain_name: "Alice Smith",
+        captain_email: "alice@example.com",
+        captain_phone: "555-0100",
+        session: "morning",
+        // team_name intentionally absent
+      };
+
+      const response = await POST(makeRequest(bodyWithoutTeamName));
       expect(response.status).toBe(200);
       const json = await response.json();
       expect(json.url).toContain("stripe.com");

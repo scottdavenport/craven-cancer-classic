@@ -164,10 +164,16 @@ describe("getTrashContacts", () => {
 // getTrashTeams
 // ---------------------------------------------------------------------------
 
-describe("getTrashTeams", () => {
+describe("getTrashTeams (Sprint 32 — captain-derived display)", () => {
   it("happy path — queries raw teams table, filters deleted_at IS NOT NULL, orders desc", async () => {
+    // Sprint 32: deleted team row has no team_name; display = captain JOIN
     const deleted = [
-      { id: "t1", team_name: "Eagles", deleted_at: "2026-04-18T10:00:00Z" },
+      {
+        id: "t1",
+        // team_name omitted — Sprint 32 contract drop
+        captain_contact_id: "c-deleted",
+        deleted_at: "2026-04-18T10:00:00Z",
+      },
     ];
 
     const chain = makeTrashQueryChain({ data: deleted, error: null });
@@ -181,6 +187,8 @@ describe("getTrashTeams", () => {
     expect(chain._mockNot).toHaveBeenCalledWith("deleted_at", "is", null);
     expect(chain._mockOrder).toHaveBeenCalledWith("deleted_at", { ascending: false });
     expect(result).toHaveLength(1);
+    // team_name must not be present in the returned data
+    expect((result[0] as Record<string, unknown>).team_name).toBeUndefined();
   });
 });
 

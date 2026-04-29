@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +24,9 @@ import {
 import type { ContactInput } from "./actions";
 import type { Contact } from "@/types/database";
 
+type ContactType = "player" | "sponsor" | "donor" | "volunteer" | "other";
+type ShirtSize = "S" | "M" | "L" | "XL" | "2XL" | "3XL";
+
 interface ContactFormProps {
   initial?: Contact;
   onSubmit: (input: ContactInput) => Promise<void>;
@@ -36,6 +40,21 @@ const CURRENT_YEAR = new Date().getFullYear();
 const YEAR_OPTIONS = Array.from(
   { length: CURRENT_YEAR + 1 - 2020 + 1 },
   (_, i) => 2020 + i
+);
+
+// Canonical type order — Player → Sponsor → Donor → Volunteer → Other
+const TYPE_ORDER: ContactType[] = ["player", "sponsor", "donor", "volunteer", "other"];
+const TYPE_LABELS: Record<ContactType, string> = {
+  player: "Player",
+  sponsor: "Sponsor",
+  donor: "Donor",
+  volunteer: "Volunteer",
+  other: "Other",
+};
+
+const SHIRT_SIZES: ShirtSize[] = ["S", "M", "L", "XL", "2XL", "3XL"];
+const SHIRT_SIZE_ITEMS: Record<string, string> = Object.fromEntries(
+  SHIRT_SIZES.map((s) => [s, s])
 );
 
 function nullify(v: string): string | null {
@@ -56,9 +75,14 @@ export function ContactForm({
   const [phone, setPhone] = useState(
     initial?.phone ? formatPhoneForDisplay(initial.phone) : ""
   );
-  const [type, setType] = useState<ContactInput["type"]>(
-    (initial?.type as ContactInput["type"]) ?? "player"
+
+  // Sprint 31: types[] replaces single type. Empty array = save-disabled until at least 1 checked.
+  const [types, setTypes] = useState<ContactType[]>(
+    Array.isArray(initial?.types) && initial.types.length > 0
+      ? (initial.types as ContactType[])
+      : []
   );
+
   const [marketingConsent, setMarketingConsent] = useState(
     initial?.marketing_consent ?? false
   );
@@ -72,8 +96,28 @@ export function ContactForm({
   const [zip, setZip] = useState(initial?.zip ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
 
+  // Type-specific fields — preserved in state even when type is unchecked (decision #10)
+  const [handicap, setHandicap] = useState(
+    initial?.handicap != null ? String(initial.handicap) : ""
+  );
+  const [shirtSize, setShirtSize] = useState<ShirtSize | "">(
+    (initial?.shirt_size as ShirtSize) ?? ""
+  );
+  const [showOnWall, setShowOnWall] = useState(
+    initial?.show_on_wall ?? true
+  );
+  const [recognitionName, setRecognitionName] = useState(
+    initial?.recognition_name ?? ""
+  );
+
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
+
+  // Derived visibility flags
+  const isPlayer = types.includes("player");
+  const isVolunteer = types.includes("volunteer");
+  const isDonor = types.includes("donor");
+  const showShirtSize = isPlayer || isVolunteer;
 
   function setFieldError(field: string, msg: string | null) {
     setErrors((prev) => {
@@ -85,6 +129,12 @@ export function ContactForm({
       }
       return next;
     });
+  }
+
+  function toggleType(type: ContactType) {
+    setTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
   }
 
   function validateEmail(val: string): boolean {
@@ -131,20 +181,36 @@ export function ContactForm({
     return true;
   }
 
-  // For the Submit button's disabled state (renders each cycle with latest errors state)
+  function validateHandicap(val: string): boolean {
+    if (val.trim() === "") {
+      setFieldError("handicap", null);
+      return true;
+    }
+    const n = Number(val);
+    if (!Number.isInteger(n) || n < 0 || n > 54) {
+      setFieldError("handicap", "Handicap must be a whole number from 0 to 54");
+      return false;
+    }
+    setFieldError("handicap", null);
+    return true;
+  }
+
   const hasErrors = Object.keys(errors).length > 0;
+  const noTypesChecked = types.length === 0;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
-    // Re-run all validations before submit; check return values synchronously.
-    // Don't rely on `errors` state — React batches setState so the latest
-    // setFieldError calls won't be reflected in `errors` during this handler.
     const emailOk = validateEmail(email);
     const phoneOk = validatePhone(phone);
     const zipOk = validateZip(zip);
     const identityOk = validateIdentity();
-    if (!emailOk || !phoneOk || !zipOk || !identityOk) return;
+    const handicapOk = isPlayer ? validateHandicap(handicap) : true;
+    if (!emailOk || !phoneOk || !zipOk || !identityOk || !handicapOk) return;
+
+    // Build handicap value: null if blank, integer if provided
+    const handicapValue =
+      handicap.trim() === "" ? null : Number(handicap);
 
     const input: ContactInput = {
       salutation: nullify(salutation),
@@ -153,7 +219,7 @@ export function ContactForm({
       company: nullify(company),
       email: nullify(email),
       phone: nullify(phone),
-      type,
+      types,
       address1: nullify(address1),
       address2: nullify(address2),
       city: nullify(city),
@@ -162,6 +228,11 @@ export function ContactForm({
       marketing_consent: marketingConsent,
       notes: nullify(notes),
       year_first_seen: Number(yearFirstSeen),
+      // Type-specific fields are always sent — server preserves them regardless of types array
+      handicap: handicapValue,
+      shirt_size: shirtSize || null,
+      show_on_wall: showOnWall,
+      recognition_name: nullify(recognitionName),
     };
 
     setSubmitting(true);
@@ -265,49 +336,163 @@ export function ContactForm({
         </div>
       </div>
 
+      {/* Types */}
+      <div className="space-y-3">
+        <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          Types
+        </h3>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          {TYPE_ORDER.map((type) => (
+            <div key={type} className="flex items-center gap-2">
+              <Checkbox
+                id={`cf-type-${type}`}
+                checked={types.includes(type)}
+                onCheckedChange={() => toggleType(type)}
+              />
+              <Label htmlFor={`cf-type-${type}`} className="cursor-pointer font-normal">
+                {TYPE_LABELS[type]}
+              </Label>
+            </div>
+          ))}
+        </div>
+
+        {/* Player section — Handicap (Player only) + Shirt Size (Player OR Volunteer) */}
+        {isPlayer && (
+          <div className="ml-1 mt-2 space-y-3 border-l-2 border-border/40 pl-4">
+            <h4 className="text-xs font-medium text-muted-foreground">Player</h4>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="cf-handicap">Handicap</Label>
+                <Input
+                  id="cf-handicap"
+                  type="number"
+                  min={0}
+                  max={54}
+                  step={1}
+                  value={handicap}
+                  onChange={(e) => {
+                    setHandicap(e.target.value);
+                    setFieldError("handicap", null);
+                  }}
+                  onBlur={(e) => validateHandicap(e.target.value)}
+                  placeholder="0–54"
+                  aria-invalid={!!errors.handicap}
+                />
+                {errors.handicap && (
+                  <p className="text-xs text-destructive">{errors.handicap}</p>
+                )}
+              </div>
+              {/* Shirt Size rendered here only when Player is checked AND Volunteer is NOT checked */}
+              {!isVolunteer && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="cf-shirt-size">Shirt Size</Label>
+                  <Select
+                    value={shirtSize}
+                    onValueChange={(v) => setShirtSize((v as ShirtSize) || "")}
+                    items={SHIRT_SIZE_ITEMS}
+                  >
+                    <SelectTrigger id="cf-shirt-size" data-testid="shirt-size-select" aria-label="Shirt Size">
+                      <SelectValue placeholder="Select size" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SHIRT_SIZES.map((s) => (
+                        <SelectItem key={s} value={s}>
+                          {s}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Shared Shirt Size — rendered once when Player+Volunteer are BOTH checked, or Volunteer alone */}
+        {showShirtSize && !(isPlayer && !isVolunteer) && (
+          <div className="ml-1 mt-2 space-y-3 border-l-2 border-border/40 pl-4">
+            {isVolunteer && !isPlayer && (
+              <h4 className="text-xs font-medium text-muted-foreground">Volunteer</h4>
+            )}
+            {isPlayer && isVolunteer && (
+              <h4 className="text-xs font-medium text-muted-foreground">Player &amp; Volunteer</h4>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-shirt-size">Shirt Size</Label>
+              <Select
+                value={shirtSize}
+                onValueChange={(v) => setShirtSize((v as ShirtSize) || "")}
+                items={SHIRT_SIZE_ITEMS}
+              >
+                <SelectTrigger id="cf-shirt-size" data-testid="shirt-size-select" aria-label="Shirt Size">
+                  <SelectValue placeholder="Select size" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SHIRT_SIZES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        )}
+
+        {/* Donor section */}
+        {isDonor && (
+          <div className="ml-1 mt-2 space-y-3 border-l-2 border-border/40 pl-4">
+            <h4 className="text-xs font-medium text-muted-foreground">Donor</h4>
+            <div className="flex items-center gap-2">
+              <Switch
+                id="cf-show-on-wall"
+                checked={showOnWall}
+                onCheckedChange={setShowOnWall}
+              />
+              <Label htmlFor="cf-show-on-wall" className="cursor-pointer">
+                Show name on tribute wall
+              </Label>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="cf-recognition-name">Recognition Name</Label>
+              <Input
+                id="cf-recognition-name"
+                value={recognitionName}
+                onChange={(e) => setRecognitionName(e.target.value)}
+                placeholder="e.g. The Smith Family"
+                aria-label="Recognition Name"
+              />
+              <p className="text-xs text-muted-foreground">
+                Shown on the tribute wall. Leave blank to use full name.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Classification */}
       <div className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
           Classification
         </h3>
-        <div className="grid grid-cols-2 gap-3">
-          <div className="space-y-1.5 col-span-2 sm:col-span-1">
-            <Label>Type</Label>
-            <Select
-              value={type}
-              onValueChange={(v) => setType(v as ContactInput["type"])}
-              items={{ player: "Player", sponsor: "Sponsor", donor: "Donor", other: "Other" }}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="player">Player</SelectItem>
-                <SelectItem value="sponsor">Sponsor</SelectItem>
-                <SelectItem value="donor">Donor</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5 col-span-2 sm:col-span-1">
-            <Label>Year First Seen</Label>
-            <Select
-              value={yearFirstSeen}
-              onValueChange={(v) => setYearFirstSeen(v ?? String(CURRENT_YEAR))}
-              items={Object.fromEntries(YEAR_OPTIONS.map((y) => [String(y), String(y)]))}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {YEAR_OPTIONS.map((y) => (
-                  <SelectItem key={y} value={String(y)}>
-                    {y}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="space-y-1.5">
+          <Label>Year First Seen</Label>
+          <Select
+            value={yearFirstSeen}
+            onValueChange={(v) => setYearFirstSeen(v ?? String(CURRENT_YEAR))}
+            items={Object.fromEntries(YEAR_OPTIONS.map((y) => [String(y), String(y)]))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {YEAR_OPTIONS.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="flex items-center gap-2">
           <Switch
@@ -397,7 +582,7 @@ export function ContactForm({
 
       {/* Actions */}
       <div className="flex gap-2 pt-2">
-        <Button type="submit" disabled={submitting || hasErrors}>
+        <Button type="submit" disabled={submitting || hasErrors || noTypesChecked}>
           {submitting ? "Saving..." : submitLabel}
         </Button>
         <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>

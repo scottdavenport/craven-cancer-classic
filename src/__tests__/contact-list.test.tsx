@@ -13,7 +13,7 @@ function makeContact(overrides: Partial<Contact> = {}): Contact {
     salutation: null,
     email: "john@example.com",
     phone: null,
-    type: "player",
+    types: ["player"],
     company: null,
     address1: null,
     address2: null,
@@ -24,6 +24,10 @@ function makeContact(overrides: Partial<Contact> = {}): Contact {
     source: null,
     year_first_seen: 2026,
     notes: null,
+    handicap: null,
+    shirt_size: null,
+    show_on_wall: false,
+    recognition_name: null,
     created_at: new Date().toISOString(),
     deleted_at: null,
     deleted_by: null,
@@ -73,8 +77,8 @@ describe("ContactList", () => {
   it("filters contacts by type when user selects a type", async () => {
     const user = userEvent.setup();
     const contacts = [
-      makeContact({ id: "1", full_name: "Alice", first_name: "Alice", last_name: null, type: "player" }),
-      makeContact({ id: "2", full_name: "Bob Corp", first_name: null, last_name: null, type: "sponsor" }),
+      makeContact({ id: "1", full_name: "Alice", first_name: "Alice", last_name: null, types: ["player"] }),
+      makeContact({ id: "2", full_name: "Bob Corp", first_name: null, last_name: null, types: ["sponsor"] }),
     ];
     render(<ContactList contacts={contacts} teams={[]} />);
 

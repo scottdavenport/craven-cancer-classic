@@ -81,7 +81,7 @@ function makeContactRow(overrides: Record<string, unknown> = {}) {
     salutation: null,
     email: "john@example.com",
     phone: null,
-    type: "player",
+    types: ["player"],
     company: null,
     address1: null,
     address2: null,
@@ -465,7 +465,7 @@ function makeValidInput(overrides: Record<string, unknown> = {}) {
     company: null,
     email: "jane@example.com",
     phone: null,
-    type: "player" as const,
+    types: ["player"] as ["player"],
     address1: null,
     address2: null,
     city: null,
@@ -660,7 +660,7 @@ describe("updateContact (S10-2)", () => {
         from: vi.fn().mockReturnValue(makeUpdateChain({ data: null, error: null })),
       });
 
-      const result = await updateContact("contact-uuid", { type: "sponsor" });
+      const result = await updateContact("contact-uuid", { types: ["sponsor"] });
 
       expect(result).toEqual({ ok: true });
     });
@@ -702,7 +702,7 @@ describe("updateContact (S10-2)", () => {
       vi.mocked(adminModule.requireAdmin).mockRejectedValue(new Error("Unauthorized"));
       setClient({ from: vi.fn() });
 
-      await expect(updateContact("contact-uuid", { type: "donor" })).rejects.toThrow("Unauthorized");
+      await expect(updateContact("contact-uuid", { types: ["donor"] })).rejects.toThrow("Unauthorized");
     });
   });
 });
@@ -938,11 +938,11 @@ describe("bulkUpdateContacts (S10-4)", () => {
       setClient(client);
 
       const ids = ["id-1", "id-2", "id-3"];
-      const result = await bulkUpdateContacts(ids, { type: "donor" });
+      const result = await bulkUpdateContacts(ids, { marketing_consent: true });
 
       expect(result).toEqual({ updated: 3 });
       expect(mockFrom).toHaveBeenCalledWith("contacts");
-      expect(mockUpdate).toHaveBeenCalledWith({ type: "donor" });
+      expect(mockUpdate).toHaveBeenCalledWith({ marketing_consent: true });
       expect(mockIn).toHaveBeenCalledWith("id", ids);
     });
 
@@ -964,7 +964,7 @@ describe("bulkUpdateContacts (S10-4)", () => {
       const { client, mockFrom } = makeBulkUpdateClient();
       setClient(client);
 
-      const result = await bulkUpdateContacts([], { type: "donor" });
+      const result = await bulkUpdateContacts([], { marketing_consent: false });
 
       expect(result).toEqual({ updated: 0 });
       expect(mockFrom).not.toHaveBeenCalled();
@@ -977,7 +977,7 @@ describe("bulkUpdateContacts (S10-4)", () => {
       setClient(client);
 
       const ids = Array.from({ length: 501 }, (_, i) => `id-${i}`);
-      const result = await bulkUpdateContacts(ids, { type: "donor" });
+      const result = await bulkUpdateContacts(ids, { marketing_consent: true });
 
       expect(result).toMatchObject({ error: expect.stringMatching(/too many/i) });
       expect(mockFrom).not.toHaveBeenCalled();
@@ -1001,7 +1001,7 @@ describe("bulkUpdateContacts (S10-4)", () => {
       const { client } = makeBulkUpdateClient({ error: { message: "bulk update failed" } });
       setClient(client);
 
-      const result = await bulkUpdateContacts(["id-1"], { type: "other" });
+      const result = await bulkUpdateContacts(["id-1"], { marketing_consent: false });
 
       expect(result).toMatchObject({ error: "bulk update failed" });
     });
@@ -1013,7 +1013,7 @@ describe("bulkUpdateContacts (S10-4)", () => {
       const { client } = makeBulkUpdateClient();
       setClient(client);
 
-      await expect(bulkUpdateContacts(["id-1"], { type: "donor" })).rejects.toThrow("Unauthorized");
+      await expect(bulkUpdateContacts(["id-1"], { marketing_consent: true })).rejects.toThrow("Unauthorized");
     });
   });
 });

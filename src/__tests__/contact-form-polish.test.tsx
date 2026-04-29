@@ -45,7 +45,7 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
               salutation: null,
               email: null,
               phone: null,
-              type: "player",
+              types: ["player"],
               company: null,
               address1: null,
               address2: null,
@@ -108,51 +108,11 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
   });
 
   // Sprint 29 — #178: base-ui Select items prop
-  // Regression guard: trigger must show human label, not raw enum value.
-  describe("Select items prop — trigger displays label not raw value (#178)", () => {
-    it("Type select trigger displays 'Sponsor' (capitalized) when type=sponsor", () => {
-      const { container } = render(
-        <ContactForm
-          initial={
-            {
-              id: "c-2",
-              full_name: "Jane Sponsor",
-              first_name: "Jane",
-              last_name: "Sponsor",
-              salutation: null,
-              email: null,
-              phone: null,
-              type: "sponsor",
-              company: null,
-              address1: null,
-              address2: null,
-              city: null,
-              state: null,
-              zip: null,
-              marketing_consent: false,
-              source: null,
-              year_first_seen: 2026,
-              notes: null,
-              created_at: new Date().toISOString(),
-              deleted_at: null,
-              deleted_by: null,
-            } as import("@/types/database").Contact
-          }
-          onSubmit={noop}
-          onCancel={noop}
-        />
-      );
-
-      // The Classification section has two SelectTriggers: Type first, Year First Seen second.
-      const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
-      expect(triggers.length).toBeGreaterThanOrEqual(1);
-      const typeTrigger = triggers[0];
-
-      // With items prop: SelectValue renders "Sponsor" (the label), not "sponsor" (the raw value).
-      expect(typeTrigger.textContent).toContain("Sponsor");
-      expect(typeTrigger.textContent).not.toBe("sponsor");
-    });
-
+  // Regression guard: Year First Seen trigger must show year label, not raw value.
+  // Sprint 31: "Type select trigger displays 'Sponsor'" RETIRED — the single-type Select
+  // dropdown was replaced with 5 multi-type checkboxes in Sprint 31 PR #268. No Type
+  // select trigger exists to assert on.
+  describe("Select items prop — Year First Seen trigger (#178)", () => {
     it("Year First Seen trigger displays the year string when year_first_seen=2024", () => {
       const { container } = render(
         <ContactForm
@@ -165,7 +125,7 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
               salutation: null,
               email: null,
               phone: null,
-              type: "player",
+              types: ["player"],
               company: null,
               address1: null,
               address2: null,
@@ -186,10 +146,12 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
         />
       );
 
-      // Year First Seen is the second SelectTrigger in the Classification section.
+      // Year First Seen is in the Classification section and is always the last SelectTrigger
+      // in the form (after any type-specific selects like Shirt Size). Using the last trigger
+      // is more durable than a fixed index now that the former Type select at index 0 is gone.
       const triggers = container.querySelectorAll('[data-slot="select-trigger"]');
-      expect(triggers.length).toBeGreaterThanOrEqual(2);
-      const yearTrigger = triggers[1];
+      expect(triggers.length).toBeGreaterThanOrEqual(1);
+      const yearTrigger = triggers[triggers.length - 1];
 
       // With items prop: SelectValue renders the year label string "2024".
       expect(yearTrigger.textContent).toContain("2024");

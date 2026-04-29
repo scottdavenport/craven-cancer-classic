@@ -220,7 +220,7 @@ describe("updateContact — generic DB error", () => {
     const updateChain = makeUpdateChain({ error: { message: "write failed" } });
     setClient({ from: vi.fn().mockReturnValue(updateChain) });
 
-    const result = await updateContact("contact-uuid", { type: "donor" });
+    const result = await updateContact("contact-uuid", { types: ["donor"] });
 
     expect(result).toMatchObject({ error: "write failed" });
   });

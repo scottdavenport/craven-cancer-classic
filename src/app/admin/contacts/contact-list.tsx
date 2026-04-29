@@ -51,13 +51,11 @@ const CANONICAL_TYPE_ORDER: ContactType[] = [
   "other",
 ];
 
-// Amber path: no amber design token found in globals.css or ui components.
-// Falling back to raw Tailwind: bg-amber-100 text-amber-800.
 const TYPE_BADGE_CLASSES: Record<string, string> = {
   player: "bg-brand-muted text-brand",
   sponsor: "bg-purple-muted text-purple",
   donor: "bg-success-muted text-success",
-  volunteer: "bg-amber-100 text-amber-800",
+  volunteer: "bg-warning-muted text-warning",
   other: "bg-neutral-100 text-neutral-600",
 };
 

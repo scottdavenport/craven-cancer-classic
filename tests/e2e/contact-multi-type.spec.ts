@@ -348,10 +348,13 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     const volunteerChip = contactRow.getByText(/volunteer/i);
     await expect(volunteerChip).toBeVisible();
 
-    // Amendment #12: Volunteer chip color = amber (design-token or raw Tailwind).
+    // Amendment #12: Volunteer chip uses the amber/warning design token.
     // Pin the contract so a builder can't ship `bg-pink-100` and pass.
+    // Project convention (per feedback_bolt_no_inline_dups): use the canonical
+    // `bg-warning-muted text-warning` design token; raw Tailwind `bg-amber-*`
+    // is a fallback only when no token exists.
     const chipClassName = await volunteerChip.evaluate((el) => el.className);
-    expect(chipClassName).toMatch(/amber/i);
+    expect(chipClassName).toMatch(/warning|amber/i);
 
     // Re-open and verify Volunteer checkbox is still checked
     await contactRow.click();

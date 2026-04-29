@@ -144,7 +144,7 @@ Document findings in the migration PR body so Watchdog can verify against curren
 
 ### Cross-repo grep (run 2026-04-29)
 
-44 files in `src/` + `supabase/` reference `team_name`. Full enumeration in the next section.
+43 files in `src/` + `supabase/` reference `team_name`. Full enumeration in the next section.
 
 ### Schema migration
 
@@ -241,6 +241,10 @@ Spec writes the failing tests first. Contract changes mean assertions update —
 - `trash-table-extraction.test.tsx` — verify still green.
 - `trash-tabs-polish.test.tsx` — verify still green.
 - `admin-destructive-copy-234.test.tsx` — verify still green (delete-confirm copy).
+- `contact-list.test.tsx` — fixtures (lines 38, 210) reference `team_name`; update to drop the field.
+- `(public)/leaderboard/__tests__/leaderboard-prospect-capture.test.tsx` — type + fixtures (lines 56, 73–74) reference `team_name`; update for captain-derived display.
+- `admin/scores/__tests__/score-manager.test.tsx` — fixture (line 96) references `team_name`; update for team→captain JOIN display.
+- `admin/teams/__tests__/team-list.test.tsx` — fixture (line 70) references `team_name`; update for captain-derived display.
 
 **E2E:**
 - `tests/e2e/team-create-edit.spec.ts` (new or rename existing) — open admin teams, click Add Team, confirm centered modal, fill captain, save, confirm row displays captain name.
@@ -278,7 +282,7 @@ Coverage target: 50%+ on changed files.
 - `src/app/(public)/register/registration-form.tsx`
 - `src/app/api/checkout/route.ts`
 - `src/types/database.ts` (auto-regen)
-- 19 test files listed above
+- 23 test files listed above
 
 **Delete:**
 - `src/app/admin/teams/team-drawer.tsx`
@@ -291,7 +295,7 @@ Coverage target: 50%+ on changed files.
 ### Pattern conventions baked in (no memory rule changes needed)
 
 - Per `feedback_drawer_edit_pattern`: centered modal is the standard, drawer is retired. This sprint migrates teams + scores. Sponsors and registrations continue to ride on the "next touched" rule.
-- Per `feedback_migration_cross_repo_grep`: cross-repo grep done at brainstorm time (44 files). Compass enumerates all 44 in tickets — no implicit out-of-scope assumptions.
+- Per `feedback_migration_cross_repo_grep`: cross-repo grep done at brainstorm time (43 files). Compass enumerates all 43 in tickets — no implicit out-of-scope assumptions.
 - Per `feedback_verify_against_prod_not_source`: Phase 1 pre-flight runs against prod before migration is written.
 - Per `feedback_admin_action_require_admin`: every server action touched in this sprint calls `await requireAdmin()` first.
 - Per `feedback_base_ui_select_items`: score-form team picker passes `items` prop on `<Select.Root>`.

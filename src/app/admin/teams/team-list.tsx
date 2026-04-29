@@ -152,7 +152,7 @@ export function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: Delete
   const isPaid = team.payment_status === "paid" && team.amount_paid_cents > 0;
   const hasScores = scoreCount !== null && scoreCount > 0;
   const requiresTypeConfirm = isPaid;
-  const deleteEnabled = !requiresTypeConfirm || confirmText === team.team_name;
+  const deleteEnabled = !requiresTypeConfirm || confirmText === team.captain_display_name;
 
   const captainMember = team.members.find((m) => m.role === "captain");
   const captainName = captainMember
@@ -196,7 +196,7 @@ export function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: Delete
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-destructive">
-            Delete team &ldquo;{team.team_name}&rdquo;?
+            Delete team &ldquo;{team.captain_display_name}&rdquo;?
           </DialogTitle>
         </DialogHeader>
 
@@ -242,7 +242,7 @@ export function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: Delete
                 id={`delete-confirm-${team.id}`}
                 value={confirmText}
                 onChange={(e) => setConfirmText(e.target.value)}
-                placeholder={team.team_name}
+                placeholder={team.captain_display_name}
                 autoComplete="off"
               />
             </div>
@@ -375,7 +375,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
                     {/* Team Name */}
                     <TableCell className="px-4 py-3">
                       <span className="text-[0.8125rem] font-medium text-foreground">
-                        {team.team_name}
+                        {team.captain_display_name}
                       </span>
                     </TableCell>
 

@@ -43,7 +43,7 @@ vi.mock("sonner", () => ({
 // ---------------------------------------------------------------------------
 import { TrashTabs } from "@/app/admin/trash/trash-tabs";
 import type { Contact, Team, Sponsor, SponsorshipItem, Photo } from "@/types/database";
-import type { WithDeletedByName } from "@/app/admin/trash/actions";
+import type { WithDeletedByName, TrashTeam } from "@/app/admin/trash/actions";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -81,9 +81,10 @@ function makeContact(overrides: Partial<WithDeletedByName<Contact>> = {}): WithD
   };
 }
 
-function makeTeam(overrides: Partial<WithDeletedByName<Team>> = {}): WithDeletedByName<Team> {
+function makeTeam(overrides: Partial<TrashTeam> = {}): TrashTeam {
   return {
     id: "t-1",
+    captain_display_name: "(unknown captain)",
     captain_contact_id: null,
     session: "morning",
     year: 2026,

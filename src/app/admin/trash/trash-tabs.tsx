@@ -14,7 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import type { Contact, Team, Sponsor, SponsorshipItem, Photo } from "@/types/database";
-import type { WithDeletedByName } from "./actions";
+import type { WithDeletedByName, TrashTeam } from "./actions";
 import {
   restoreContact,
   restoreTeam,
@@ -25,7 +25,7 @@ import {
 
 interface TrashTabsProps {
   contacts: WithDeletedByName<Contact>[];
-  teams: WithDeletedByName<Team>[];
+  teams: TrashTeam[];
   sponsors: WithDeletedByName<Sponsor>[];
   sponsorshipItems: WithDeletedByName<SponsorshipItem>[];
   photos: WithDeletedByName<Photo>[];
@@ -141,7 +141,7 @@ function ContactsTab({ initial }: { initial: WithDeletedByName<Contact>[] }) {
   );
 }
 
-function TeamsTab({ initial }: { initial: WithDeletedByName<Team>[] }) {
+function TeamsTab({ initial }: { initial: TrashTeam[] }) {
   const [rows, setRows] = useState(initial);
 
   async function handleRestore(id: string) {
@@ -159,7 +159,7 @@ function TeamsTab({ initial }: { initial: WithDeletedByName<Team>[] }) {
   return (
     <TrashTable
       rows={rows}
-      columns={{ header: "Team Name", renderName: (row) => row.team_name || "—" }}
+      columns={{ header: "Team Name", renderName: (row) => row.captain_display_name || "(unknown captain)" }}
       onRestore={handleRestore}
     />
   );

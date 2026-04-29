@@ -27,6 +27,7 @@ CREATE OR REPLACE FUNCTION public.register_team(
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
+SET search_path = ''
 AS $$
 declare
   v_cap           int;
@@ -103,6 +104,9 @@ begin
   );
 end;
 $$;
+
+-- Preserve grants per precedent (20260424000001_update_register_team_rpc.sql)
+GRANT EXECUTE ON FUNCTION public.register_team(text, text, text, text) TO anon, authenticated;
 
 -- Step 4: Drop team_name column from teams
 ALTER TABLE public.teams DROP COLUMN team_name;

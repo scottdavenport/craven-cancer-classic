@@ -123,7 +123,7 @@ export async function commitImport(rows: CommitRow[]): Promise<ImportResult> {
     zip: row.zip,
     email: row.email ?? null,
     full_name: row.full_name,
-    type: row.type,
+    types: [row.type],
     source: "mailing_list_import_2026",
     marketing_consent: true,
     year_first_seen: 2026,

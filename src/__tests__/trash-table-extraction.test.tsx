@@ -68,7 +68,6 @@ function makeContact(overrides: Partial<WithDeletedByName<Contact>> = {}): WithD
 function makeTeam(overrides: Partial<WithDeletedByName<Team>> = {}): WithDeletedByName<Team> {
   return {
     id: "team-1",
-    team_name: "Eagle Squad",
     session: "morning",
     payment_status: "pending",
     amount_paid_cents: 0,
@@ -224,7 +223,7 @@ describe("TrashTabs — TrashTable component extraction (issue 3)", () => {
     render(
       <TrashTabs
         {...emptyProps}
-        teams={[makeTeam({ team_name: "Eagle Squad" })]}
+        teams={[makeTeam()]}
       />
     );
     fireEvent.click(screen.getByRole("tab", { name: /teams/i }));

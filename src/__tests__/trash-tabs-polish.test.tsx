@@ -84,7 +84,6 @@ function makeContact(overrides: Partial<WithDeletedByName<Contact>> = {}): WithD
 function makeTeam(overrides: Partial<WithDeletedByName<Team>> = {}): WithDeletedByName<Team> {
   return {
     id: "t-1",
-    team_name: "The Eagles",
     captain_contact_id: null,
     session: "morning",
     year: 2026,

@@ -58,13 +58,9 @@ describe("database types", () => {
   });
 
   it("Team type enforces session values", () => {
-    // Sprint 32 NOTE: After migration, team_name is dropped from the Team type.
-    // Until database.ts is regenerated, the Team type still includes team_name.
-    // The team_name is passed here to satisfy current type (pre-migration).
-    // The Sprint 32 RED assertion below separately verifies the drop.
+    // Sprint 32: team_name dropped from the Team type after migration.
     const team: Team = {
       id: "uuid",
-      team_name: "The Hackers", // to be removed post-migration
       captain_contact_id: null,
       session: "morning",
       payment_status: "pending",
@@ -148,7 +144,6 @@ describe("database types", () => {
     // It passes after Flux runs the migration and types are regenerated.
     type TeamInsert = Database["public"]["Tables"]["teams"]["Insert"];
     // Post-migration: team_name is NOT a required field; session is the only required field.
-    // @ts-expect-error Sprint 32: team_name currently required in DB types; will be optional post-migration
     const insert: TeamInsert = {
       session: "afternoon",
       // team_name must NOT be required — if it is, this will cause a TS error post-regen

@@ -81,7 +81,7 @@ export async function getTrashTeams(): Promise<TrashTeam[]> {
   const nameMap = await resolveDeletedByNames(supabase, rows);
   return rows.map((row) => ({
     ...row,
-    captain_display_name: row.captain?.full_name ?? "(unknown captain)",
+    captain_display_name: row.captain?.full_name ?? "(no captain)",
     deleted_by_name: row.deleted_by ? (nameMap.get(row.deleted_by) ?? null) : null,
   }));
 }

@@ -8,6 +8,8 @@ Today, registering a team makes you type a "Team Name" field. Some captains call
 
 This sprint also retires two more side drawers (team form, score form) in favor of the centered-modal pattern Sprint 31 established for contacts. Admin UX becomes consistent across the three big tables.
 
+> **Plan amendment 2026-04-29 (after merge, before builders).** Pre-flight against prod corrected the RPC count from 3 to 1. Only `register_team` exists in production with a `p_team_name` parameter. The plan was originally inferred from migration filenames (`20260419000006_register_team_rpc.sql`, `20260424000001_update_register_team_rpc.sql`, `20260421000002_payments_cents.sql`) — those are 3 successive `CREATE OR REPLACE` migrations of the **same** `register_team` function, not 3 separate functions. The corrected scope is captured below; original references kept as audit trail at the bottom of this file.
+
 ## What you'll experience after this ships
 
 ### Registering a team
@@ -41,7 +43,7 @@ Stripe checkout line items get the same treatment: the team identifier on the re
 | Team admin form | Drawer → centered modal (~800px), same shell pattern as contacts. `team-drawer.tsx` retired. |
 | Score admin form | Drawer → centered modal (~800px), freeform team-name input replaced with plain dropdown of active teams (captain names, alphabetized by last name). `score-drawer.tsx` retired. |
 | Registration form copy | The "Team Name" input is silently removed. No helper line, no restructured section. Captain inputs read as the team identity on their own — there's no existing user base to surprise. |
-| 3 RPC signatures | `register_team_rpc`, `update_register_team_rpc`, `payments_cents` all drop their `p_team_name text` parameter. Coordinated UI + RPC deploy in Phase 1. |
+| RPC signature | `register_team` (single function in prod, not 3) drops its `p_team_name text` parameter. New signature: `register_team(p_session, p_captain_name, p_captain_email, p_captain_phone)`. Captain params stay vestigial back-compat per S11-2 contract. Coordinated UI + RPC deploy in Phase 1. |
 | Migration window | Vercel-red Option A — same as Sprint 31. Phase 1 ships the migration, Vercel goes red, Phase 2/3 land in succession, Vercel re-greens at the end. Production keeps serving the previous green deploy. Craven traffic is ~zero outside event prep. |
 | Backfill | None. `teams.team_name` and `scores.team_name` are dropped, not transformed. No data is preserved (nothing meaningful to preserve — `teams.team_name` is just text, and `scores.team_name` is empty in prod). |
 | Auto-derive logic | None. Display is computed at read time via JOIN. No materialized "captain_name" column on teams or scores. |
@@ -94,7 +96,7 @@ Plain-English checklist someone could run on a Saturday:
 
 - **Compass** turns this plan into tickets with clear acceptance criteria.
 - **Spec** writes failing tests first (per our TDD rule).
-- **Flux** handles the database change + 3 RPC signature changes + server action updates.
+- **Flux** handles the database change + the `register_team` RPC signature change + server action updates.
 - **Bolt** builds the team modal, the score modal, the team picker dropdown, and updates every display consumer.
 - **Aria** writes the new copy for the deferred surfaces (type-removal guard, trash labels, Stripe receipt line item, leaderboard row label, null-team-id fallback string).
 - **Watchdog** reviews every PR.
@@ -105,10 +107,10 @@ Single PR per builder, in phase order. Watchdog reviews each separately.
 
 **Phase 1 — schema + tests (parallel, both unblocked):**
 - Spec: failing unit + e2e tests for team display via captain, score display via team→captain, registration without team-name field, type-removal guard sentence shape, RPC contract changes.
-- Flux: pre-flight via Supabase MCP → migration (drop two columns, drop/recreate any dependent views, drop+recreate 3 RPCs without `p_team_name`) → types regen.
+- Flux: pre-flight already done by Forge (see "Pre-flight findings" appendix below) → migration (drop `teams.team_name` + `scores.team_name`, DROP/RECREATE the `teams_active` view, DROP+CREATE OR REPLACE the `register_team` function without `p_team_name`) → types regen.
 
 **Phase 2 — actions + form rewrites (3 parallel, blocked by Phase 1):**
-- Flux: `admin/teams/actions.ts` + `admin/scores/actions.ts` + `admin/contacts/actions.ts` (type-removal guard error message captain reference) + `api/checkout/route.ts` (drop `team_name` from `teammates` payload + Stripe metadata).
+- Flux: `admin/teams/actions.ts` + `admin/scores/actions.ts` + `admin/contacts/actions.ts` (type-removal guard error message captain reference) + `api/checkout/route.ts` (drop `p_team_name` from the single `register_team` RPC call at line 157, drop `team_name` from `teammates` payload + Stripe metadata).
 - Bolt: team form rewrite (drawer → modal, drop team-name field, captain typeahead picker).
 - Bolt: score form rewrite (drawer → modal, freeform team-name → team dropdown).
 
@@ -128,19 +130,28 @@ Estimated 6-8 builder PRs + 1-2 Forge-direct fixups + 1 Aria copy PR. Same shape
 
 *This part is for Compass and the builders. You don't need to read it — it's here for the record so the implementation matches the conversation we had.*
 
-### Pre-flight (to be run by Flux at Phase 1 start, per `feedback_verify_against_prod_not_source`)
+### Pre-flight findings (run 2026-04-29 by Forge via supabase-craven MCP, post-merge)
 
-Query the live Craven database via the service key (`~/.openclaw/secrets/supabase-craven-service-key`, Supabase ref `kybfsxjruczbiokucyft`) before writing the migration:
+Per `feedback_verify_against_prod_not_source`, queried the live Craven database (Supabase ref `kybfsxjruczbiokucyft`) before any builder spawn. Findings:
 
-- All public views referencing `teams.team_name` or `scores.team_name`. (Pre-flight on 2026-04-29 found none, but re-verify against current state — Sprint 31 added a view to the catalog.)
-- All public functions referencing the columns. (Known: `register_team_rpc`, `update_register_team_rpc`, `payments_cents` accept `p_team_name`. Re-verify signatures and confirm no other functions have crept in.)
-- All RLS policies referencing the columns. (None known.)
-- All triggers on `teams` and `scores`. (None known.)
-- All CHECK constraints referencing the columns. (None expected.)
-- All indexes on the columns. (None known on `teams.team_name` or `scores.team_name`.)
-- Live row count for `teams` (last known: 1) and `scores` (last known: 0).
+| Check | Finding |
+|---|---|
+| Views referencing `team_name` | **1** — `public.teams_active` (definition explicitly lists every `teams` column including `team_name`). DROP/RECREATE pattern same as `supabase/migrations/20260424000002_drop_teams_captain_columns.sql`. |
+| Views/functions on `scores` | **None.** No views, no functions reference `scores.team_name` or `scores` more broadly. |
+| Functions referencing `team_name` | **1** — `public.register_team(p_session text, p_team_name text, p_captain_name text, p_captain_email text, p_captain_phone text)`. The 3 migration files cited in the original plan are successive `CREATE OR REPLACE` versions of this single function — not 3 separate functions. |
+| `register_team` body | INSERTs `team_name, session, payment_status, amount_paid_cents, year`. Captain params (`p_captain_name`, `p_captain_email`, `p_captain_phone`) are accepted but **not used in the body** — they are vestigial back-compat per S11-2 contract test (`register-team-rpc-contract.test.ts`). |
+| Sprint 32 RPC change | DROP function, then `CREATE OR REPLACE FUNCTION register_team(p_session, p_captain_name, p_captain_email, p_captain_phone)` — drop `p_team_name` only. Body INSERTs `(session, payment_status, amount_paid_cents, year)`. Returns same JSONB shape. Vestigial captain params stay (do not bundle a separate cleanup). |
+| RLS policies referencing `team_name` | None |
+| Triggers on `teams` or `scores` | None |
+| CHECK constraints referencing `team_name` | None |
+| Indexes on `team_name` columns | None |
+| Active teams (`deleted_at IS NULL`) | 1 |
+| Soft-deleted teams | 0 |
+| Total scores | 0 (clean slate — no historical-integrity concern, no backfill needed) |
+| RPC caller surface | `src/app/api/checkout/route.ts:155-160` — single `supabase.rpc("register_team", { p_session, p_team_name, p_captain_name, p_captain_email, p_captain_phone })` call. Drop `p_team_name: team_name` line. |
+| Test contract | `src/__tests__/register-team-rpc-contract.test.ts:144` — `expect(args.p_team_name).toBe("Test Team Alpha")`. Drop this assertion. |
 
-Document findings in the migration PR body so Watchdog can verify against current state.
+Migration is straightforward: 1 view to recreate, 1 function to recreate, 2 columns to drop, 0 backfill.
 
 ### Cross-repo grep (run 2026-04-29)
 
@@ -150,35 +161,65 @@ Document findings in the migration PR body so Watchdog can verify against curren
 
 File: `supabase/migrations/<timestamp>_drop_team_name.sql` in `~/github/craven-cancer-classic`.
 
-The 3 RPC bodies don't just accept `p_team_name` — they currently INSERT it into `teams.team_name` (lines 77 / 78 / 101 in the respective migration files). So the migration must rewrite each function body to remove both the parameter AND the column reference. Drop the columns AFTER recreating the functions to avoid mid-transaction "column does not exist" errors.
+`register_team` is the only function that references `team_name`. The body INSERTs `team_name` along with 4 other columns into `teams`. The migration must drop the view (column-pinned), recreate the function without `p_team_name`, then drop the columns, then recreate the view — order matters to avoid "column does not exist" errors mid-transaction.
 
 ```sql
--- 1. Drop dependent views (none expected from pre-flight, but verify first)
--- DROP VIEW IF EXISTS <view> CASCADE;  -- only if pre-flight finds one
+-- 1. Drop teams_active view (column-pinned to current shape, recreate after column drop)
+DROP VIEW IF EXISTS public.teams_active;
 
--- 2. Drop and recreate 3 RPCs without p_team_name (full body rewrite — current bodies INSERT team_name)
-DROP FUNCTION IF EXISTS register_team_rpc(...);          -- exact pre-drop signature from pre-flight
-DROP FUNCTION IF EXISTS update_register_team_rpc(...);
-DROP FUNCTION IF EXISTS payments_cents(...);
+-- 2. Drop and recreate register_team without p_team_name
+DROP FUNCTION IF EXISTS public.register_team(text, text, text, text, text);
 
-CREATE OR REPLACE FUNCTION register_team_rpc(<params minus p_team_name>)
-RETURNS ... AS $$
-  -- existing body, with team_name removed from INSERT INTO teams (...) VALUES (...)
+CREATE OR REPLACE FUNCTION public.register_team(
+  p_session       text,
+  p_captain_name  text,
+  p_captain_email text,
+  p_captain_phone text
+)
+RETURNS jsonb AS $$
+DECLARE
+  v_cap          int;
+  v_count        int;
+  v_team_id      uuid;
+  v_current_year int;
+  v_fee_cents    bigint;
+BEGIN
+  -- Body identical to current production register_team, EXCEPT:
+  --  - p_team_name parameter removed
+  --  - INSERT INTO teams (...) drops team_name from columns + values lists
+  --  - everything else (advisory lock, cap check, fee read, return shape) preserved
+  ...
+  INSERT INTO public.teams (
+    session,
+    payment_status,
+    amount_paid_cents,
+    year
+  ) VALUES (
+    p_session,
+    'pending',
+    0,
+    v_current_year
+  )
+  RETURNING id INTO v_team_id;
+  ...
+END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- (analogous CREATE OR REPLACE for update_register_team_rpc and payments_cents — both have team_name in their INSERT statements)
+-- 3. Drop the columns (now safe — no function or view references them)
+ALTER TABLE public.teams  DROP COLUMN team_name;
+ALTER TABLE public.scores DROP COLUMN team_name;
 
--- 3. Drop the columns (now safe — no function references them)
-ALTER TABLE teams DROP COLUMN team_name;
-ALTER TABLE scores DROP COLUMN team_name;
-
--- 4. Recreate any dropped views (none expected)
+-- 4. Recreate teams_active view (without team_name)
+CREATE OR REPLACE VIEW public.teams_active AS
+  SELECT * FROM public.teams WHERE deleted_at IS NULL;
 ```
 
-Reference RPC files for current body shape:
-- `supabase/migrations/20260419000006_register_team_rpc.sql` (lines 13, 77, 86)
-- `supabase/migrations/20260424000001_update_register_team_rpc.sql` (lines 11, 78, 84)
-- `supabase/migrations/20260421000002_payments_cents.sql` (lines 37, 101, 110)
+Reference for current `register_team` body (Forge confirmed via `pg_proc.prosrc` 2026-04-29): the body uses `p_session` and `p_team_name` only — the 3 captain params (`p_captain_name`, `p_captain_email`, `p_captain_phone`) are accepted but never referenced in the body (they were retained as vestigial back-compat after migration `20260424000002_drop_teams_captain_columns` dropped the columns they used to write to). Sprint 32 leaves them alone — minimal-scope change.
+
+Source migration files (informational — these are successive `CREATE OR REPLACE` of the same function, not 3 separate functions):
+- `supabase/migrations/20260419000006_register_team_rpc.sql` (initial CREATE)
+- `supabase/migrations/20260421000002_payments_cents.sql` (REPLACE — switched amount_paid → amount_paid_cents)
+- `supabase/migrations/20260424000001_update_register_team_rpc.sql` (REPLACE — most recent body shape)
 
 Migration applied via `mcp__supabase-craven__apply_migration` against production (Craven has no staging — see `memory/projects/craven.md`).
 
@@ -195,9 +236,9 @@ Migration applied via `mcp__supabase-craven__apply_migration` against production
 
 | RPC | Param dropped | Callers to update |
 |---|---|---|
-| `register_team_rpc` | `p_team_name text` | `api/checkout/route.ts`, `(public)/register/registration-form.tsx` |
-| `update_register_team_rpc` | `p_team_name text` | `admin/teams/actions.ts` (update flow) |
-| `payments_cents` | `p_team_name text` | Internal — verify via grep against `payments_cents(` in src/ + supabase/ |
+| `register_team` | `p_team_name text` | `src/app/api/checkout/route.ts:155-160` (single `supabase.rpc` call — drop `p_team_name: team_name` line). Test contract update: `src/__tests__/register-team-rpc-contract.test.ts:144` (drop `expect(args.p_team_name).toBe(...)` assertion). |
+
+> **Original plan referenced 3 RPCs** (`register_team_rpc`, `update_register_team_rpc`, `payments_cents`). Pre-flight 2026-04-29 confirmed those are 3 historical migration files for the same single `register_team` function — not 3 separate functions. Corrected to 1 RPC. Phase 2 Flux scope is correspondingly smaller.
 
 ### Frontend
 

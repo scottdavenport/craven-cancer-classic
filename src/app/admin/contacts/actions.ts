@@ -367,10 +367,11 @@ async function runTypeRemovalGuard(
         captain_contact_id: string | null;
         captain: { full_name: string } | null;
       } | null);
-      const captainName = team?.captain?.full_name ?? "their captain";
-      return {
-        error: `${fullName} is on ${captainName}'s team — remove from the team first, then change their type.`,
-      };
+      const captainFullName = team?.captain?.full_name ?? null;
+      const error = captainFullName
+        ? `${fullName} is on ${captainFullName}'s team. Remove them from the team first, then change their type.`
+        : `${fullName} is on a team without a listed captain. Remove them from the team first, then change their type.`;
+      return { error };
     }
   }
 
@@ -531,23 +532,23 @@ export async function bulkRemoveContactType(
 
     if (teamError) return { error: teamError.message };
 
-    const blockedByTeam = new Map<string, string>();
+    const blockedByTeam = new Map<string, string | null>();
     for (const row of teamRows ?? []) {
       const team = (row.team as {
         captain_contact_id: string | null;
         captain: { full_name: string } | null;
       } | null);
-      const captainName = team?.captain?.full_name ?? "their captain";
-      blockedByTeam.set(row.contact_id as string, captainName);
+      const captainFullName = team?.captain?.full_name ?? null;
+      blockedByTeam.set(row.contact_id as string, captainFullName);
     }
 
     for (const contact of contactRows) {
-      const captainName = blockedByTeam.get(contact.id);
-      if (captainName) {
-        blocked.push({
-          id: contact.id,
-          reason: `${contact.full_name} is on ${captainName}'s team — remove from the team first.`,
-        });
+      if (blockedByTeam.has(contact.id)) {
+        const captainFullName = blockedByTeam.get(contact.id) ?? null;
+        const reason = captainFullName
+          ? `${contact.full_name} is on ${captainFullName}'s team. Remove them from the team first, then change their type.`
+          : `${contact.full_name} is on a team without a listed captain. Remove them from the team first, then change their type.`;
+        blocked.push({ id: contact.id, reason });
       }
     }
   }

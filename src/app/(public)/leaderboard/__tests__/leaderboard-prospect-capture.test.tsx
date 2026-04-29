@@ -67,6 +67,7 @@ function buildSupabaseMock(rows: DbScoreRow[]) {
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({ data: rows, error: null }),
     }),
   } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>);

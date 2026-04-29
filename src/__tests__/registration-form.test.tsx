@@ -22,7 +22,7 @@ describe("RegistrationForm", () => {
 
   it("renders team info fields", () => {
     render(<RegistrationForm {...defaultProps} />);
-    expect(screen.getByLabelText(/team name/i)).toBeInTheDocument();
+    // Sprint 32: team-name label removed by design (captain inputs are the team identity).
     // Captain label reads "Your Name (Captain)"
     expect(screen.getByLabelText(/your name \(captain\)/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/your email/i)).toBeInTheDocument();

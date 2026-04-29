@@ -70,13 +70,58 @@ The CSV importer keeps doing what it does — guessing types from the GOLFER col
 
 ---
 
-## Three small open questions for the build
+## Plan amendments — 2026-04-29 (locked decisions before build)
 
-These don't block plan approval — Compass can park them on tickets — but I want to flag them so they don't get decided silently:
+After approving the plan, Scott and Forge worked through 12 follow-up decisions before spawning builders. The biggest is adding a Volunteer type to the same sprint — it was on the fence and Scott pulled it in. Six others sharpen UX details: how the form save button should behave, what happens to type-specific field values when a type is unchecked, how blocked bulk-action rows surface to the admin, what the default Donor toggle should look like, and how the public tribute wall falls back when a recognition name is left blank. Three answer the original parked questions (shirt size, handicap range, recognition-name fallback). Two are housekeeping conventions baked in before build (chip display order on the contacts list, recognition-name field visibility inside the Donor section).
 
-1. **Shirt size** — dropdown of S / M / L / XL / 2XL / 3XL? (I recommend yes — makes ordering shirts in bulk easier later.)
-2. **Handicap** — integer 0–54 (the USGA range), and blank is allowed. Sound right?
-3. **Recognition name when blank** — fall back to the contact's full name. Sound right?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Shirt size | Dropdown of S / M / L / XL / 2XL / 3XL. Blank allowed. |
+| 2 | Handicap | Integer 0–54 (USGA range). Blank allowed. CHECK constraint enforces range when non-null. |
+| 3 | Recognition name when blank | Public tribute wall falls back to the contact's full name. No "Anonymous" auto-substitution. |
+| 4 | Bulk-blocked surface | Inline shadcn `<Alert>` rendered below the bulk-action bar after a bulk Set/Add/Remove returns blocked rows. Lists each blocked contact name + reason ("Lacie is on Team Mulligans"). Stays visible until dismissed. |
+| 5 | "Other" stackability | "Other" is stackable with any other type. CHECK constraint allows e.g. `['player','other']`. No mutually-exclusive enforcement. |
+| 6 | Volunteer type | `volunteer` added as a 5th type **in this sprint** (not deferred). Touches CHECK constraint, chip palette, form checkboxes, filter dropdown, and the existing `text[]` shape. Existing data has no volunteers; no backfill needed for that type. |
+| 7 | Volunteer fields | Same as Player: `shirt_size` only. `shirt_size` is NOT a Player-only column — it is shared. The conditional Shirt Size section appears in the form when **Player OR Volunteer** is checked. Handicap stays Player-only. |
+| 8 | Add Contact form default | Nothing pre-checked. Save button disabled until ≥1 type checkbox is checked. The DB-level `DEFAULT ARRAY['other']` is a NOT NULL safety net for any code path that bypasses the form; the user-facing flow forces an explicit pick. |
+| 9 | Mislabeled-row backfill | Backfill is NOT a simple `types = ARRAY[type]`. It must UNION-add `'player'` for every contact present in `team_members` and `'sponsor'` for every contact present in `sponsor_contacts`. Idempotent. Catches the 1 known mislabeled row and any other join-based misalignments. See updated migration SQL in the technical appendix. |
+| 10 | Type-specific values on uncheck | When admin unchecks Player, Volunteer, or Donor, the corresponding type-specific fields (`shirt_size`, `handicap`, `show_on_wall`, `recognition_name`) are **preserved in the DB**. The form section disappears; re-checking the type later restores previously-entered values. No nulling, no prompt. Forgiving by design — protects against fat-fingers. |
+| 11 | Donor name-on-wall toggle | Form copy: **"Show name on tribute wall"** (positive framing). Default ON. DB column is `show_on_wall boolean NOT NULL DEFAULT true` — replaces the original plan's `anonymous_default boolean NOT NULL DEFAULT false`. Semantically identical (default = recognized) but removes inversion confusion. |
+| 12 | Volunteer chip color | Amber / orange. 5th entry in `TYPE_BADGE_CLASSES` in `contact-list.tsx`. The existing 4 entries use design-token class names (`bg-brand-muted text-brand`, `bg-purple-muted text-purple`, `bg-success-muted text-success`, `bg-neutral-100 text-neutral-600`) — NOT raw Tailwind colors. Builder must check whether an amber token (`bg-amber-muted text-amber` or equivalent) exists in the design system before falling back to `bg-amber-100 text-amber-800`. |
+
+### Two additional conventions (baked in before build)
+
+- **Chip display order on the contacts list:** `Player → Sponsor → Donor → Volunteer → Other`. Preserves the existing 4-type visual order, appends Volunteer before the catch-all. Implement as a client-side sort against this canonical order array — do not depend on DB array order.
+- **`recognition_name` field visibility:** ALWAYS visible inside the Donor section (not gated on `show_on_wall`). Lets admin pre-fill "The Smith Family" before flipping visibility on. Same parent rule (Donor section visible iff Donor checked); inside the Donor section, both fields render regardless of `show_on_wall` state.
+
+### What you'll experience after this ships — amendments only
+
+These deltas are additive to the "What you'll experience" section above; re-read that section first.
+
+**Editing a contact — 5th checkbox and shared Shirt Size:**
+The checkbox row now reads **Player / Sponsor / Donor / Volunteer / Other**. The Shirt Size field appears when *either* Player or Volunteer is checked — it belongs to both roles. Handicap remains Player-only.
+
+**Editing a contact — Donor toggle wording:**
+The Donor section toggle reads **"Show name on tribute wall"** (checked by default). Unchecking it means the contact's name stays private on the public wall; their recognition name and all other fields are still stored and still editable regardless.
+
+**Add Contact — save discipline:**
+When adding a new contact, the Save button stays disabled until at least one type checkbox is checked. There is no pre-selected default — the admin makes an explicit choice every time.
+
+**Unchecking a type — nothing is lost:**
+If you uncheck Player, the Shirt Size and Handicap fields disappear from view but the values are not erased from the database. Re-check Player and they return. Same for Volunteer (Shirt Size) and Donor (toggle + recognition name). Forgiving by design.
+
+**Bulk actions — blocked rows surface inline:**
+After a bulk Set/Add/Remove that skips some contacts due to active team or sponsor links, an inline `<Alert>` appears below the bulk-action bar listing every skipped contact by name and reason. It stays until dismissed.
+
+---
+
+~~## Three small open questions for the build~~
+
+~~These don't block plan approval — Compass can park them on tickets — but I want to flag them so they don't get decided silently:~~
+
+~~1. **Shirt size** — dropdown of S / M / L / XL / 2XL / 3XL? (I recommend yes — makes ordering shirts in bulk easier later.)~~
+~~2. **Handicap** — integer 0–54 (the USGA range), and blank is allowed. Sound right?~~
+~~3. **Recognition name when blank** — fall back to the contact's full name. Sound right?~~
 
 ---
 
@@ -146,19 +191,38 @@ Per `feedback_verify_against_prod_not_source`, query the live Craven database vi
 
 ### Schema migration
 File: `supabase/migrations/<timestamp>_contacts_multi_type.sql` in `~/github/craven-cancer-classic`.
+
 1. `ALTER TABLE contacts ADD COLUMN types text[] NOT NULL DEFAULT ARRAY['other'];`
-2. Backfill: `UPDATE contacts SET types = ARRAY[type] WHERE type IS NOT NULL;`
-3. CHECK constraint: `types <@ ARRAY['player','sponsor','donor','other']::text[] AND array_length(types, 1) >= 1`.
-4. Add `handicap smallint` (CHECK 0–54 if non-null), `shirt_size text` (CHECK S/M/L/XL/2XL/3XL if non-null), `anonymous_default boolean NOT NULL DEFAULT false`, `recognition_name text`.
+2. Backfill (three-step — idempotent, catches join-based misalignments per decision #9):
+```sql
+-- Step 1: seed from existing single-type column
+UPDATE contacts SET types = ARRAY[type] WHERE type IS NOT NULL;
+
+-- Step 2: UNION-add 'player' for every contact present in team_members (verified: team_members.contact_id exists)
+UPDATE contacts c
+SET types = ARRAY(SELECT DISTINCT unnest(c.types || ARRAY['player']))
+WHERE EXISTS (SELECT 1 FROM team_members tm WHERE tm.contact_id = c.id)
+  AND NOT ('player' = ANY(c.types));
+
+-- Step 3: UNION-add 'sponsor' for every contact present in sponsor_contacts (verified: sponsor_contacts.contact_id exists)
+UPDATE contacts c
+SET types = ARRAY(SELECT DISTINCT unnest(c.types || ARRAY['sponsor']))
+WHERE EXISTS (SELECT 1 FROM sponsor_contacts sc WHERE sc.contact_id = c.id)
+  AND NOT ('sponsor' = ANY(c.types));
+```
+3. CHECK constraint (amended to include `volunteer`): `types <@ ARRAY['player','sponsor','donor','volunteer','other']::text[] AND array_length(types, 1) >= 1`. "Other" is stackable with any other type — no mutually-exclusive enforcement.
+4. Add columns: `handicap smallint` (CHECK 0–54 when non-null), `shirt_size text` (CHECK one of S/M/L/XL/2XL/3XL when non-null), **`show_on_wall boolean NOT NULL DEFAULT true`** (replaces `anonymous_default` — positive framing, default = recognized on wall), `recognition_name text`. Note: `shirt_size` is NOT Player-only — it is shared with Volunteer.
 5. Drop dependent views, then `ALTER TABLE contacts DROP COLUMN type;`, then recreate `contacts_active` with explicit columns (no `SELECT *`).
 6. `CREATE INDEX idx_contacts_types ON contacts USING GIN (types) WHERE deleted_at IS NULL;`
 7. `DROP INDEX IF EXISTS idx_contacts_type;`
 8. Regen TypeScript types via Supabase MCP.
 
 ### Server actions — `src/app/admin/contacts/actions.ts`
-- `ContactInput.types: ContactType[]` (was singular). Add `handicap`, `shirt_size`, `anonymous_default`, `recognition_name`.
-- `getContacts` filter compiles to `.contains('types', [filter.type])` (replaces the existing equality at ~line 57 in `actions.ts:36–68`).
-- `updateContact` (lines 238–297): when `types` is being set, run removal-guard. If old contains `player` and new does not, query `team_members` for `contact_id`. If rows exist, return `{ error: "<contact_name> is on <team_display_name>. Remove from team first." }`. Same for `sponsor` against `sponsor_contacts`.
+- `ContactType` union includes `'volunteer'` as the 5th member.
+- `ContactInput.types: ContactType[]` (was singular). Add `handicap`, `shirt_size`, **`show_on_wall`** (was `anonymous_default`), `recognition_name`.
+- `getContacts` filter compiles to `.contains('types', [filter.type])` (replaces the existing equality at ~line 57 in `actions.ts:36–68`). Filter dropdown includes Volunteer as a 5th option.
+- `updateContact` (lines 238–297): when `types` is being set, run removal-guard. If old types contain `player` and new do not, query `team_members` for `contact_id`. If rows exist, return `{ error: "<contact_name> is on <team_display_name>. Remove from team first." }`. Same for `sponsor` against `sponsor_contacts`. No guard for `volunteer` — there is no join table. No guard for `donor` or `other`.
+- Type-specific field preservation on uncheck (decision #10): the server action does NOT null out type-specific fields when a type is removed. It only writes the fields that are explicitly included in the `ContactInput`. The form passes back the preserved field values even when the corresponding type is unchecked — this is a form-state responsibility, not a server-side nulling prevention.
 - Replace `bulkUpdateContacts` (lines 312–330) with `bulkSetContactTypes`, `bulkAddContactType`, `bulkRemoveContactType`. Add/Remove run the removal-guard per row and return `{ updated, blocked: [{id, reason}] }`. 500-row cap unchanged.
 - All actions call `await requireAdmin()` first per `feedback_admin_action_require_admin`.
 
@@ -167,12 +231,12 @@ File: `supabase/migrations/<timestamp>_contacts_multi_type.sql` in `~/github/cra
 |---|---|
 | `src/app/admin/contacts/contact-drawer.tsx` | Delete |
 | `src/app/admin/contacts/contact-modal.tsx` | New — shadcn `<Dialog>`, `sm:max-w-[800px]`. Mirrors current drawer structure |
-| `src/app/admin/contacts/contact-form.tsx` | Major rewrite — multi-select chip group, conditional Player + Donor blocks, two-column rows, server-error display for guard. base-ui `<Select>` with `items` prop per `feedback_base_ui_select_items` |
-| `src/app/admin/contacts/contact-list.tsx` | Replace single TypeBadge with array map (reuse `TYPE_BADGE_CLASSES` map at lines 37–52). Update client-side filter from `c.type === filterType` to `c.types.includes(filterType)` (lines 156–168). Replace bulk type dropdown with three buttons |
+| `src/app/admin/contacts/contact-form.tsx` | Major rewrite — **5 checkboxes** (Player / Sponsor / Donor / Volunteer / Other); conditional Player section (Handicap); conditional Shirt Size section (visible when Player OR Volunteer checked); conditional Donor section (Show name on tribute wall toggle + Recognition name — both fields always visible inside Donor section regardless of `show_on_wall` state); **Save button disabled until ≥1 type checkbox is checked** (Add Contact form only — no pre-selection); type-specific field values preserved in form state on uncheck (passed back to server to avoid server-side nulling); two-column rows; server-error display for guard; base-ui `<Select>` with `items` prop per `feedback_base_ui_select_items` |
+| `src/app/admin/contacts/contact-list.tsx` | Replace single TypeBadge with array map (reuse `TYPE_BADGE_CLASSES` map at lines 37–42). Add 5th entry for `volunteer` using amber color — existing entries use design-token class names; builder must verify whether an amber token exists in the design system before falling back to `bg-amber-100 text-amber-800`. Client-side chip render order = **Player → Sponsor → Donor → Volunteer → Other** (canonical order array, not DB array order). Update client-side filter from `c.type === filterType` to `c.types.includes(filterType)` (lines 156–168). Filter dropdown gains Volunteer as 5th option. Replace bulk type dropdown with three buttons. Add inline shadcn `<Alert>` below the bulk-action bar that renders when a bulk action returns `blocked` rows — lists each blocked contact name + reason, stays visible until dismissed. |
 | Supabase types file | Regen after migration |
 
 ### CSV import
-- `src/app/admin/contacts/csv-parser.ts` — `deriveSuggestedType(...)` (lines 127–135) returns single-element `ContactType[]`.
+- `src/app/admin/contacts/csv-parser.ts` — `deriveSuggestedType(...)` (lines 127–135) returns single-element `ContactType[]`. `volunteer` cannot be derived from existing CSV columns (GOLFER, SPONSOR_AMOUNT, etc.) — it requires manual tagging post-import. No change to derivation logic.
 - `src/app/admin/contacts/import-actions.ts` — inserts write `types` array.
 - Preview UI shows derived type as a single value; admin edits later to add types.
 
@@ -208,13 +272,14 @@ File: `supabase/migrations/<timestamp>_contacts_multi_type.sql` in `~/github/cra
 
 ### Tests (TDD per memory rule)
 **Unit:**
-- `contacts-actions.test.ts`: `types[]` round-trip on create + update; bulk Set/Add/Remove happy + blocked paths; type-removal guard returns error when `team_members` row exists; same for `sponsor_contacts`; filter compiles to `contains('types', ...)`.
-- `contacts-update-coverage.test.ts`: partial update preserves untouched type-specific columns.
+- `contacts-actions.test.ts`: `types[]` round-trip on create + update; `volunteer` type accepted by server action; bulk Set/Add/Remove happy + blocked paths; type-removal guard returns error when `team_members` row exists; same for `sponsor_contacts`; no guard fires for `volunteer` uncheck; filter compiles to `contains('types', ...)` with Volunteer filter option; `show_on_wall` round-trip (create with `true`, update to `false`, verify persisted).
+- `contacts-update-coverage.test.ts`: partial update preserves untouched type-specific columns (uncheck Player → `shirt_size` and `handicap` unchanged in DB; uncheck Donor → `show_on_wall` and `recognition_name` unchanged in DB).
 
 **E2E:**
-- `contact-create-edit.spec.ts`: multi-select types; Player section visible iff player checked; Donor section visible iff donor checked; save with `['player','sponsor']` round-trips.
+- `contact-create-edit.spec.ts`: multi-select types including Volunteer; Player section visible iff Player checked; Shirt Size section visible when Player OR Volunteer checked (and hidden when neither); Handicap section visible iff Player checked (not when only Volunteer); Donor section visible iff Donor checked; `recognition_name` and `show_on_wall` both render inside Donor section regardless of `show_on_wall` state; Save button disabled with no types checked; Save button enabled after first type checked; save with `['player','sponsor']` round-trips; save with `['volunteer']` round-trips.
 - `contact-type-removal-guard.spec.ts` (new): seed contact + team membership; open modal; uncheck Player; expect inline error referencing team; types unchanged.
 - `contact-bulk-subscribe.spec.ts`: verify green after bulk action bar refactor.
+- Bulk-blocked Alert: seed blocked + unblocked rows; run bulk Remove; verify inline `<Alert>` lists blocked contact names; verify Alert dismissed on close.
 - Modal interaction (focus trap, ESC, click-outside) if shadcn Dialog defaults aren't sufficient.
 
 `fireEvent.change` for any string field >50 chars per `feedback_no_user_type_long_strings`.

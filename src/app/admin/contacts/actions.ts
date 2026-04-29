@@ -28,7 +28,7 @@ export interface ContactFilter {
 
 export interface TeamFilterOption {
   id: string;
-  team_name: string;
+  captain_display_name: string;
 }
 
 export async function getContacts(filter?: ContactFilter): Promise<Contact[]> {
@@ -168,11 +168,18 @@ export async function getTeamsForFilter(): Promise<TeamFilterOption[]> {
 
   const { data, error } = await supabase
     .from("teams")
-    .select("id, team_name")
-    .order("team_name", { ascending: true });
+    .select("id, captain:contacts!teams_captain_contact_id_fkey(full_name)")
+    .order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
-  return data ?? [];
+
+  return (data ?? []).map((row) => {
+    const captain = row.captain as { full_name: string } | null;
+    return {
+      id: row.id,
+      captain_display_name: captain?.full_name ?? "(no captain)",
+    };
+  });
 }
 
 export type ContactInput = {
@@ -350,13 +357,19 @@ async function runTypeRemovalGuard(
   if (removed.includes("player")) {
     const { data: teamRows, error: teamError } = await supabase
       .from("team_members")
-      .select("contact_id, team:teams(team_name)")
+      .select(
+        "contact_id, team:teams(captain_contact_id, captain:contacts!teams_captain_contact_id_fkey(full_name))"
+      )
       .eq("contact_id", contactId);
 
     if (!teamError && teamRows && teamRows.length > 0) {
-      const teamName = (teamRows[0]?.team as { team_name: string } | null)?.team_name ?? "a team";
+      const team = (teamRows[0]?.team as {
+        captain_contact_id: string | null;
+        captain: { full_name: string } | null;
+      } | null);
+      const captainName = team?.captain?.full_name ?? "their captain";
       return {
-        error: `${fullName} is on ${teamName}. Remove from team first, then change their type.`,
+        error: `${fullName} is on ${captainName}'s team — remove from the team first, then change their type.`,
       };
     }
   }
@@ -511,24 +524,29 @@ export async function bulkRemoveContactType(
   if (type === "player") {
     const { data: teamRows, error: teamError } = await supabase
       .from("team_members")
-      .select("contact_id, team:teams(team_name)")
+      .select(
+        "contact_id, team:teams(captain_contact_id, captain:contacts!teams_captain_contact_id_fkey(full_name))"
+      )
       .in("contact_id", ids);
 
     if (teamError) return { error: teamError.message };
 
     const blockedByTeam = new Map<string, string>();
     for (const row of teamRows ?? []) {
-      const teamName =
-        (row.team as { team_name: string } | null)?.team_name ?? "a team";
-      blockedByTeam.set(row.contact_id as string, teamName);
+      const team = (row.team as {
+        captain_contact_id: string | null;
+        captain: { full_name: string } | null;
+      } | null);
+      const captainName = team?.captain?.full_name ?? "their captain";
+      blockedByTeam.set(row.contact_id as string, captainName);
     }
 
     for (const contact of contactRows) {
-      const teamName = blockedByTeam.get(contact.id);
-      if (teamName) {
+      const captainName = blockedByTeam.get(contact.id);
+      if (captainName) {
         blocked.push({
           id: contact.id,
-          reason: `${contact.full_name} is on ${teamName}. Remove from team first.`,
+          reason: `${contact.full_name} is on ${captainName}'s team — remove from the team first.`,
         });
       }
     }

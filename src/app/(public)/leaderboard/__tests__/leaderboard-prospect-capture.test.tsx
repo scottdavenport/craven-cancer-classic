@@ -51,18 +51,18 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import * as serverModule from "@/lib/supabase/server";
 
-// Sprint 32: ScoreRow no longer has team_name; display = team→captain JOIN
-type ScoreRow = {
+// Sprint 32: ScoreRow — nested JOIN shape returned by Supabase for
+// "scores" + "team:teams(captain:contacts!teams_captain_contact_id_fkey(full_name))"
+type DbScoreRow = {
   id: string;
-  // team_name omitted — Sprint 32 contract drop
   team_id: string | null;
-  captain_full_name?: string; // derived via JOIN at read time
   total_score: number;
   session: "morning" | "afternoon";
   year: number;
+  team: { captain: { full_name: string } | null } | null;
 };
 
-function buildSupabaseMock(rows: ScoreRow[]) {
+function buildSupabaseMock(rows: DbScoreRow[]) {
   vi.mocked(serverModule.createClient).mockResolvedValue({
     from: vi.fn().mockReturnValue({
       select: vi.fn().mockReturnThis(),
@@ -72,10 +72,10 @@ function buildSupabaseMock(rows: ScoreRow[]) {
   } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>);
 }
 
-// Sprint 32: fixtures use captain_full_name (via JOIN), not team_name
-const SAMPLE_SCORES: ScoreRow[] = [
-  { id: "1", team_id: "team-1", captain_full_name: "Mike Smith", total_score: 62, session: "morning", year: 2026 },
-  { id: "2", team_id: "team-2", captain_full_name: "Carol Jones", total_score: 65, session: "afternoon", year: 2026 },
+// Sprint 32: fixtures use nested JOIN shape (team→captain), not team_name
+const SAMPLE_SCORES: DbScoreRow[] = [
+  { id: "1", team_id: "team-1", team: { captain: { full_name: "Mike Smith" } }, total_score: 62, session: "morning", year: 2026 },
+  { id: "2", team_id: "team-2", team: { captain: { full_name: "Carol Jones" } }, total_score: 65, session: "afternoon", year: 2026 },
 ];
 
 // ---------------------------------------------------------------------------
@@ -191,9 +191,10 @@ describe("Leaderboard scores state — ProspectCaptureForm absent (#237)", () =>
     ).not.toBeInTheDocument();
   });
 
-  it("renders the score table with team names when scores are present", async () => {
+  it("renders the score table with captain names when scores are present", async () => {
     await renderWithScores();
-    expect(screen.getByText("Eagles")).toBeInTheDocument();
+    // Sprint 32: team display = captain full name (no team_name column)
+    expect(screen.getByText("Mike Smith")).toBeInTheDocument();
   });
 });
 

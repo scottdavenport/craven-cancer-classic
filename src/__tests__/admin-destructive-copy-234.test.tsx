@@ -128,7 +128,7 @@ import { SponsorDrawer } from "@/app/admin/sponsors/sponsor-drawer";
 import { ScoreManager } from "@/app/admin/scores/score-manager";
 import { SponsorshipManager } from "@/app/admin/sponsorships/sponsorship-manager";
 import { PhotoModeration } from "@/app/admin/photos/photo-moderation";
-import { ContactDrawer } from "@/app/admin/contacts/contact-drawer";
+import { ContactModal } from "@/app/admin/contacts/contact-modal";
 
 import type { Sponsor, Score, Photo, Contact, SponsorshipPurchase } from "@/types/database";
 import type { SponsorshipItemOption } from "@/app/admin/sponsors/sponsor-form";
@@ -711,7 +711,7 @@ describe("Area 6 — ContactDrawer reference text guard", () => {
     const contact = makeContact();
 
     render(
-      <ContactDrawer
+      <ContactModal
         open={true}
         mode="edit"
         contact={contact}

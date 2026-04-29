@@ -26,15 +26,19 @@ export type Database = {
           email: string | null
           first_name: string | null
           full_name: string
+          handicap: number | null
           id: string
           last_name: string | null
           marketing_consent: boolean
           notes: string | null
           phone: string | null
+          recognition_name: string | null
           salutation: string | null
+          shirt_size: string | null
+          show_on_wall: boolean
           source: string | null
           state: string | null
-          type: string
+          types: string[]
           year_first_seen: number
           zip: string | null
         }
@@ -49,15 +53,19 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           full_name: string
+          handicap?: number | null
           id?: string
           last_name?: string | null
           marketing_consent?: boolean
           notes?: string | null
           phone?: string | null
+          recognition_name?: string | null
           salutation?: string | null
+          shirt_size?: string | null
+          show_on_wall?: boolean
           source?: string | null
           state?: string | null
-          type?: string
+          types?: string[]
           year_first_seen?: number
           zip?: string | null
         }
@@ -72,15 +80,19 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           full_name?: string
+          handicap?: number | null
           id?: string
           last_name?: string | null
           marketing_consent?: boolean
           notes?: string | null
           phone?: string | null
+          recognition_name?: string | null
           salutation?: string | null
+          shirt_size?: string | null
+          show_on_wall?: boolean
           source?: string | null
           state?: string | null
-          type?: string
+          types?: string[]
           year_first_seen?: number
           zip?: string | null
         }
@@ -341,25 +353,25 @@ export type Database = {
       }
       sponsor_contacts: {
         Row: {
-          id: string
-          sponsor_id: string
           contact_id: string
-          role: string
           created_at: string
+          id: string
+          role: string
+          sponsor_id: string
         }
         Insert: {
-          id?: string
-          sponsor_id: string
           contact_id: string
-          role?: string
           created_at?: string
+          id?: string
+          role?: string
+          sponsor_id: string
         }
         Update: {
-          id?: string
-          sponsor_id?: string
           contact_id?: string
-          role?: string
           created_at?: string
+          id?: string
+          role?: string
+          sponsor_id?: string
         }
         Relationships: [
           {
@@ -697,15 +709,19 @@ export type Database = {
           email: string | null
           first_name: string | null
           full_name: string | null
+          handicap: number | null
           id: string | null
           last_name: string | null
           marketing_consent: boolean | null
           notes: string | null
           phone: string | null
+          recognition_name: string | null
           salutation: string | null
+          shirt_size: string | null
+          show_on_wall: boolean | null
           source: string | null
           state: string | null
-          type: string | null
+          types: string[] | null
           year_first_seen: number | null
           zip: string | null
         }
@@ -720,15 +736,19 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           full_name?: string | null
+          handicap?: number | null
           id?: string | null
           last_name?: string | null
           marketing_consent?: boolean | null
           notes?: string | null
           phone?: string | null
+          recognition_name?: string | null
           salutation?: string | null
+          shirt_size?: string | null
+          show_on_wall?: boolean | null
           source?: string | null
           state?: string | null
-          type?: string | null
+          types?: string[] | null
           year_first_seen?: number | null
           zip?: string | null
         }
@@ -743,15 +763,19 @@ export type Database = {
           email?: string | null
           first_name?: string | null
           full_name?: string | null
+          handicap?: number | null
           id?: string | null
           last_name?: string | null
           marketing_consent?: boolean | null
           notes?: string | null
           phone?: string | null
+          recognition_name?: string | null
           salutation?: string | null
+          shirt_size?: string | null
+          show_on_wall?: boolean | null
           source?: string | null
           state?: string | null
-          type?: string | null
+          types?: string[] | null
           year_first_seen?: number | null
           zip?: string | null
         }

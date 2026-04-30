@@ -270,3 +270,29 @@ describe("checkout — splitName edge cases", () => {
     );
   });
 });
+
+describe("checkout — contact payload shape (post-Sprint 31 multi-type)", () => {
+  it("upserts captain with types: ['player'] array, not legacy singular type column", async () => {
+    const captainChain = makeUpsertChain("captain-types-id");
+
+    mockFrom.mockImplementation((table: string) => {
+      if (table === "event_settings") return mockEventSettingsChain;
+      if (table === "team_members") return { insert: mockTeamMembersInsert };
+      if (table === "teams") return { update: mockTeamsUpdate };
+      if (table === "contacts") return captainChain;
+      return {};
+    });
+
+    mockCreateClient.mockResolvedValue({ from: mockFrom, rpc: mockRpc });
+
+    const { POST } = await import("@/app/api/checkout/route");
+
+    await POST(makeRequest(CAPTAIN_BASE));
+
+    const upsertPayload = captainChain.upsert.mock.calls[0][0];
+    expect(upsertPayload).toEqual(
+      expect.objectContaining({ types: ["player"] })
+    );
+    expect(upsertPayload).not.toHaveProperty("type");
+  });
+});

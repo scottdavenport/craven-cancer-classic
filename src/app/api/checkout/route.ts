@@ -64,7 +64,7 @@ async function findOrCreateContact(
     last_name,
     email: params.email || null,
     phone: params.phone || null,
-    type: "player",
+    types: ["player"],
     source: "web_registration_2026",
   };
 

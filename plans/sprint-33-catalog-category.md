@@ -237,6 +237,23 @@ Surface points (~10): `Database['public']['Tables']['sponsorship_items']['Row' |
 - `src/app/(public)/__tests__/sponsors-page.test.tsx` — sibling test file at the outer `(public)/__tests__/` path; mocks the same `sponsorship_items` query chain. Same assertion update as above (both break the same way when the page adds `.eq('category', 'sponsorship')`).
 - `src/app/(public)/sponsorships/__tests__/sponsorships-page.test.tsx` — existing integration test for the `/sponsorships` page being rewritten in Phase 3. Mocks the `sponsorship_items` chain that today returns a single grid. Update to mock the three category-filtered queries (or the single query that gets partitioned client-side, depending on Phase 3 implementation choice) and assert all three sections render with the right items.
 
+**Tests requiring updates (existing files):**
+- `src/__tests__/database-types.test.ts` — references `sponsorship_items` and `sponsorship_purchases` shape assertions; updates needed for the new `category` and `tribute_recipient` columns after `database.ts` regen.
+- `src/__tests__/sponsorships-actions.test.ts` — covers `admin/sponsorships/actions.ts`; needs new coverage for the optional `category` filter param on `getSponsorshipItems` and `getSponsorshipPurchases`.
+
+**Verify-still-green (existing tests + non-test consumers, expected unchanged behavior):**
+- `src/__tests__/checkout-sponsorship.test.ts` — sponsorship purchase happy/error paths. Item-shape mocks gain `category: 'sponsorship'`; `tribute_recipient` is `null` on non-tribute purchases. Existing `objectContaining` assertions should hold.
+- `src/__tests__/webhook-db-errors.test.ts` — sponsorship_purchases.update error paths. tribute_recipient is set at insert (pre-Stripe); webhook is verify-not-set, so error paths unchanged.
+- `src/__tests__/webhook-idempotency.test.ts` — duplicate-event short-circuit. Unchanged.
+- `src/__tests__/webhooks-stripe-captain-lookup.test.ts` — registration captain lookup; `sponsorship_purchases` reference is incidental fixture. Unchanged.
+- `src/__tests__/trash-actions.test.ts` — `getTrashSponsorshipItems` queries the raw table; doesn't care about category. Unchanged.
+- `src/__tests__/sold-count-contract.test.ts` — sold_count trigger contract; doesn't care about category. Unchanged.
+- `src/lib/supabase/soft-delete.ts` — soft-delete helper; type-list reference only, no category logic. Unchanged.
+- `src/app/admin/trash/actions.ts` — trash listing for `sponsorship_items`; doesn't care about category. Unchanged.
+
+**Out of scope (no changes needed):**
+- Historical migration files in `supabase/migrations/` (forward-only history) — only the new Sprint 33 migration is added.
+
 ## Auth / hooks
 
 - Plan PR + builder PRs authored by `scottdavenport` (`unset GH_TOKEN` per `feedback_builder_pr_create_auth`).

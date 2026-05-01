@@ -297,7 +297,7 @@ type ModalState = {
 
 export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListProps) {
   const router = useRouter();
-  const [teams, setTeams] = useState<TeamWithMembers[]>(initialTeams);
+  const teams = initialTeams;
   const [modal, setModal] = useState<ModalState>({ open: false, mode: "create", team: null });
   const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
 

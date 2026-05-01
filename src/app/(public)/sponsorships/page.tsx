@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { SponsorshipSection } from "./sponsorship-section";
 import { TributeSection } from "./tribute-section";
+import { RecentlyHonored } from "./recently-honored";
 import { SupporterSection } from "./supporter-section";
 import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
 import { PublicEmptyState } from "@/components/public/public-empty-state";
@@ -146,6 +147,9 @@ export default async function SponsorshipsPage() {
 
               {/* Section 2: Tributes */}
               <TributeSection items={tributeItems} />
+
+              {/* Recently Honored — renders below Tributes per plan line 86 */}
+              <RecentlyHonored />
 
               {/* Section 3: Supporters */}
               <SupporterSection items={supporterItems} />

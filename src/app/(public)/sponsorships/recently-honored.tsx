@@ -16,6 +16,7 @@ async function getRecentTributeRecipients(): Promise<string[]> {
     .from("sponsorship_purchases")
     .select("tribute_recipient, created_at")
     .not("tribute_recipient", "is", null)
+    .eq("payment_status", "paid")
     .order("created_at", { ascending: false })
     .limit(20);
 

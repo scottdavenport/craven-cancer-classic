@@ -111,6 +111,13 @@ vi.mock("@/components/public/prospect-capture-form", () => ({
   ProspectCaptureForm: () => <div data-testid="prospect-form" />,
 }));
 
+// Stub RecentlyHonored so the async server component doesn't fire its own
+// Supabase query during page-level tests. recently-honored.test.tsx owns
+// the query contract.
+vi.mock("@/app/(public)/sponsorships/recently-honored", () => ({
+  RecentlyHonored: () => <div data-testid="recently-honored-stub" />,
+}));
+
 // Mock the old SponsorshipGrid which the current page uses
 vi.mock("@/app/(public)/sponsorships/sponsorship-grid", () => ({
   SponsorshipGrid: ({

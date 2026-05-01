@@ -20,7 +20,7 @@ interface SponsorshipSectionProps {
 export function SponsorshipSection({ items }: SponsorshipSectionProps) {
   return (
     <section data-testid="section-sponsorships" data-section-type="sponsorship">
-      {/* Section header — placeholder copy; Aria #308 finalizes */}
+      {/* Section header */}
       <div className="mb-10 text-center">
         <h2
           style={{
@@ -32,13 +32,10 @@ export function SponsorshipSection({ items }: SponsorshipSectionProps) {
             color: "var(--foreground)",
           }}
         >
-          {/* TODO-aria-308: section heading for Sponsorships */}
           Sponsorships
         </h2>
         <p className="mt-3 mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
-          {/* TODO-aria-308: section intro for Sponsorships */}
-          Support the tournament with a named sponsorship package. Your brand
-          is recognized at the event and on the site.
+          Named packages that put your brand in front of every player and guest. Each sponsorship supports transportation, lodging, and medical equipment for cancer patients in our community.
         </p>
       </div>
 

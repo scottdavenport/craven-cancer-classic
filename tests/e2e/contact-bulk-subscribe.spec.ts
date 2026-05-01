@@ -22,8 +22,10 @@ test.describe("Bulk subscribe contacts", () => {
     await page.goto("/admin/contacts");
     await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
 
-    // Find contact row checkboxes
-    const checkboxes = page.getByRole("checkbox").filter({ hasNot: page.locator("thead") });
+    // Find contact row checkboxes — scope to tbody to exclude the select-all header checkbox.
+    // The hasNot filter does not exclude the thead checkbox (checkboxes don't contain thead
+    // as descendants). Scoping to tbody locator is the correct pattern.
+    const checkboxes = page.locator("tbody").getByRole("checkbox");
 
     // Need at least 3 contacts for this test
     const count = await checkboxes.count();
@@ -37,13 +39,16 @@ test.describe("Bulk subscribe contacts", () => {
     await checkboxes.nth(1).check();
     await checkboxes.nth(2).check();
 
-    // Bulk action bar should appear
-    await expect(page.getByText(/3 selected|selected/i)).toBeVisible({ timeout: 3_000 });
+    // Bulk action bar should appear — use first() to avoid strict-mode violation on duplicate spans
+    await expect(page.getByText(/3 selected/i).first()).toBeVisible({ timeout: 3_000 });
 
     // Click Subscribe
     await page.getByRole("button", { name: /^subscribe$/i }).click();
 
-    // Toast should appear confirming the action
-    await expect(page.getByText(/subscribed|updated/i)).toBeVisible({ timeout: 5_000 });
+    // Toast should appear confirming the action — scope to sonner toast container to avoid
+    // strict-mode violation from "Subscribed" status chips already visible in the contact list.
+    await expect(
+      page.locator("[data-sonner-toast]").filter({ hasText: /subscribed|updated/i })
+    ).toBeVisible({ timeout: 5_000 });
   });
 });

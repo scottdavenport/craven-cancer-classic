@@ -10,8 +10,14 @@
  * - getLinkedSponsorNames: returns empty array for tier with no linked sponsors
  * - getLinkedSponsorNames: excludes soft-deleted sponsors (queries sponsors_active)
  *
+ * Sprint 33 additions:
+ * - getSponsorshipItems: optional category filter param filters to matching items only
+ * - getSponsorshipPurchases: optional category filter param joins to item category
+ * - getSponsorshipPurchases: tribute purchases include tribute_recipient in returned rows
+ *
  * RED phase — these tests reference getSponsorshipItems returning active_sponsor_count
  * and a new getLinkedSponsorNames export that does not yet exist. All tests should fail.
+ * Sprint 33 RED additions fail because the optional category param does not exist yet.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -43,6 +49,7 @@ import * as serverModule from "@/lib/supabase/server";
 import {
   getSponsorshipItems,
   getLinkedSponsorNames,
+  getSponsorshipPurchases,
 } from "@/app/admin/sponsorships/actions";
 
 type MockClient = {
@@ -61,8 +68,14 @@ function setClient(client: MockClient) {
 
 const YEAR = new Date().getFullYear();
 
+type SponsorshipCategory = "sponsorship" | "tribute" | "supporter";
+
 /** Minimal sponsorship_items_active row shape (fields beyond these are nullable/optional) */
-function makeTierRow(id: string, name: string) {
+function makeTierRow(
+  id: string,
+  name: string,
+  category: SponsorshipCategory = "sponsorship"
+) {
   return {
     id,
     name,
@@ -77,6 +90,24 @@ function makeTierRow(id: string, name: string) {
     deleted_by: null,
     sort_order: 0,
     year: YEAR,
+    category,
+  };
+}
+
+function makePurchaseRow(itemId: string, purchaserName: string, tributeRecipient: string | null = null) {
+  return {
+    id: `purchase-${itemId}`,
+    item_id: itemId,
+    purchaser_name: purchaserName,
+    purchaser_email: `${purchaserName.toLowerCase().replace(/\s/g, "")}@example.com`,
+    purchaser_phone: null,
+    company_name: null,
+    payment_status: "paid",
+    amount_paid_cents: 2000,
+    stripe_payment_id: "pi_test",
+    year: YEAR,
+    created_at: new Date().toISOString(),
+    tribute_recipient: tributeRecipient,
   };
 }
 
@@ -264,5 +295,212 @@ describe("getLinkedSponsorNames", () => {
     // Must have queried sponsors_active, not sponsors
     expect(queriedTables).toContain("sponsors_active");
     expect(queriedTables).not.toContain("sponsors");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 33 RED — getSponsorshipItems optional category filter
+// ---------------------------------------------------------------------------
+
+describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () => {
+  // Hoisted so tests can assert the spy was called with the right args.
+  let itemsEqCategory: ReturnType<typeof vi.fn>;
+
+  function buildCategoryFilterClient(
+    tierRows: ReturnType<typeof makeTierRow>[]
+  ) {
+    // getSponsorshipItems({ category: 'tribute' }) must add .eq('category', 'tribute')
+    // to the items query chain. The mock must handle that extra .eq() call.
+    // Chain: .select('*').eq('year', year).eq('category', category).order(...)
+    const itemsOrder = vi.fn().mockResolvedValue({ data: tierRows, error: null });
+    itemsEqCategory = vi.fn().mockReturnValue({ order: itemsOrder });
+    const itemsEqYear = vi.fn().mockReturnValue({
+      order: itemsOrder,
+      eq: itemsEqCategory,
+    });
+    const itemsSelect = vi.fn().mockReturnValue({ eq: itemsEqYear });
+
+    // sponsors_active chain
+    const sponsorsEq = vi.fn().mockResolvedValue({ data: [], error: null });
+    const sponsorsSelect = vi.fn().mockReturnValue({ eq: sponsorsEq });
+
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "sponsorship_items_active") return { select: itemsSelect };
+      if (table === "sponsors_active") return { select: sponsorsSelect };
+      return {};
+    });
+
+    return { from: mockFrom } as MockClient;
+  }
+
+  // Use a typed alias that accepts the new optional category param.
+  // Sprint 33 RED: getSponsorshipItems does not yet accept this argument.
+  // The cast via unknown lets us call it with the future API shape.
+  type GetSponsorshipItemsWithFilter = (opts?: { category?: SponsorshipCategory }) => Promise<unknown[]>;
+  const getSponsorshipItemsFiltered = getSponsorshipItems as unknown as GetSponsorshipItemsWithFilter;
+
+  it("returns only tribute-category items when category='tribute' is passed", async () => {
+    const tierRows = [makeTierRow("item-balloons", "Balloons", "tribute")];
+    setClient(buildCategoryFilterClient(tierRows));
+
+    const result = await getSponsorshipItemsFiltered({ category: "tribute" });
+
+    // Contract: the action must call .eq('category', 'tribute') on the query chain.
+    expect(itemsEqCategory).toHaveBeenCalledWith("category", "tribute");
+    expect(result).toHaveLength(1);
+    expect((result[0] as { name: string }).name).toBe("Balloons");
+  });
+
+  it("returns only sponsorship-category items when category='sponsorship' is passed", async () => {
+    const tierRows = [
+      makeTierRow("item-champion", "Champion", "sponsorship"),
+      makeTierRow("item-eagle", "Eagle", "sponsorship"),
+    ];
+    setClient(buildCategoryFilterClient(tierRows));
+
+    const result = await getSponsorshipItemsFiltered({ category: "sponsorship" });
+
+    // Contract: the action must call .eq('category', 'sponsorship') on the query chain.
+    expect(itemsEqCategory).toHaveBeenCalledWith("category", "sponsorship");
+    expect(result).toHaveLength(2);
+    result.forEach((item) => {
+      expect((item as { category: string }).category).toBe("sponsorship");
+    });
+  });
+
+  it("returns only supporter-category items when category='supporter' is passed", async () => {
+    const tierRows = [
+      makeTierRow("item-tee-sign", "Tee Sign", "supporter"),
+      makeTierRow("item-yard-sign", "Yard Sign", "supporter"),
+    ];
+    setClient(buildCategoryFilterClient(tierRows));
+
+    const result = await getSponsorshipItemsFiltered({ category: "supporter" });
+
+    // Contract: the action must call .eq('category', 'supporter') on the query chain.
+    expect(itemsEqCategory).toHaveBeenCalledWith("category", "supporter");
+    expect(result).toHaveLength(2);
+    result.forEach((item) => {
+      expect((item as { category: string }).category).toBe("supporter");
+    });
+  });
+
+  it("returns all items when no category filter is passed (backward compatible)", async () => {
+    const tierRows = [
+      makeTierRow("item-champion", "Champion", "sponsorship"),
+      makeTierRow("item-balloons", "Balloons", "tribute"),
+      makeTierRow("item-tee-sign", "Tee Sign", "supporter"),
+    ];
+    setClient(buildCategoryFilterClient(tierRows));
+
+    // No category argument — old behavior preserved; .eq('category', ...) must NOT be called.
+    const result = await getSponsorshipItemsFiltered();
+
+    expect(itemsEqCategory).not.toHaveBeenCalled();
+    expect(result).toHaveLength(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 33 RED — getSponsorshipPurchases optional category filter
+// ---------------------------------------------------------------------------
+
+describe("getSponsorshipPurchases — optional category filter (Sprint 33 RED)", () => {
+  // Hoisted so tests can assert the spy was called with the right args.
+  let purchasesEqCategory: ReturnType<typeof vi.fn>;
+
+  function buildPurchasesClient(
+    purchaseRows: ReturnType<typeof makePurchaseRow>[]
+  ) {
+    // getSponsorshipPurchases({ category: 'tribute' }) must join to sponsorship_items
+    // and filter by category. Current implementation does a flat select on
+    // sponsorship_purchases with no join — this will need a JOIN or inner select.
+    //
+    // Mock: simple chain that returns filtered rows (simulating DB-side filtering).
+    const purchasesOrder = vi.fn().mockResolvedValue({ data: purchaseRows, error: null });
+    const purchasesEqYear = vi.fn().mockReturnValue({ order: purchasesOrder });
+    purchasesEqCategory = vi.fn().mockReturnValue({ order: purchasesOrder });
+    const purchasesSelectChain = vi.fn().mockReturnValue({
+      eq: vi.fn().mockReturnValue({
+        order: purchasesOrder,
+        eq: purchasesEqCategory,
+      }),
+    });
+
+    const mockFrom = vi.fn((table: string) => {
+      if (table === "sponsorship_purchases") {
+        return { select: purchasesSelectChain };
+      }
+      return {};
+    });
+
+    return { from: mockFrom } as MockClient;
+  }
+
+  // Sprint 33 RED: getSponsorshipPurchases does not yet accept category argument.
+  type GetPurchasesWithFilter = (opts?: { category?: SponsorshipCategory }) => Promise<unknown[] | null>;
+  const getSponsorshipPurchasesFiltered = getSponsorshipPurchases as unknown as GetPurchasesWithFilter;
+
+  it("returns tribute purchases with tribute_recipient populated", async () => {
+    const purchaseRows = [
+      makePurchaseRow("item-balloons", "Jane Doe", "John Davenport"),
+    ];
+    setClient(buildPurchasesClient(purchaseRows));
+
+    const result = await getSponsorshipPurchasesFiltered({ category: "tribute" });
+
+    // Contract: the action must call .eq('category', 'tribute') on the query chain.
+    expect(purchasesEqCategory).toHaveBeenCalledWith("category", "tribute");
+    expect(result).toHaveLength(1);
+    expect((result![0] as { tribute_recipient: string }).tribute_recipient).toBe(
+      "John Davenport"
+    );
+  });
+
+  it("returns only purchases for the specified category when category filter is passed", async () => {
+    const tributePurchases = [
+      makePurchaseRow("item-balloons", "Jane Doe", "John Davenport"),
+    ];
+    setClient(buildPurchasesClient(tributePurchases));
+
+    const result = await getSponsorshipPurchasesFiltered({ category: "tribute" });
+
+    // Contract: the action must call .eq('category', 'tribute') on the query chain.
+    expect(purchasesEqCategory).toHaveBeenCalledWith("category", "tribute");
+    // Should only return the tribute purchase (Balloons)
+    expect(result).toHaveLength(1);
+    // Balloons is item_id
+    expect((result![0] as { item_id: string }).item_id).toBe("item-balloons");
+  });
+
+  it("returns all purchases when no category filter is passed (backward compatible)", async () => {
+    const allPurchases = [
+      makePurchaseRow("item-champion", "Acme Corp", null),
+      makePurchaseRow("item-balloons", "Jane Doe", "John Davenport"),
+      makePurchaseRow("item-tee-sign", "Bob Smith", null),
+    ];
+    setClient(buildPurchasesClient(allPurchases));
+
+    // No category argument — old behavior preserved; .eq('category', ...) must NOT be called.
+    const result = await getSponsorshipPurchasesFiltered();
+
+    expect(purchasesEqCategory).not.toHaveBeenCalled();
+    expect(result).toHaveLength(3);
+  });
+
+  it("tribute_recipient is null on non-tribute purchases", async () => {
+    const sponsorshipPurchases = [
+      makePurchaseRow("item-champion", "Acme Corp", null),
+    ];
+    setClient(buildPurchasesClient(sponsorshipPurchases));
+
+    const result = await getSponsorshipPurchasesFiltered({ category: "sponsorship" });
+
+    // Contract: the action must call .eq('category', 'sponsorship') on the query chain.
+    expect(purchasesEqCategory).toHaveBeenCalledWith("category", "sponsorship");
+    expect(result).toHaveLength(1);
+    expect(
+      (result![0] as { tribute_recipient: string | null }).tribute_recipient
+    ).toBeNull();
   });
 });

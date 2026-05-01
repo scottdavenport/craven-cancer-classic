@@ -8,6 +8,10 @@
  *   - Tier strips dropped from SponsorCard (Marquee direction)
  *   - Mock updated for 3 queries: event_settings, sponsorship_items, sponsors
  *
+ * Sprint 33 additions (#302):
+ *   - sponsorship_items query must filter to category='sponsorship' only
+ *   - Tribute items (Balloons) and supporter items (Tee Sign) must not appear
+ *
  * Design spec: plans/sprint-22-sponsors-redesign.md
  */
 
@@ -136,10 +140,17 @@ const STUB_SPONSORS = [
 
 import * as serverModule from "@/lib/supabase/server";
 
-function buildSupabaseMock() {
+// Sprint 33: track whether sponsorship_items query included category filter
+let _categoryFilterApplied = false;
+
+function buildSupabaseMock(opts: { tiersToReturn?: typeof STUB_TIERS } = {}) {
+  const { tiersToReturn = STUB_TIERS } = opts;
+  _categoryFilterApplied = false;
+
   // Sprint 22: page now makes 3 queries:
   //   1. event_settings → .select(...).single()
-  //   2. sponsorship_items → .select(...).eq('active', true).order(...)
+  //   2. sponsorship_items → .select(...).eq('active', true).eq('category','sponsorship').order(...)
+  //      Sprint 33: added .eq('category', 'sponsorship') to this chain
   //   3. sponsors → .select(...).eq(...).eq(...).is(...).order(...)
   const makeEventSettingsChain = () => ({
     select: vi.fn().mockReturnValue({
@@ -147,13 +158,22 @@ function buildSupabaseMock() {
     }),
   });
 
-  const makeTierChain = () => ({
-    select: vi.fn().mockReturnValue({
-      eq: vi.fn().mockReturnValue({
-        order: vi.fn().mockResolvedValue({ data: STUB_TIERS, error: null }),
-      }),
-    }),
-  });
+  const makeTierChain = () => {
+    const orderFn = vi.fn().mockResolvedValue({ data: tiersToReturn, error: null });
+    const eqCategoryFn = vi.fn().mockImplementation((field: string, value: string) => {
+      if (field === "category" && value === "sponsorship") {
+        _categoryFilterApplied = true;
+      }
+      return { order: orderFn };
+    });
+    const eqActiveFn = vi.fn().mockReturnValue({
+      order: orderFn,
+      eq: eqCategoryFn,
+    });
+    return {
+      select: vi.fn().mockReturnValue({ eq: eqActiveFn }),
+    };
+  };
 
   const makeSponsorChain = () => ({
     select: vi.fn().mockReturnValue({
@@ -345,5 +365,74 @@ describe("SponsorsPage — redesign (#220, updated Sprint 22)", () => {
       const card = within(sotdSection).queryByTestId("sponsor-card-sp-sotd-1");
       expect(card).toBeInTheDocument();
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 33 RED — /sponsors page filters sponsorship_items to category='sponsorship'
+// ---------------------------------------------------------------------------
+
+describe("SponsorsPage — category=sponsorship filter (Sprint 33 RED, #302)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.resetModules();
+    buildSupabaseMock();
+  });
+
+  it("(RED) S33-A — sponsorship_items query applies .eq('category', 'sponsorship') filter", async () => {
+    await renderPage();
+    // The mock tracks whether .eq('category', 'sponsorship') was called on the tier chain
+    expect(_categoryFilterApplied).toBe(true);
+  });
+
+  it("(RED) S33-B — 'Balloons' tribute item does not appear on /sponsors page", async () => {
+    const balloonsItem = {
+      id: "tier-balloons",
+      name: "Balloons",
+      sort_order: 99,
+      active: true,
+      deleted_at: null,
+      price_cents: 2000,
+    };
+
+    // Include Balloons in the pool but mock so the category filter should exclude it
+    // Since the current page doesn't filter by category, this test catches the RED state.
+    buildSupabaseMock({
+      tiersToReturn: [
+        ...STUB_TIERS,
+        balloonsItem,
+      ],
+    });
+
+    await renderPage();
+
+    // With the category filter in place, Balloons should not be returned by the query
+    // and should not appear on the page.
+    // RED: currently fails because the page doesn't filter by category.
+    expect(screen.queryByTestId("tier-section-tier-balloons")).not.toBeInTheDocument();
+    expect(screen.queryByText("Balloons")).not.toBeInTheDocument();
+  });
+
+  it("(RED) S33-C — 'Tee Sign' supporter item does not appear on /sponsors page", async () => {
+    const teeSignItem = {
+      id: "tier-tee-sign",
+      name: "Tee Sign",
+      sort_order: 100,
+      active: true,
+      deleted_at: null,
+      price_cents: 10000,
+    };
+
+    buildSupabaseMock({
+      tiersToReturn: [
+        ...STUB_TIERS,
+        teeSignItem,
+      ],
+    });
+
+    await renderPage();
+
+    expect(screen.queryByTestId("tier-section-tier-tee-sign")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tee Sign")).not.toBeInTheDocument();
   });
 });

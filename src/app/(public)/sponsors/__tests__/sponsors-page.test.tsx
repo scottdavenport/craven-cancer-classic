@@ -1,5 +1,5 @@
 /**
- * sponsors-page.test.tsx — Sprint 22 RED phase
+ * sponsors-page.test.tsx — Sprint 22 RED phase + Sprint 33 category filter update
  *
  * Integration tests for the rewritten /sponsors page.
  * The current page (src/app/(public)/sponsors/page.tsx) does NOT yet implement:
@@ -9,6 +9,10 @@
  *   - Bottom CTA href="/donate" (currently /sponsorships)
  *   - Tier sections only rendered for active sponsors (currently renders all tiers)
  *   - Soft-delete filtering on both tier sections and open-sponsorships chips
+ *
+ * Sprint 33 additions:
+ *   - /sponsors page must filter to category='sponsorship' items only
+ *   - Tribute and supporter items (Balloons, Tee Sign, Yard Sign) must NOT appear
  *
  * All tests marked with "(RED)" will fail until Bolt's PR B (GREEN) implements
  * the redesigned page.
@@ -635,5 +639,184 @@ describe("SponsorsPage — Open Sponsorships section header (Sprint 25)", () => 
     // Both must be in the document
     expect(heading).toBeInTheDocument();
     expect(block).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 33 RED — /sponsors page filters to category='sponsorship' only
+// ---------------------------------------------------------------------------
+
+describe("SponsorsPage — category=sponsorship filter (Sprint 33 RED)", () => {
+  /**
+   * Build a mock that includes both sponsorship-category and non-sponsorship items.
+   * The page must add .eq('category', 'sponsorship') to its sponsorship_items query.
+   * If it doesn't, all items appear on the sponsor wall — breaking the contract.
+   */
+  function buildCategoryAwareMock(opts: {
+    sponsorshipTiers: MockTier[];
+    allTiers: MockTier[];
+    sponsors: MockSponsor[];
+  }) {
+    const { sponsorshipTiers, allTiers, sponsors } = opts;
+
+    // Capture whether the query filtered by category
+    let queriedWithCategoryFilter = false;
+
+    const fromMock = vi.fn().mockImplementation((table: string) => {
+      if (table === "sponsorship_items") {
+        // The page should call .eq('active', true).eq('category', 'sponsorship').order(...)
+        // We check by tracking eq() calls on the chain.
+        let filteredTiers = allTiers;
+        const orderFn = vi.fn().mockImplementation(() =>
+          Promise.resolve({ data: filteredTiers, error: null })
+        );
+        const eqCategory = vi.fn().mockImplementation((_field: string, value: string) => {
+          if (_field === "category" && value === "sponsorship") {
+            queriedWithCategoryFilter = true;
+            filteredTiers = sponsorshipTiers;
+          }
+          return { order: orderFn };
+        });
+        const eqActive = vi.fn().mockReturnValue({ order: orderFn, eq: eqCategory });
+        return {
+          select: vi.fn().mockReturnValue({ eq: eqActive }),
+        };
+      }
+
+      if (table === "sponsors") {
+        return {
+          select: vi.fn().mockReturnValue({
+            eq: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                is: vi.fn().mockReturnValue({
+                  order: vi.fn().mockResolvedValue({ data: sponsors, error: null }),
+                }),
+              }),
+            }),
+          }),
+        };
+      }
+
+      if (table === "event_settings") {
+        return {
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        };
+      }
+
+      return {
+        select: vi.fn().mockReturnValue({
+          single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          eq: vi.fn().mockReturnValue({
+            order: vi.fn().mockResolvedValue({ data: [], error: null }),
+          }),
+        }),
+      };
+    });
+
+    return { from: fromMock, _queriedWithCategoryFilter: () => queriedWithCategoryFilter };
+  }
+
+  const TRIBUTE_TIER = makeTier({
+    id: "tier-balloons",
+    name: "Balloons",
+    sort_order: 99,
+    active: true,
+  });
+
+  const SUPPORTER_TIER = makeTier({
+    id: "tier-tee-sign",
+    name: "Tee Sign",
+    sort_order: 100,
+    active: true,
+  });
+
+  const SPONSORSHIP_TIERS = TIERS_WITH_SPONSORS;
+  const ALL_TIERS_MIXED = [...TIERS_WITH_SPONSORS, TRIBUTE_TIER, SUPPORTER_TIER];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
+  it("(RED) S33-1 — sponsorship_items query filters to category='sponsorship'", async () => {
+    const mock = buildCategoryAwareMock({
+      sponsorshipTiers: SPONSORSHIP_TIERS,
+      allTiers: ALL_TIERS_MIXED,
+      sponsors: ACTIVE_SPONSORS,
+    });
+
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      { from: mock.from } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    // The mock tracks whether .eq('category', 'sponsorship') was called
+    expect(mock._queriedWithCategoryFilter()).toBe(true);
+  });
+
+  it("(RED) S33-2 — 'Balloons' tribute item does NOT appear on /sponsors page", async () => {
+    const mock = buildCategoryAwareMock({
+      sponsorshipTiers: SPONSORSHIP_TIERS,
+      allTiers: ALL_TIERS_MIXED,
+      sponsors: ACTIVE_SPONSORS,
+    });
+
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      { from: mock.from } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    // Balloons is a tribute item — must not appear as a tier section
+    expect(screen.queryByTestId("tier-section-tier-balloons")).not.toBeInTheDocument();
+    expect(screen.queryByText("Balloons")).not.toBeInTheDocument();
+  });
+
+  it("(RED) S33-3 — 'Tee Sign' supporter item does NOT appear on /sponsors page", async () => {
+    const mock = buildCategoryAwareMock({
+      sponsorshipTiers: SPONSORSHIP_TIERS,
+      allTiers: ALL_TIERS_MIXED,
+      sponsors: ACTIVE_SPONSORS,
+    });
+
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      { from: mock.from } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    expect(screen.queryByTestId("tier-section-tier-tee-sign")).not.toBeInTheDocument();
+    expect(screen.queryByText("Tee Sign")).not.toBeInTheDocument();
+  });
+
+  it("(RED) S33-4 — legitimate sponsorship tiers still render after category filter", async () => {
+    const mock = buildCategoryAwareMock({
+      sponsorshipTiers: [makeTier({ id: "tier-champion", name: "Champion", sort_order: 1 })],
+      allTiers: [
+        makeTier({ id: "tier-champion", name: "Champion", sort_order: 1 }),
+        TRIBUTE_TIER,
+        SUPPORTER_TIER,
+      ],
+      sponsors: [makeSponsor({ id: "s-champ", name: "Champ Corp", tier_id: "tier-champion" })],
+    });
+
+    vi.mocked(serverModule.createClient).mockResolvedValue(
+      { from: mock.from } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
+    );
+
+    const Page = await loadPage();
+    render(await Page());
+
+    // Champion (sponsorship) should still appear
+    expect(screen.getByTestId("tier-section-tier-champion")).toBeInTheDocument();
   });
 });

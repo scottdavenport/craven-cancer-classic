@@ -1,6 +1,7 @@
 /**
  * database-types.test.ts
  * Sprint 32 (#282) updates: team_name dropped from Team + Score types.
+ * Sprint 33 (#302) updates: category enum + tribute_recipient column added.
  * RED assertions fail until Flux runs migration and regenerates src/types/database.ts.
  */
 
@@ -174,5 +175,138 @@ describe("database types", () => {
     } as ScoreRow;
     expect(score.total_score).toBe(72);
     expect(Object.prototype.hasOwnProperty.call(score, "team_name")).toBe(false);
+  });
+
+  // ---------------------------------------------------------------------------
+  // Sprint 33 RED: category enum + tribute_recipient column
+  // These tests verify the shape assertions AFTER Flux regenerates database.ts.
+  // They fail RED because the properties don't exist on current types.
+  // ---------------------------------------------------------------------------
+
+  it("Database Enums includes sponsorship_category with three values (Sprint 33 RED)", () => {
+    // RED: sponsorship_category enum does not exist in database.ts yet.
+    // We verify via runtime check that the enum object doesn't exist (RED state).
+    // After Flux regenerates types, this test must be updated to use the real type.
+    type Enums = Database["public"]["Enums"];
+    // Compile-time: Enums is currently {}. This assertion confirms it's empty now.
+    // After regen, the type will have sponsorship_category.
+    const enumKeys = Object.keys({} as Enums);
+    // RED: currently empty. After regen it will include 'sponsorship_category'.
+    // The test intentionally fails until types are regenerated.
+    expect(enumKeys).toContain("sponsorship_category");
+  });
+
+  it("SponsorshipItem Row type has a category field (Sprint 33 RED)", () => {
+    // RED: category does not exist on sponsorship_items Row yet.
+    // After migration + type regen, this must pass.
+    type ItemRow = Database["public"]["Tables"]["sponsorship_items"]["Row"];
+    const baseItem: ItemRow = {
+      id: "uuid",
+      name: "Champion",
+      description: null,
+      price_cents: 500000,
+      max_quantity: null,
+      sold_count: 0,
+      active: true,
+      benefits: [],
+      created_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
+      deleted_by: null,
+      sort_order: 1,
+      year: 2026,
+    };
+    // Sprint 33 RED: after regen, 'category' will be a key on ItemRow.
+    // Currently it is NOT present — this assertion fails (RED state).
+    expect(Object.keys(baseItem)).toContain("category");
+  });
+
+  it("SponsorshipPurchase Row type has a tribute_recipient field (Sprint 33 RED)", () => {
+    // RED: tribute_recipient does not exist on sponsorship_purchases Row yet.
+    type PurchaseRow = Database["public"]["Tables"]["sponsorship_purchases"]["Row"];
+    const purchase: PurchaseRow = {
+      id: "uuid",
+      item_id: "item-uuid",
+      purchaser_name: "Jane Doe",
+      purchaser_email: "jane@example.com",
+      purchaser_phone: null,
+      company_name: null,
+      payment_status: "paid",
+      amount_paid_cents: 2000,
+      stripe_payment_id: null,
+      year: 2026,
+      created_at: "2026-01-01T00:00:00Z",
+    };
+    // Sprint 33 RED: after regen, 'tribute_recipient' will be a key on PurchaseRow.
+    // Currently it is NOT present — this assertion fails (RED state).
+    expect(Object.keys(purchase)).toContain("tribute_recipient");
+  });
+
+  it("SponsorshipPurchase Row tribute_recipient is nullable (non-tribute purchases) (Sprint 33 RED)", () => {
+    // After regen: tribute_recipient must be string | null.
+    // We verify via SponsorshipPurchase convenience type from @/types/database.
+    // Currently SponsorshipPurchase doesn't include tribute_recipient.
+    const purchase: SponsorshipPurchase = {
+      id: "uuid",
+      item_id: "item-uuid",
+      purchaser_name: "Acme Corp",
+      purchaser_email: "acme@example.com",
+      purchaser_phone: null,
+      company_name: "Acme Corp",
+      payment_status: "paid",
+      amount_paid_cents: 500000,
+      stripe_payment_id: "pi_test",
+      year: 2026,
+      created_at: "2026-01-01T00:00:00Z",
+    };
+    // RED: tribute_recipient will be accessible as null on non-tribute purchases.
+    // Currently the property doesn't exist — test fails.
+    const extended = purchase as SponsorshipPurchase & { tribute_recipient?: string | null };
+    expect("tribute_recipient" in purchase).toBe(true);
+    expect(extended.tribute_recipient ?? null).toBeNull();
+  });
+
+  it("sponsorship_items_active view Row includes category column (Sprint 33 RED)", () => {
+    // RED: View type does not include category until the view is recreated by Flux.
+    type ActiveViewRow = Database["public"]["Views"]["sponsorship_items_active"]["Row"];
+    const baseViewRow: ActiveViewRow = {
+      id: "uuid",
+      name: "Balloons",
+      description: null,
+      price_cents: 2000,
+      max_quantity: null,
+      sold_count: 0,
+      active: true,
+      benefits: [],
+      created_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
+      deleted_by: null,
+      sort_order: 14,
+      year: 2026,
+    };
+    // Sprint 33 RED: after recreation, 'category' will be a key on the view Row.
+    // Currently it is NOT present — this assertion fails (RED state).
+    expect(Object.keys(baseViewRow)).toContain("category");
+  });
+
+  it("SponsorshipItem convenience type has category field (Sprint 33 RED)", () => {
+    // The SponsorshipItem convenience type exported from @/types/database must
+    // include category after types are regenerated.
+    const item: SponsorshipItem = {
+      id: "uuid",
+      name: "Tee Sign",
+      description: null,
+      price_cents: 10000,
+      max_quantity: null,
+      sold_count: 0,
+      active: true,
+      benefits: [],
+      created_at: "2026-01-01T00:00:00Z",
+      deleted_at: null,
+      deleted_by: null,
+      sort_order: 15,
+      year: 2026,
+    };
+    // RED: category not present on SponsorshipItem yet.
+    expect(Object.keys(item)).toContain("category");
   });
 });

@@ -207,13 +207,14 @@ Surface points (~10): `Database['public']['Tables']['sponsorship_items']['Row' |
 
 **Server actions:**
 - `src/app/admin/sponsorships/actions.ts` — `getSponsorshipItems({ category? })` filter param. `getSponsorshipPurchases({ category? })` filter via JOIN. `createSponsorshipItem` accepts category. `updateSponsorshipItem` accepts category.
+- `src/app/admin/sponsors/actions.ts` — `getSponsorshipItems()` (the sponsor-attribution dropdown helper used by the Sponsors admin tab to pick which tier a sponsor contact bought). After this sprint **must filter to `.eq('category', 'sponsorship')`** so Balloons / Tee Sign / Yard Sign do not appear in the tier-sponsor picker.
 - `src/app/(public)/sponsorships/page.tsx` — page query splits into three category-filtered queries (or single query, partition client-side). Pass each category's items to the section component.
 - `src/app/(public)/sponsors/page.tsx` — sponsorship-page query gains `.eq('category', 'sponsorship')` on the catalog read.
 
 **Checkout / Stripe:**
 - `src/app/api/checkout/route.ts` — `handleSponsorshipCheckout` accepts optional `tribute_recipient` in body, persists to `sponsorship_purchases` row at insert. Stripe metadata gets `tribute_recipient` so the webhook can confirm. **Validation:** if `item.category='tribute'` and `tribute_recipient` is blank/missing, return 400 "tribute purchases require an honoree name." If `item.category!='tribute'` and `tribute_recipient` is supplied, ignore it (do not persist) — defensive against client-side mis-shapes.
 - **Stripe line item description carries the tribute recipient on the receipt.** For tribute purchases, build the line item `name` as `"<item.name> — in honor of <tribute_recipient>"` (e.g., `"Balloons — in honor of John Davenport"`). This shows up on the Stripe-generated receipt email without requiring a custom Resend template. Sponsorship + supporter purchases use the existing `item.name` only.
-- `supabase/functions/stripe-webhook/index.ts` — already advisory-locked + idempotent; tribute_recipient is set at purchase insert (pre-Stripe), so webhook need only verify (not re-set). Confirm logic still works.
+- `src/app/api/webhooks/stripe/route.ts` — already advisory-locked + idempotent (lines 52–111); tribute_recipient is set at purchase insert (pre-Stripe), so webhook need only verify (not re-set). Confirm logic still works.
 
 **Admin UI:**
 - `src/app/admin/sponsorships/sponsorship-manager.tsx` — add CategoryFilter component (custom Select, not native — per `feedback_no_system_ui`). Filter applies to both list and purchases panel.
@@ -249,6 +250,10 @@ Surface points (~10): `Database['public']['Tables']['sponsorship_items']['Row' |
 - Public `/tributes` standalone page — Q6 picked the inline-on-/sponsorships pattern; revisit only if tribute volume justifies a dedicated page.
 - Tribute message field (per-purchase note like "Mom — we miss you every day") — not in this sprint; can be added later as `tribute_message text` if Scott wants more emotional space on the tribute wall.
 - `Bloody Mary Sponsor`, `Golf Cart Sponsor`, `Thursday Night Sponsor` (3 soft-deleted items) — backfilled to `sponsorship` category by name match in the migration UPDATE; they remain soft-deleted, so no admin or public surface change.
+
+## Seed file
+
+`supabase/seed.sql` inserts 8 canonical sponsorship-tier items without a `category` column today. After this sprint, the migration's `NOT NULL DEFAULT 'sponsorship'` covers all 8 cleanly — no seed update needed for the seeded set. Balloons / Tee Sign / Yard Sign are not seeded (they were added directly in prod via admin UI), so seed-vs-prod drift is limited to those three items in dev environments. Acceptable for now; a follow-up may refresh seed.sql to include the supporter + tribute items if dev-environment fidelity matters.
 
 ## Amendments
 

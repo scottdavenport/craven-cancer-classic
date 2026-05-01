@@ -339,7 +339,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
         <Table>
           <TableHeader className="bg-neutral-50">
             <TableRow>
-              {["Team Name", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(
+              {["Team", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(
                 (h) => (
                   <TableHead
                     key={h}

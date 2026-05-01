@@ -13,7 +13,7 @@ test("homepage displays hero section", async ({ page }) => {
 
 test("about page loads", async ({ page }) => {
   await page.goto("/about");
-  await expect(page.locator("h1")).toContainText("About Our Cause");
+  await expect(page.locator("h1")).toContainText("How This Started");
   await expect(page.getByText("Scott Davenport Sr.", { exact: true })).toBeVisible();
 });
 

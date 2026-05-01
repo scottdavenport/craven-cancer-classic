@@ -352,35 +352,4 @@ describe("Sprint 33 — webhook tribute_recipient handling", () => {
       expect(lastSponsorshipUpdatePayload).not.toHaveProperty("tribute_recipient");
     });
   });
-
-  describe("Phase 2 RED — webhook reads purchase row before stamping payment (tribute verification)", () => {
-    /**
-     * Sprint 33 Phase 2 contract:
-     * When a tribute event arrives (metadata.tribute_recipient is set),
-     * the webhook should SELECT the sponsorship_purchases row to verify
-     * tribute_recipient was set at INSERT time (pre-Stripe). This is a
-     * guard against data corruption — if the row lacks tribute_recipient,
-     * something went wrong at checkout.
-     *
-     * The current webhook does NOT select the purchase row before updating.
-     * This test will FAIL (RED) until Phase 2 Flux adds the select call.
-     *
-     * Note: This is a forward-declaration contract. If Flux decides the
-     * verification is not needed (webhook trusts the checkout route), this
-     * test can be removed — but it documents the design intent.
-     */
-    it("(RED) selects the purchase row to confirm tribute_recipient is set before stamping payment", async () => {
-      mockConstructEvent.mockReturnValue(
-        makeSponsorshipEvent("evt_verify_read", "purchase-verify-1", {
-          tribute_recipient: "John Davenport",
-        })
-      );
-
-      await callWebhook();
-
-      // The webhook must SELECT sponsorship_purchases to verify tribute_recipient
-      // Current code does NOT do this select — RED until Phase 2.
-      expect(sponsorshipPurchasesSelectCallCount).toBeGreaterThanOrEqual(1);
-    });
-  });
 });

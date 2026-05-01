@@ -303,6 +303,9 @@ describe("getLinkedSponsorNames", () => {
 // ---------------------------------------------------------------------------
 
 describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () => {
+  // Hoisted so tests can assert the spy was called with the right args.
+  let itemsEqCategory: ReturnType<typeof vi.fn>;
+
   function buildCategoryFilterClient(
     tierRows: ReturnType<typeof makeTierRow>[]
   ) {
@@ -310,7 +313,7 @@ describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () 
     // to the items query chain. The mock must handle that extra .eq() call.
     // Chain: .select('*').eq('year', year).eq('category', category).order(...)
     const itemsOrder = vi.fn().mockResolvedValue({ data: tierRows, error: null });
-    const itemsEqCategory = vi.fn().mockReturnValue({ order: itemsOrder });
+    itemsEqCategory = vi.fn().mockReturnValue({ order: itemsOrder });
     const itemsEqYear = vi.fn().mockReturnValue({
       order: itemsOrder,
       eq: itemsEqCategory,
@@ -342,6 +345,8 @@ describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () 
 
     const result = await getSponsorshipItemsFiltered({ category: "tribute" });
 
+    // Contract: the action must call .eq('category', 'tribute') on the query chain.
+    expect(itemsEqCategory).toHaveBeenCalledWith("category", "tribute");
     expect(result).toHaveLength(1);
     expect((result[0] as { name: string }).name).toBe("Balloons");
   });
@@ -355,6 +360,8 @@ describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () 
 
     const result = await getSponsorshipItemsFiltered({ category: "sponsorship" });
 
+    // Contract: the action must call .eq('category', 'sponsorship') on the query chain.
+    expect(itemsEqCategory).toHaveBeenCalledWith("category", "sponsorship");
     expect(result).toHaveLength(2);
     result.forEach((item) => {
       expect((item as { category: string }).category).toBe("sponsorship");
@@ -370,6 +377,8 @@ describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () 
 
     const result = await getSponsorshipItemsFiltered({ category: "supporter" });
 
+    // Contract: the action must call .eq('category', 'supporter') on the query chain.
+    expect(itemsEqCategory).toHaveBeenCalledWith("category", "supporter");
     expect(result).toHaveLength(2);
     result.forEach((item) => {
       expect((item as { category: string }).category).toBe("supporter");
@@ -384,9 +393,10 @@ describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () 
     ];
     setClient(buildCategoryFilterClient(tierRows));
 
-    // No category argument — old behavior preserved
+    // No category argument — old behavior preserved; .eq('category', ...) must NOT be called.
     const result = await getSponsorshipItemsFiltered();
 
+    expect(itemsEqCategory).not.toHaveBeenCalled();
     expect(result).toHaveLength(3);
   });
 });
@@ -396,6 +406,9 @@ describe("getSponsorshipItems — optional category filter (Sprint 33 RED)", () 
 // ---------------------------------------------------------------------------
 
 describe("getSponsorshipPurchases — optional category filter (Sprint 33 RED)", () => {
+  // Hoisted so tests can assert the spy was called with the right args.
+  let purchasesEqCategory: ReturnType<typeof vi.fn>;
+
   function buildPurchasesClient(
     purchaseRows: ReturnType<typeof makePurchaseRow>[]
   ) {
@@ -406,7 +419,7 @@ describe("getSponsorshipPurchases — optional category filter (Sprint 33 RED)",
     // Mock: simple chain that returns filtered rows (simulating DB-side filtering).
     const purchasesOrder = vi.fn().mockResolvedValue({ data: purchaseRows, error: null });
     const purchasesEqYear = vi.fn().mockReturnValue({ order: purchasesOrder });
-    const purchasesEqCategory = vi.fn().mockReturnValue({ order: purchasesOrder });
+    purchasesEqCategory = vi.fn().mockReturnValue({ order: purchasesOrder });
     const purchasesSelectChain = vi.fn().mockReturnValue({
       eq: vi.fn().mockReturnValue({
         order: purchasesOrder,
@@ -436,6 +449,8 @@ describe("getSponsorshipPurchases — optional category filter (Sprint 33 RED)",
 
     const result = await getSponsorshipPurchasesFiltered({ category: "tribute" });
 
+    // Contract: the action must call .eq('category', 'tribute') on the query chain.
+    expect(purchasesEqCategory).toHaveBeenCalledWith("category", "tribute");
     expect(result).toHaveLength(1);
     expect((result![0] as { tribute_recipient: string }).tribute_recipient).toBe(
       "John Davenport"
@@ -450,6 +465,8 @@ describe("getSponsorshipPurchases — optional category filter (Sprint 33 RED)",
 
     const result = await getSponsorshipPurchasesFiltered({ category: "tribute" });
 
+    // Contract: the action must call .eq('category', 'tribute') on the query chain.
+    expect(purchasesEqCategory).toHaveBeenCalledWith("category", "tribute");
     // Should only return the tribute purchase (Balloons)
     expect(result).toHaveLength(1);
     // Balloons is item_id
@@ -464,8 +481,10 @@ describe("getSponsorshipPurchases — optional category filter (Sprint 33 RED)",
     ];
     setClient(buildPurchasesClient(allPurchases));
 
+    // No category argument — old behavior preserved; .eq('category', ...) must NOT be called.
     const result = await getSponsorshipPurchasesFiltered();
 
+    expect(purchasesEqCategory).not.toHaveBeenCalled();
     expect(result).toHaveLength(3);
   });
 
@@ -477,6 +496,8 @@ describe("getSponsorshipPurchases — optional category filter (Sprint 33 RED)",
 
     const result = await getSponsorshipPurchasesFiltered({ category: "sponsorship" });
 
+    // Contract: the action must call .eq('category', 'sponsorship') on the query chain.
+    expect(purchasesEqCategory).toHaveBeenCalledWith("category", "sponsorship");
     expect(result).toHaveLength(1);
     expect(
       (result![0] as { tribute_recipient: string | null }).tribute_recipient

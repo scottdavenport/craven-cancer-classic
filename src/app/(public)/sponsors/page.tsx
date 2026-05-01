@@ -118,7 +118,7 @@ export default async function SponsorsPage() {
           const tierSponsors = activeSponsors.filter(
             (s) => s.tier_id === tier.id
           );
-          const tierSize = getTierSize(tier.sort_order, tierSponsors.length);
+          const tierSize = getTierSize((tier as { price_cents?: number }).price_cents ?? 0, tierSponsors.length);
           const gridClass = TIER_GRID_CLASS[tierSize];
 
           return (

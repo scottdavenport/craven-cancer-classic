@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,8 +68,6 @@ function nullify(v: string): string | null {
 export function ContactForm({
   initial,
   onSubmit,
-  onCancel,
-  submitLabel = "Save",
 }: ContactFormProps) {
   const [salutation, setSalutation] = useState(initial?.salutation ?? "");
   const [firstName, setFirstName] = useState(initial?.first_name ?? "");
@@ -116,7 +113,7 @@ export function ContactForm({
   );
 
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [submitting, setSubmitting] = useState(false);
+  const [, setSubmitting] = useState(false);
 
   // Derived visibility flags
   const isPlayer = types.includes("player");
@@ -200,9 +197,6 @@ export function ContactForm({
     return true;
   }
 
-  const hasErrors = Object.keys(errors).length > 0;
-  const noTypesChecked = types.length === 0;
-
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -249,7 +243,7 @@ export function ContactForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1 px-1">
+    <form id="contact-form" onSubmit={handleSubmit} className="space-y-6 overflow-y-auto flex-1 px-1">
       {/* Identity */}
       <div className="space-y-3">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
@@ -612,15 +606,6 @@ export function ContactForm({
         />
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-2 pt-2">
-        <Button type="submit" disabled={submitting || hasErrors || noTypesChecked}>
-          {submitting ? "Saving..." : submitLabel}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={submitting}>
-          Cancel
-        </Button>
-      </div>
     </form>
   );
 }

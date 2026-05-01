@@ -77,16 +77,14 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
   });
 
   describe("actions div padding", () => {
-    it("actions div does NOT have pb-4 class", () => {
-      const { container } = render(<ContactForm onSubmit={noop} onCancel={noop} />);
+    it("submit button is NOT rendered inside ContactForm (moved to DialogFooter)", () => {
+      render(<ContactForm onSubmit={noop} onCancel={noop} />);
 
-      // Find the element that contains the Save / Cancel buttons
-      const saveBtn = screen.getByRole("button", { name: /save/i });
-      const actionsDiv = saveBtn.parentElement;
-      expect(actionsDiv).toBeTruthy();
-
-      // PR C fix: pb-4 was a doubled-padding workaround — it must be removed
-      expect(actionsDiv!.className).not.toContain("pb-4");
+      // #325 fix: Save/Create/Cancel buttons relocated to ContactModal's DialogFooter.
+      // ContactForm renders no submit button — the pb-4 doubled-padding constraint
+      // is moot now that the actions div is entirely removed.
+      const saveBtn = document.querySelector('button[type="submit"]');
+      expect(saveBtn).toBeNull();
     });
   });
 

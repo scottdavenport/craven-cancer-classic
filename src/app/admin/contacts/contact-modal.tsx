@@ -72,7 +72,7 @@ export function ContactModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-[800px] flex flex-col overflow-hidden p-0"
+          className="sm:max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden p-0"
           showCloseButton={false}
         >
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
@@ -88,8 +88,8 @@ export function ContactModal({
             />
           </div>
 
-          {mode === "edit" && contact && (
-            <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+          <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+            {mode === "edit" && contact && (
               <Button
                 type="button"
                 variant="outline"
@@ -98,8 +98,18 @@ export function ContactModal({
               >
                 Delete contact
               </Button>
-            </DialogFooter>
-          )}
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" form="contact-form">
+              {mode === "create" ? "Create" : "Save"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -42,11 +42,12 @@ test.describe("Contact create/edit via modal", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
     await expect(page.getByText(/contact created|saved/i)).toBeVisible({ timeout: 5_000 });
 
-    // New contact visible in list
-    await expect(page.getByText("E2EFirst E2ELast")).toBeVisible();
+    // New contact visible in list — locate by unique email since name may collide with prior runs
+    const newRow = page.getByRole("row", { name: new RegExp(TEST_EMAIL) });
+    await expect(newRow).toBeVisible();
 
     // ---- Edit the contact ----
-    await page.getByText("E2EFirst E2ELast").click();
+    await newRow.click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
     // Verify values pre-filled
@@ -62,16 +63,18 @@ test.describe("Contact create/edit via modal", () => {
     await expect(page.getByText(/saved|updated/i)).toBeVisible({ timeout: 5_000 });
 
     // ---- Cleanup: soft-delete the test contact ----
-    await page.getByText("E2EFirst E2ELast").click();
+    // Scope to the specific row by TEST_EMAIL so leftover contacts from prior runs don't confuse the locator
+    const testRow = page.getByRole("row", { name: new RegExp(TEST_EMAIL) });
+    await testRow.click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("button", { name: /delete/i }).click();
 
-    // Confirm the delete
-    const confirmBtn = page.getByRole("button", { name: /confirm|yes/i });
-    if (await confirmBtn.isVisible()) {
-      await confirmBtn.click();
-    }
+    // Confirm the delete — ConfirmDialog renders confirmLabel="Delete" (exact text, not "Delete contact")
+    const confirmBtn = page.getByRole("button", { name: "Delete", exact: true });
+    await expect(confirmBtn).toBeVisible({ timeout: 3_000 });
+    await confirmBtn.click();
 
-    await expect(page.getByText("E2EFirst E2ELast")).not.toBeVisible({ timeout: 5_000 });
+    // Verify this specific row is gone (scoped by unique email, not the shared name)
+    await expect(testRow).not.toBeVisible({ timeout: 5_000 });
   });
 });

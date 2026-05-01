@@ -376,6 +376,7 @@ describe("Item 8 — Sponsorship card hover not duplicated (#235)", () => {
         max_quantity: 5,
         sold_count: 1,
         active: true,
+        category: "sponsorship" as const,
         year: 2026,
         deleted_at: null,
         deleted_by: null,

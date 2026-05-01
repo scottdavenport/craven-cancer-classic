@@ -186,6 +186,7 @@ function makeSpItem(overrides: Partial<SponsorshipItemWithCount> = {}): Sponsors
     sold_count: 0,
     active: true,
     benefits: [] as import("@/types/database").Json,
+    category: "sponsorship" as const,
     created_at: new Date().toISOString(),
     deleted_at: null,
     deleted_by: null,

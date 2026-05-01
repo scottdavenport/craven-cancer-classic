@@ -457,6 +457,7 @@ export type Database = {
         Row: {
           active: boolean
           benefits: Json
+          category: Database["public"]["Enums"]["sponsorship_category"]
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
@@ -472,6 +473,7 @@ export type Database = {
         Insert: {
           active?: boolean
           benefits?: Json
+          category?: Database["public"]["Enums"]["sponsorship_category"]
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -487,6 +489,7 @@ export type Database = {
         Update: {
           active?: boolean
           benefits?: Json
+          category?: Database["public"]["Enums"]["sponsorship_category"]
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
@@ -513,6 +516,7 @@ export type Database = {
           purchaser_name: string
           purchaser_phone: string | null
           stripe_payment_id: string | null
+          tribute_recipient: string | null
           year: number
         }
         Insert: {
@@ -526,6 +530,7 @@ export type Database = {
           purchaser_name: string
           purchaser_phone?: string | null
           stripe_payment_id?: string | null
+          tribute_recipient?: string | null
           year?: number
         }
         Update: {
@@ -539,6 +544,7 @@ export type Database = {
           purchaser_name?: string
           purchaser_phone?: string | null
           stripe_payment_id?: string | null
+          tribute_recipient?: string | null
           year?: number
         }
         Relationships: [
@@ -884,6 +890,7 @@ export type Database = {
         Row: {
           active: boolean | null
           benefits: Json | null
+          category: Database["public"]["Enums"]["sponsorship_category"] | null
           created_at: string | null
           deleted_at: string | null
           deleted_by: string | null
@@ -899,6 +906,7 @@ export type Database = {
         Insert: {
           active?: boolean | null
           benefits?: Json | null
+          category?: Database["public"]["Enums"]["sponsorship_category"] | null
           created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
@@ -914,6 +922,7 @@ export type Database = {
         Update: {
           active?: boolean | null
           benefits?: Json | null
+          category?: Database["public"]["Enums"]["sponsorship_category"] | null
           created_at?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
@@ -1015,7 +1024,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      sponsorship_category: "sponsorship" | "tribute" | "supporter"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1142,7 +1151,9 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      sponsorship_category: ["sponsorship", "tribute", "supporter"] as const,
+    },
   },
 } as const
 

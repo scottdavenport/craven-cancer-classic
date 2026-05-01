@@ -1,5 +1,5 @@
 /**
- * Flow 1: Contact create + edit via side drawer
+ * Flow 1: Contact create + edit via centered modal
  *
  * Requires: E2E_ADMIN_EMAIL + E2E_ADMIN_PASSWORD in env
  * Skipped automatically when credentials are not configured.
@@ -17,27 +17,26 @@ import { test } from "./fixtures/admin-auth";
 
 const TEST_EMAIL = `e2e-contact-create-${Date.now()}@example.com`;
 
-test.describe("Contact create/edit via drawer", () => {
+test.describe("Contact create/edit via modal", () => {
   test("creates a new contact, edits it, then soft-deletes it", async ({ adminPage: page }) => {
     // ---- Navigate to contacts ----
     await page.goto("/admin/contacts");
     await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
 
-    // ---- Open new contact drawer ----
+    // ---- Open new contact modal ----
     await page.getByRole("button", { name: /new contact/i }).click();
     await expect(page.getByRole("dialog")).toBeVisible();
 
     // ---- Fill in the form ----
     await page.getByLabel(/first name/i).fill("E2EFirst");
     await page.getByLabel(/last name/i).fill("E2ELast");
-    await page.getByLabel(/email/i).fill(TEST_EMAIL);
+    await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
 
     // Set type to donor
-    await page.getByRole("combobox", { name: /type/i }).click();
-    await page.getByRole("option", { name: /donor/i }).click();
+    await page.getByRole("checkbox", { name: "Donor" }).check();
 
     // ---- Save ----
-    await page.getByRole("button", { name: /save/i }).click();
+    await page.getByRole("button", { name: "Create", exact: true }).click();
 
     // Drawer should close and toast should appear
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
@@ -52,13 +51,13 @@ test.describe("Contact create/edit via drawer", () => {
 
     // Verify values pre-filled
     await expect(page.getByLabel(/first name/i)).toHaveValue("E2EFirst");
-    await expect(page.getByLabel(/email/i)).toHaveValue(TEST_EMAIL);
+    await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(TEST_EMAIL);
 
-    // Change type to sponsor
-    await page.getByRole("combobox", { name: /type/i }).click();
-    await page.getByRole("option", { name: /sponsor/i }).click();
+    // Change type from donor to sponsor
+    await page.getByRole("checkbox", { name: "Donor" }).uncheck();
+    await page.getByRole("checkbox", { name: "Sponsor" }).check();
 
-    await page.getByRole("button", { name: /save/i }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
     await expect(page.getByText(/saved|updated/i)).toBeVisible({ timeout: 5_000 });
 

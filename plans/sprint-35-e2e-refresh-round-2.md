@@ -27,9 +27,9 @@ No new product surfaces. No schema changes. What changes is that after this spri
 
 ---
 
-## 8 Patterns Reference
+## Pattern Reference (10 patterns total)
 
-Established in Sprint 34 execution. All are relevant to this sprint's 7 specs.
+8 established in Sprint 34. **2 new patterns added 2026-05-01** after Watchdog's plan-PR review surfaced production-side mismatches (T and X). Pattern P (alert variant from PR #317) was verified non-issue and removed from the action list.
 
 | ID | Pattern | Canonical fix |
 |----|---------|---------------|
@@ -38,9 +38,13 @@ Established in Sprint 34 execution. All are relevant to this sprint's 7 specs.
 | C | Stale "drawer" naming in describe blocks / comments | Replace "drawer" → "modal" or "centered modal" throughout |
 | E | `/save/i` → `{ name: "Create", exact: true }` in create flow; `{ name: "Save", exact: true }` in edit flow | Modal renders "Create" on new contact, "Save" on edit; regex `/save/i` never matches "Create" |
 | F | Submit attempt with no type checked → button disabled, test times out | Sprint 31 #268: at least one type checkbox must be checked before Save/Create is enabled; any test that doesn't `.check()` a type before clicking submit will time out |
-| G | `getByRole("button", { name: /confirm|yes/i })` → `getByRole("button", { name: "Delete", exact: true })` | ConfirmDialog renders `confirmLabel="Delete"`; `/confirm|yes/i` matches nothing; also must disambiguate from the edit-modal "Delete contact" trigger (use `.last()` or scope within confirm dialog) |
+| G | `getByRole("button", { name: /confirm|yes/i })` → `getByRole("button", { name: "Delete", exact: true })` | ConfirmDialog renders `confirmLabel="Delete"`; `/confirm|yes/i` matches nothing; also must disambiguate from the edit-modal "Delete contact" trigger (scope within confirm dialog) |
 | H | `getByText(TEST_EMAIL)` in Trash → `getByText(FULL_NAME)` | Trash column is `full_name`, not email; assertions on email text always fail |
 | TS | Static names → per-run timestamps | Static test names accumulate in PROD across runs; strict-mode locators collide on the second run; use `Date.now()` suffix in email AND derive `FULL_NAME` from the name constants |
+| **T** | `getByRole("alert")` → sonner toast locator | Server-action errors (type-removal guard, generic create/update failures) surface via `toast.error()` from sonner. Sonner toasts have NO `role="alert"`. Use `page.getByText(<expected error text>)` scoped to `[data-sonner-toast]` or the visible toast region. Confirmed at `contact-modal.tsx:48-49,63-64`. |
+| **X** | Team list header text drift vs cell content | `team-list.tsx:342` ships header `["Team Name", "Captain", ...]` but the cell at line 378 renders `team.captain_display_name`. Sprint 32 dropped the column but never renamed the header. **Production-code fix required** — rename "Team Name" → "Team" in `team-list.tsx:342`. This is a Bolt task in Phase 0b, NOT a spec-only change. |
+
+**Pattern P (PR #317 alert variant) — VERIFIED NON-ISSUE.** Watchdog confirmed `contact-list.tsx:753-755` retains `role="alert"` AND adds `aria-live="polite"`. The existing `getByRole("alert")` locators in `contact-bulk-blocked-alert.spec.ts` work as-is. **No surgery needed.** This was the right call to flag in pre-flight; it just resolved cleanly.
 
 ---
 
@@ -127,13 +131,15 @@ No Trash assertions in this file.
 
 **Summary for contact-multi-type.spec.ts:**
 
-| Pattern | Hits | Lines |
+Verified count via `grep -n 'name: /save/i' tests/e2e/contact-multi-type.spec.ts` = **18 hits** (Compass's initial pass said 16; corrected after Watchdog flag).
+
+| Pattern | Hits | Lines (verified) |
 |---------|------|-------|
-| E (create → "Create" exact) | 10 create-flow submits | 85, 119, 148, 187, 213, 246, 252, 256, 290, 340, 385, 456, 466, 473, 481, 485 |
+| E (create → "Create" exact) | 17 create-flow submits | 84, 85, 119, 148, 187, 213, 246, 252, 256, 290, 340, 385, 456, 466, 473, 480, 485 |
 | E (edit → "Save" exact) | 1 edit-flow submit | 302 |
 | G (confirm button) | 1 — in `softDeleteContact()` | 59 |
 | TS (static names in cleanup paths) | LOW RISK if G is fixed | 95, 122, 151, 190, 230, 322, 365, 397 |
-| A, B, C, F, H | N/A | — |
+| A, B, C, F, H, T, X | N/A | — |
 
 ---
 
@@ -233,80 +239,72 @@ No Trash assertions.
 
 These tests depend on PROD having enough contacts with specific properties (team_members, player types). The tests correctly guard with `count < 1` / `count < 2` runtime checks and use `test.skip()` or annotation notes when conditions aren't met. No static names are created; tests are read-only except for the bulk Remove action.
 
-**Pattern PR #317 alert variant change — POTENTIAL FAILURE (NEW DISCOVERY)**
+**Pattern P (PR #317 alert variant) — VERIFIED NON-ISSUE.**
 
-The issue #331 body notes: "Sprint 31 alert variant changed in PR #317". Per the daily note, Sprint 31 polish round (PR #317) changed the blocked-row Alert variant from `destructive` to `warning`. Pixel also added a leading warning triangle SVG and `aria-live="polite"` wrapper.
+Watchdog confirmed during plan-PR review: `src/app/admin/contacts/contact-list.tsx:753-755` retains `role="alert"` on the blocked-row Alert wrapper. PR #317 added `aria-live="polite"` alongside the existing `role="alert"`, not in place of it.
 
-Check the alert locators in this spec:
-
-- Line 133–136: `page.getByRole("alert").filter({ hasText: /blocked|team|could not|skipped/i }).or(page.getByTestId("bulk-blocked-alert"))` — uses `getByRole("alert")` which finds elements with `role="alert"`. After PR #317, the Alert wrapper has `aria-live="polite"` added. However, `role="alert"` was preserved. The locator should still work.
-- Line 214: Same pattern for test 4.
-
-**The `aria-live="polite"` addition in PR #317 could affect `getByRole("alert")` matching.** In ARIA, `aria-live="polite"` on its own does NOT confer `role="alert"`. If the PR #317 change moved from a `role="alert"` element to a `role="status"` or plain `div` with `aria-live="polite"`, then `getByRole("alert")` would miss it.
-
-This is a SUSPECTED PATTERN (call it Pattern P — PR #317 alert variant change). Needs verification by reading `contact-list.tsx` post-PR #317. **Flag as a known unknown that Spec must verify during execution.** If `getByRole("alert")` no longer matches the blocked-row alert, the fix is to use `getByTestId("bulk-blocked-alert")` (which is already the `.or()` fallback at lines 134–136 and 214).
-
-**Recommendation:** Spec should try `getByTestId("bulk-blocked-alert")` as the PRIMARY locator (not the `.or()` fallback) and demote `getByRole("alert")` to secondary. This is a surgical change if the role changed.
+Existing locators at lines 133–136 and 214 (`getByRole("alert").filter(...).or(getByTestId("bulk-blocked-alert"))`) work as-is. **No surgery needed in this spec.**
 
 **Summary for contact-bulk-blocked-alert.spec.ts:**
 
 | Pattern | Hits | Lines |
 |---------|------|-------|
-| A–H (standard) | N/A | — |
+| A–H, T, X | N/A | — |
 | B (filter combobox) | KEEP AS-IS | 85, 169 |
-| Pattern P (PR #317 alert variant) | SUSPECTED — verify `contact-list.tsx` | 133–136, 214 |
+| Pattern P | VERIFIED NON-ISSUE | — |
 | TS | PROD-data-dependent, non-accumulating | N/A |
+
+**Likely outcome:** This spec passes today after Phase 0 dotenv fix loads the env vars. Spec verifies + closes; no edits expected.
 
 ---
 
 ### tests/e2e/contact-type-removal-guard.spec.ts
 
-**Summary:** 3 tests, 221 lines. Tests the Sprint 31 guard that prevents removing a type when the contact has dependencies (team_members, sponsor_contacts). All 3 tests are data-conditional — they run the guard assertion only if the matching PROD data exists, otherwise annotate and continue.
+**Summary:** 3 tests, 221 lines. Tests the Sprint 31 guard that prevents removing a type when the contact has dependencies (team_members, sponsor_contacts). All 3 tests are data-conditional.
 
-**Pattern A — NOT applicable**
+**Pattern T — DOMINANT (NEW PATTERN, discovered post-Watchdog-review)**
 
-No email locator.
+The spec assumes the type-removal guard error renders inline as a `role="alert"` element. **It doesn't.** Per `src/app/admin/contacts/contact-modal.tsx:48-49,63-64`:
+
+```typescript
+if ("error" in result) {
+  toast.error(result.error);
+  return;
+}
+```
+
+Server-action errors (including the type-removal guard) surface via **sonner `toast.error()`**, which renders into a sonner Toaster container with NO `role="alert"`. The spec's `inlineError` locator at lines 63–65, 146–148, 203–206 will never find the guard error. Test 1 silently passes the "valid path" branch on every run; tests 2 and 3 hard-fail.
+
+**Fix:** Replace `getByRole("alert")` with a sonner-toast locator. Sonner emits toasts into a `[data-sonner-toaster]` region; individual toasts have `[data-sonner-toast]`. The most resilient locator:
+
+```typescript
+const inlineError = page
+  .locator('[data-sonner-toast]')
+  .filter({ hasText: /team|sponsor|remove/i });
+```
+
+Spec MUST verify the actual sonner DOM in dev mode (open the form, trigger the guard, inspect the toast element) before locking the locator. If sonner's testid attribute differs in this project's version, fall back to `page.getByText(<expected error text>).first()`.
 
 **Pattern B — filter-side combobox (KEEP)**
 
 Line 33: `page.getByRole("combobox", { name: /filter|type/i }).first()` — list filter. Correct.
 Line 170: `page.getByRole("combobox", { name: /filter|type/i }).first()` — list filter. Correct.
 
-**Pattern C — NOT applicable**
+**Pattern E — DOES NOT APPLY**
 
-No drawer references. "Sprint 31: centered modal" comments are correct (lines 43, 44).
+Lines 59, 141, 199: `page.getByRole("button", { name: /save/i }).click()` — these are EDIT-flow saves; "Save" is correct for edit-flow. `/save/i` regex matches.
 
-**Pattern E — PARTIAL RISK**
-
-Lines 59, 141, 199: `page.getByRole("button", { name: /save/i }).click()` — these are EDIT-flow saves (the test opens an existing contact, modifies it, then saves). The button label for edit-flow is "Save" — so `/save/i` is correct for these lines. **No Pattern E failure expected here.** The `/save/i` regex works for edit-flow.
-
-**Pattern F — GUARD TEST, NOT A FAILURE**
-
-These tests intentionally check a type before saving (lines 55–57: check Donor if not checked; line 140: check Other). The tests correctly manage type state before submitting. Pattern F does not apply.
-
-**Pattern G — PARTIAL: inline guard error, not ConfirmDialog**
-
-The "inline error" at lines 63–65 uses `getByRole("alert").filter({ hasText: /team|remove/i })` — this is the type-guard inline error, not the ConfirmDialog. No `/confirm|yes/i` button here. Pattern G does not apply.
-
-However, the same PR #317 concern (Pattern P) applies: if `getByRole("alert")` was affected by the `aria-live` change, the `inlineError` locator at lines 63–65, 146–148, and 203–206 may need to fall back to `getByTestId("type-guard-error")`. The `.or()` fallback at those lines already includes `getByTestId("type-guard-error")`. **Spec should verify that `getByRole("alert")` still matches for the type-guard error specifically** (this may be a different component from the bulk-blocked-alert).
-
-**Pattern H — NOT applicable**
-
-No Trash assertions.
-
-**Pattern TS — NOT applicable**
-
-No data creation. Tests are read-only on PROD data.
+**Patterns A, C, F, G, H, X, TS — N/A.**
 
 **Summary for contact-type-removal-guard.spec.ts:**
 
 | Pattern | Hits | Lines |
 |---------|------|-------|
-| A–H (standard) | N/A | — |
-| E | DOES NOT APPLY — edit-flow only | 59, 141, 199 |
+| **T (sonner toast — NEW)** | DOMINANT — 3 inline-error locators | 63–65, 146–148, 203–206 |
 | B (filter combobox) | KEEP AS-IS | 33, 170 |
-| Pattern P (alert role) | SUSPECTED — verify | 63–65, 146–148, 203–206 |
-| TS | N/A — read-only | — |
+| A, C, E, F, G, H, X, TS | N/A | — |
+
+**Risk note:** This spec was previously believed to be partially-passing. After fixing Pattern T, the guard branches will execute end-to-end for the first time. Spec should expect new failures to surface (e.g., the guard error message text may not match `/team|remove/i` exactly — verify the actual server-returned error string from `actions.ts`).
 
 ---
 
@@ -350,80 +348,107 @@ Line 25: `const TEST_CAPTAIN_EMAIL = \`e2e-captain-s32-${Date.now()}@example.com
 
 **Risk:** Low. Since no test creates a team, there is no PROD data accumulation. The `TEST_CAPTAIN_EMAIL` dead variable should be removed to avoid confusion, but it is not a correctness issue.
 
-**Sprint 32 contract check — POTENTIAL FAILURE:**
+**Pattern X — DOMINANT (NEW PATTERN, discovered post-Watchdog-review)**
 
-Line 94: `const editButtons = page.getByRole("button", { name: /^edit$/i })` — this assumes the team list has explicit "Edit" buttons per row. Sprint 32 may have shipped with a different edit trigger (row click → modal, or an icon button with aria-label "Edit"). Spec must verify whether `/^edit$/i` matches the current production edit trigger. If the edit trigger is a row-click (like the contacts list), this locator finds nothing and the test skips gracefully (line 98: `if (count === 0) { test.skip(...) }`). If edit was shipped as an icon-button with a different label, the test would false-skip rather than fail.
+The spec at line 84 (per Watchdog) reads the team list table headers and asserts no "Team Name" header is present. **This will fail today.** Per `src/app/admin/teams/team-list.tsx:342`:
 
-This is not a new Pattern but a Sprint 32 feature assumption that needs verification. Flag for Spec.
+```typescript
+{["Team Name", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(...)}
+```
+
+Sprint 32 dropped the `team_name` column and changed the cell to render `team.captain_display_name` (line 378), but **the header text was never updated**. So today the team list ships:
+- Header column 1: "Team Name" (drift)
+- Cell column 1: captain's display name (correct)
+
+This is a Sprint 32 closeout miss. Two fix options:
+1. **Bolt task in Phase 0b:** rename "Team Name" → "Team" in `team-list.tsx:342`. Spec assertion stays.
+2. **Spec-only:** soften the assertion to allow either "Team Name" or "Team" header text.
+
+**Decision: Option 1 (Bolt fix in Phase 0b).** Per `memory/projects/craven.md` data model: "team identity = captain's full name everywhere — admin lists, leaderboard, error messages, Stripe receipts." The header should reflect that. Cleaner contract; the spec correctly enforces the post-Sprint-32 contract.
+
+**Sprint 32 edit-trigger verification:**
+
+Line 94: `page.getByRole("button", { name: /^edit$/i })` — verified at `team-list.tsx:432-434`. Each row renders a Button with text "Edit". `/^edit$/i` matches. **No issue here.**
+
+**Pattern TS — Dead variable**
+
+Line 25: `const TEST_CAPTAIN_EMAIL = \`e2e-captain-s32-${Date.now()}@example.com\`` — declared but never used. Spec should remove. Cosmetic only.
+
+**Patterns A, B, C, E, F, G, H, T — N/A.**
 
 **Summary for team-create-edit.spec.ts:**
 
 | Pattern | Hits | Lines |
 |---------|------|-------|
-| A–H (standard) | N/A | — |
-| C | Already correct | — |
-| TS | Dead variable `TEST_CAPTAIN_EMAIL` — remove | 25 |
-| Edit trigger assumption | VERIFY: `/^edit$/i` matches production | 94 |
+| **X (header rename — Phase 0b Bolt fix)** | 1 production-side fix | `team-list.tsx:342` |
+| TS (dead variable) | Cosmetic remove | spec line 25 |
+| A–H, T | N/A | — |
 
 ---
 
 ### tests/e2e/team-delete-type-to-confirm.spec.ts
 
-**Summary:** 1 test, 82 lines. Finds the first team with a Delete button, opens the type-to-confirm dialog, verifies the confirm button is disabled until the exact team name is typed, deletes, and verifies in Trash.
+**Summary:** 1 test, 82 lines. **STRUCTURALLY BROKEN** per Watchdog plan-PR review — the spec assumes a row-level Delete button exists. It doesn't. This is a full restructure, not a Pattern G `.last()` fix.
 
-**Pattern A — NOT applicable**
+**The actual delete flow (verified `team-list.tsx` + `team-modal.tsx`):**
 
-No email locator.
+1. **Row actions:** Edit button + Mark Paid button (paid teams hide Mark Paid). **NO Delete button** on the row.
+2. **Click Edit** → opens `<TeamModal mode="edit">`.
+3. **TeamModal** (edit mode) renders a `DialogFooter` with a "Delete team" button.
+4. **Click "Delete team"** → opens `<DeleteTeamDialog>`.
+5. **`DeleteTeamDialog`** renders type-to-confirm logic gated by `requiresTypeConfirm = isPaid` (`team-list.tsx:154`).
+   - **Paid teams:** type-to-confirm input + "Delete team" button (disabled until `confirmText === team.captain_display_name`).
+   - **Unpaid teams:** no type-to-confirm; "Delete team" button enabled immediately.
+6. **Click "Delete team"** in the confirm dialog → soft-delete + close.
 
-**Pattern B — NOT applicable**
+**Spec rewrite required:**
 
-No type picker.
+```
+[BEFORE — broken]
+firstRow.getByRole("button", { name: /delete/i }).click()  // there is no row Delete button
+const deleteButton = page.getByRole("button", { name: /^delete$/i }).last()  // fragile
 
-**Pattern C — NOT applicable**
+[AFTER — actual flow]
+1. Read team identity: firstRow.locator("td").first().innerText() → captainDisplayName
+   (verified: column 0 cell = team.captain_display_name)
+2. Click Edit on first paid row: 
+   firstRow.getByRole("button", { name: "Edit", exact: true }).click()
+3. Wait for edit modal: page.getByRole("dialog", { name: /Edit Team:/ })
+4. Click "Delete team" in modal footer:
+   page.getByRole("dialog").getByRole("button", { name: "Delete team", exact: true }).click()
+5. Wait for confirm dialog: page.getByRole("dialog", { name: /Delete team .+\?/ })
+6. Verify type-to-confirm input visible + Delete button starts disabled
+7. Type captain display name
+8. Verify Delete button enabled
+9. Click confirm-dialog's Delete button (scoped to dialog)
+10. Verify team gone from list + present in Trash
+```
 
-No drawer references.
+**Test selection — paid-team requirement:**
 
-**Pattern E — NOT applicable**
+`requiresTypeConfirm = isPaid && amount_paid_cents > 0`. The test must select a **paid team** to exercise the type-to-confirm flow. Spec options:
 
-No Create/Save form submit.
+- **Option A (preferred):** Find first paid team — `firstRow.getByRole("button", { name: "Mark Paid" })` is absent on paid rows, so paid rows can be filtered by absence of Mark Paid. Iterate rows until found; skip with explicit reason if no paid teams in PROD.
+- **Option B:** Spec creates a team + uses service-key REST to mark it paid before the test (heavy, requires fixture infra).
 
-**Pattern F — NOT applicable**
+**Decision: Option A.** Adds 5–10 lines of row-iteration; no new fixture infra. Spec includes deterministic logging if no paid teams found.
 
-No contact type required.
+**Pattern X (header text):** The first column header reads "Team Name" today (Phase 0b Bolt fix renames to "Team"). Spec doesn't depend on header text in `td.first()` — it reads cell value, not header. So no spec dependency on Phase 0b. Spec works with either header.
 
-**Pattern G — CRITICAL HIT**
+**Pattern H — Trash assertion:** Line 80 `getByText(teamName)` in Trash. The `teamName` value read from the list cell will be the captain display name (per Sprint 32), and the Trash column for teams uses the same display value. This is correct as-is.
 
-Line 53: `const deleteButton = page.getByRole("button", { name: /^delete$/i }).last()` — this uses `/^delete$/i` and `.last()` to target the confirm-dialog's Delete button. This is consistent with Pattern G's fix (exact "Delete") already applied. The `.last()` disambiguates from the row-level Delete trigger.
+**Pattern TS — Destructive on PROD (KNOWN RISK):** Each test run removes a paid team. Per `memory/projects/craven.md` live data: 1 active team in prod as of Sprint 32. If still 1 team, this spec depletes the only team. Recommend Spec creates a paid-team fixture per run via service-key REST (matches `feedback_use_service_key_for_data_ops`). **Add to Spec prompt:** create + mark-paid the fixture team before exercising delete; verify cleanup if spec fails mid-run.
 
-However: line 47 triggers the delete by clicking `firstRow.getByRole("button", { name: /delete/i })` (without exact). If there are multiple buttons labeled "Delete" in the row (e.g., the row-delete trigger plus a header "Delete" action), this could misfire. In practice, the row Delete trigger is the only "Delete" button scoped to `firstRow`, so this should be fine.
-
-**The key risk is line 53 with `.last()`:** If the type-to-confirm dialog's Delete button appears as the LAST "Delete" button in the entire page DOM, `.last()` works. But if any "Delete" button appears after it in DOM order (e.g., in the contact-list behind the dialog), `.last()` could be fragile. More robust: scope to `page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true })`.
-
-**Pattern H — CRITICAL HIT**
-
-Lines 37–44: The test reads the team name from `firstRow.locator("td").first()`. After Sprint 32, the team identity is the **captain's full name** (no `team_name` column). The `teamNameCell` at line 39 should contain the captain's name.
-
-Line 72: `await expect(page.getByText(teamName, { exact: true })).not.toBeVisible(...)` — verifies the team row is gone after delete.
-
-Line 80: `await expect(page.getByText(teamName)).toBeVisible(...)` — verifies the team appears in Trash.
-
-Pattern H says "Trash column is `full_name`, not email" — for teams, the Trash column would be captain full name (or the team identity). If `teamName` was read from `td.first()` and that cell contains the captain name (per Sprint 32), then `getByText(teamName)` in Trash should work. **This is likely correct as-is** — the test reads the display value from the list and expects to find it in Trash.
-
-**HOWEVER:** Line 39 reads `td.first()` which assumes the FIRST cell contains the team identity. After Sprint 32 dropped `team_name`, the first column in the team list should be the captain name. Spec must verify column order in the current `/admin/teams` table.
-
-**Pattern TS — LOW RISK**
-
-No data created by the test itself. The test operates on the first existing team in PROD, deletes it, and checks Trash. This is a **destructive operation on PROD data** — it permanently soft-deletes a real team. Each test run removes a team from the active list.
-
-This is by design (per the note that specs write to PROD), but worth flagging explicitly: if run repeatedly, this spec will deplete the teams list. After a few runs, `if (rowCount === 0)` will skip. Recommend adding a team-creation step as a prerequisite, or using a dedicated seed team.
+**Patterns A, B, C, E, F, T — N/A.**
 
 **Summary for team-delete-type-to-confirm.spec.ts:**
 
 | Pattern | Hits | Lines |
 |---------|------|-------|
-| G (confirm button scoping) | MEDIUM — `.last()` is fragile; scope to dialog | 53 |
-| H (Trash display value) | VERIFY column order is captain name | 39, 80 |
-| TS (destructive on PROD) | KNOWN RISK — depletes teams list | N/A |
+| **Structural rewrite** | Full flow change (Edit → Delete team → confirm) | 47–80 (whole test body) |
+| G (confirm button) | Scope to confirm dialog, drop `.last()` | rewritten |
+| H (Trash display) | Already correct — captain display name | 39, 80 |
+| TS (destructive on PROD) | Spec creates paid-team fixture per run | new helper required |
 
 ---
 
@@ -480,19 +505,20 @@ Line 100: `expect(headerTexts.some((h) => h.match(/^team name$/i))).toBe(false)`
 
 ---
 
-## Pattern 9 Determination
+## Pattern Discoveries Beyond the Original 8
 
-After reading all 7 files, no 9th pattern meeting the bar of "needs a named fix across multiple files" was found. The discoveries are:
+**Two new patterns surfaced during plan-PR review** (Watchdog catch, 2026-05-01) — both promoted to numbered patterns above:
 
-- **Pattern P (PR #317 alert variant):** A suspected issue in `contact-bulk-blocked-alert.spec.ts` and possibly `contact-type-removal-guard.spec.ts` if the shadcn Alert's ARIA role changed from `role="alert"` to `aria-live="polite"` in PR #317. Spec must verify by reading `contact-list.tsx` before editing these specs. Not promoted to a numbered pattern because it may be a non-issue (the `.or(getByTestId(...))` fallback already exists).
+- **Pattern T (sonner toast vs role="alert"):** Server-action errors render via sonner `toast.error()`, not inline `role="alert"`. Confirmed at `contact-modal.tsx:48-49,63-64`. Affects `contact-type-removal-guard.spec.ts` (3 inline-error locators).
+- **Pattern X (team list header text drift):** `team-list.tsx:342` ships `["Team Name", "Captain", ...]` but Sprint 32 dropped the column. Cell renders captain display name. Production-side fix in Phase 0b.
 
-These are documented per-spec above. No code-wide renames or sweeps required beyond the per-spec changes enumerated.
+**Pattern P (PR #317 alert variant) — VERIFIED NON-ISSUE.** `contact-list.tsx:753-755` retains `role="alert"`. Pre-flight flag was correct caution; resolved cleanly with no surgery.
 
 ---
 
 ## Phase Structure
 
-### Phase 0 — Forge-direct: dotenv config fix
+### Phase 0a — Forge-direct: dotenv config fix
 
 **File:** `playwright.config.ts`
 **Change:** Add a dotenv loader at the top so that `.env.local` is loaded before spec env-var guards run.
@@ -514,7 +540,34 @@ This ships FIRST. It is the highest-leverage fix in the sprint: every agent that
 **Effort:** S (≤3 files, ≤30 minutes).
 **Commit:** `fix(e2e): load .env.local in playwright.config.ts to prevent skip-as-pass`
 
-Forge commits and pushes this directly on branch `compass/sprint-35-plan` alongside the plan, or as a standalone commit on a branch that targets main. Forge opens the PR as scottdavenport.
+Forge opens the PR as scottdavenport on a fresh branch off main.
+
+---
+
+### Phase 0b — Bolt: team-list header rename (Pattern X)
+
+**File:** `src/app/admin/teams/team-list.tsx`
+**Change:** Rename the first column header from `"Team Name"` to `"Team"` at line 342. Cell content unchanged (still renders `team.captain_display_name`).
+
+```typescript
+// BEFORE
+{["Team Name", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(
+  (h) => (...)
+)}
+
+// AFTER
+{["Team", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(
+  (h) => (...)
+)}
+```
+
+**Rationale:** Per `memory/projects/craven.md` data model — "team identity = captain's full name everywhere — admin lists, leaderboard, error messages, Stripe receipts." The header text was a Sprint 32 closeout miss. Spec at `team-create-edit.spec.ts:84` correctly enforces the post-Sprint-32 contract by asserting "Team Name" is NOT present.
+
+**Effort:** XS (single-line change in one file). Bolt opens own PR per `feedback_builders_open_their_own_prs`.
+
+**Commit:** `fix(admin): rename team list "Team Name" header → "Team" (Sprint 32 closeout, #331 Pattern X)`
+
+**Phase 0a + 0b ship in parallel** — different files, no dependency.
 
 ---
 
@@ -576,15 +629,17 @@ Per `feedback_builders_open_their_own_prs`: after `git push`, each Spec agent ru
 
 ---
 
-### Phase 1 dependency map
+### Phase dependency map
 
 ```
-Phase 0 (Forge-direct, serial first):
-  - playwright.config.ts dotenv fix
-  - Commit and merge to main BEFORE Phase 1 launches
-  - File: playwright.config.ts only
+Phase 0 (parallel, serial-before-Phase-1):
+  Phase 0a (Forge-direct):           Phase 0b (Bolt):
+    playwright.config.ts                team-list.tsx:342 header rename
+    dotenv loader                       "Team Name" → "Team"
+  Both merge BEFORE Phase 1 launches.
+  No file overlap → parallel safe.
 
-Phase 1 (parallel, AFTER Phase 0 merges):
+Phase 1 (parallel, AFTER Phase 0a + 0b both merge):
   Batch 1:                          Batch 2:
   spec/sprint-35-contact-cluster    spec/sprint-35-team-score-cluster
   Files: 4 contact e2e specs        Files: 3 team/score e2e specs
@@ -592,9 +647,9 @@ Phase 1 (parallel, AFTER Phase 0 merges):
   → Can run fully parallel
 ```
 
-**No file overlap between Batch 1 and Batch 2.** All 7 spec files are distinct. Parallel execution is safe.
+**No file overlap between any phase.** Phase 0a touches `playwright.config.ts`. Phase 0b touches `team-list.tsx`. Phase 1 touches only spec files.
 
-**Contact zone:** `playwright.config.ts` is touched only by Phase 0 (Forge-direct) and merged before Phase 1 starts. Phase 1 agents are instructed to pull from fresh main after Phase 0 merge.
+**Phase 1 fresh-from-main requirement:** Phase 1 Spec agents pull from fresh main AFTER both Phase 0 PRs merge. Bake `git fetch origin main && git worktree add ... origin/main` into Spec prompts.
 
 ---
 
@@ -629,8 +684,8 @@ All acceptance criteria are written as verifiable test outcomes per Compass stan
 ### contact-type-removal-guard.spec.ts (3 tests)
 
 13. All three tests open the edit modal (centered dialog confirmed visible within 5 seconds) on at least one attempt.
-14. Guard-fire tests: if a contacted filtered contact is on a team, `inlineError` locator resolves (via `getByTestId("type-guard-error")` or confirmed `getByRole("alert")` match) and `errorText` matches `/team/i`.
-15. All 3 tests report `passed` or annotated `info` (valid non-fire path), not silent skip or timeout.
+14. Guard-fire tests: if a contact is on a team, `inlineError` locator resolves to a sonner toast (`[data-sonner-toast]` filtered by guard error text). `errorText` matches the actual server-returned guard message — verify exact string from `actions.ts` before locking the regex. Pattern T fix applied at lines 63–65, 146–148, 203–206.
+15. All 3 tests report `passed` (or annotated `info` for valid non-fire path with explicit reason logged), not silent skip or timeout.
 
 ### team-create-edit.spec.ts (5 tests)
 
@@ -640,10 +695,11 @@ All acceptance criteria are written as verifiable test outcomes per Compass stan
 19. Test "Team list row shows captain full name as team identity": no "Team Name" header; "Captain" or equivalent header is present.
 20. Test "Edit team opens a centered modal (not drawer)": if edit buttons exist, clicking the first opens a centered dialog. Dead `TEST_CAPTAIN_EMAIL` variable removed from file.
 
-### team-delete-type-to-confirm.spec.ts (1 test)
+### team-delete-type-to-confirm.spec.ts (1 test, FULL RESTRUCTURE)
 
-21. If teams exist in PROD: delete button opens dialog; confirm button inside `page.getByRole("dialog")` with `{ name: "Delete", exact: true }` starts disabled; enabled only after exact team name typed; clicking deletes the team; team name appears in `/admin/trash` Teams tab.
-22. If no teams exist: test skips with explicit "No teams in DB" message surfaced in output — not a silent skip.
+21. **Fixture creation:** Spec creates a fresh paid-team fixture per run via service-key REST (insert via `register_team` RPC, mark paid via UPDATE). Captain captured for type-to-confirm. try/finally cleanup if test fails before delete completes.
+22. **Flow:** click row's "Edit" button (NOT "Delete" — no row-level delete exists) → click "Delete team" in modal `DialogFooter` → wait for `DeleteTeamDialog` → verify type-to-confirm input visible → verify confirm button starts disabled → type captain display name → verify confirm button enabled → click confirm-dialog's "Delete team" button (scoped to `page.getByRole("dialog")`) → verify team gone from list → verify team appears in `/admin/trash` Teams tab.
+23. Test reports `1 passed` (no silent skip). If fixture creation fails, fail loudly with the REST error, do not skip.
 
 ### score-create-edit.spec.ts (5 tests)
 
@@ -657,21 +713,31 @@ All acceptance criteria are written as verifiable test outcomes per Compass stan
 
 ## Risk Notes / Known Unknowns
 
-### 1. Pattern P — PR #317 alert role change
+### 1. Pattern T (sonner toast locator) — verify in dev mode before locking
 
-Sprint 31 polish round PR #317 changed the blocked-row Alert variant from `destructive` to `warning` and added `aria-live="polite"`. If the Alert component's root element changed from `role="alert"` to just `aria-live="polite"` without `role`, then `getByRole("alert")` will stop matching.
+Sonner's DOM structure can change across versions; the spec MUST verify the actual `[data-sonner-toast]` element exists in dev mode before committing the locator. Fallback: `page.getByText(<exact server error string>)` scoped to a visible region. Spec Batch 1 owns this discovery.
 
-**Spec Batch 1 MUST:** read `src/app/admin/contacts/contact-list.tsx` and verify the Alert element's ARIA role BEFORE editing `contact-bulk-blocked-alert.spec.ts` and `contact-type-removal-guard.spec.ts`. If `role="alert"` is gone, promote `getByTestId("bulk-blocked-alert")` / `getByTestId("type-guard-error")` to primary locator (not `.or()` fallback). If role is preserved, the existing locators work.
+### 2. Pattern X dependency: Phase 0b must merge before team-create-edit assertions
 
-### 2. Phase 1 may escalate to Bolt
+`team-create-edit.spec.ts` line 84 (per Watchdog) asserts no "Team Name" header is present. **This is RED today** because production still ships "Team Name" at `team-list.tsx:342`. Phase 0b (Bolt) renames it to "Team". Phase 1 Batch 2 must pull fresh main AFTER Phase 0b merges, otherwise the Spec verification will appear to fail incorrectly.
 
-Per `feedback_test_refresh_can_surface_prod_bugs`: "Test-only" spec refresh sprints regularly surface production-code regressions. Sprint 34 found the modal DialogFooter issue mid-sprint and had to spawn Bolt. Budget for Bolt escalation if:
+### 3. team-delete-type-to-confirm requires a paid-team fixture
 
-- The team edit trigger (`/^edit$/i`) doesn't match the current production UI — the production code may need a label or data-testid added.
+Per `memory/projects/craven.md`: 1 active team in PROD as of Sprint 32. The spec destructively deletes a paid team per run. **Spec MUST create a fresh paid-team fixture per run** via service-key REST per `feedback_use_service_key_for_data_ops`. Fixture pattern:
+1. Insert fresh team via `register_team` RPC (4-param signature per `memory/projects/craven.md`)
+2. Mark paid via `UPDATE teams SET payment_status = 'paid', amount_paid_cents = X` via service-key REST
+3. Run delete flow against fixture team
+4. Verify cleanup if mid-run failure (try/finally to remove fixture if test failed before delete completed)
+
+Spec prompt for Batch 2 must explicitly include this fixture pattern; do NOT operate on the only PROD team.
+
+### 4. Phase 1 may escalate to Bolt
+
+Per `feedback_test_refresh_can_surface_prod_bugs`: "Test-only" spec refresh sprints regularly surface production-code regressions. Sprint 34 found the modal DialogFooter issue mid-sprint and had to spawn Bolt. Phase 0b is one Bolt task already; **budget for additional Bolt escalation if:**
+
 - The score modal has multiple comboboxes without accessible labels, requiring a production-code fix to add a `<label>` or `aria-label`.
-- The `contact-bulk-blocked-alert` Alert is not reachable via any Playwright locator — requires Bolt to add `data-testid="bulk-blocked-alert"` to the component.
-
-Forge should monitor Spec verification runs and escalate to Bolt if Spec reports production-side locator failures that can't be resolved in the spec file alone.
+- The type-removal-guard error message text from `actions.ts` doesn't match the spec's expected pattern — may need a copy update from Aria.
+- A new alert/toast component without test-friendly attributes blocks Spec from writing a stable locator.
 
 ### 3. PROD writes and orphan contact cleanup
 
@@ -713,14 +779,15 @@ Each Spec agent works exclusively in its own `/tmp/craven-sprint-35-batchN/` wor
 
 | File | Change type | Sprint phase |
 |------|-------------|--------------|
-| `playwright.config.ts` | Modified — add dotenv loader | Phase 0 (Forge-direct) |
-| `tests/e2e/contact-multi-type.spec.ts` | Modified — Pattern E + G | Phase 1 Batch 1 |
-| `tests/e2e/contact-bulk-subscribe.spec.ts` | Likely no change — verify only | Phase 1 Batch 1 |
-| `tests/e2e/contact-bulk-blocked-alert.spec.ts` | Modified — Pattern P resolution | Phase 1 Batch 1 |
-| `tests/e2e/contact-type-removal-guard.spec.ts` | Modified — Pattern P resolution | Phase 1 Batch 1 |
-| `tests/e2e/team-create-edit.spec.ts` | Modified — dead variable removal | Phase 1 Batch 2 |
-| `tests/e2e/team-delete-type-to-confirm.spec.ts` | Modified — Pattern G confirm scope | Phase 1 Batch 2 |
-| `tests/e2e/score-create-edit.spec.ts` | Modified — combobox label fix if needed | Phase 1 Batch 2 |
+| `playwright.config.ts` | Modified — add dotenv loader | Phase 0a (Forge-direct) |
+| `src/app/admin/teams/team-list.tsx` | Modified — line 342 "Team Name" → "Team" header rename | Phase 0b (Bolt) |
+| `tests/e2e/contact-multi-type.spec.ts` | Modified — Pattern E (18 hits) + G | Phase 1 Batch 1 |
+| `tests/e2e/contact-bulk-subscribe.spec.ts` | Verify only — likely no change | Phase 1 Batch 1 |
+| `tests/e2e/contact-bulk-blocked-alert.spec.ts` | Verify only — Pattern P resolved as non-issue | Phase 1 Batch 1 |
+| `tests/e2e/contact-type-removal-guard.spec.ts` | **Modified — Pattern T (sonner toast locator rewrite)** | Phase 1 Batch 1 |
+| `tests/e2e/team-create-edit.spec.ts` | Modified — dead `TEST_CAPTAIN_EMAIL` removal; assertion validates after Phase 0b merge | Phase 1 Batch 2 |
+| `tests/e2e/team-delete-type-to-confirm.spec.ts` | **Modified — full restructure (Edit modal → Delete team → confirm dialog) + paid-team fixture** | Phase 1 Batch 2 |
+| `tests/e2e/score-create-edit.spec.ts` | Verify only — likely no change | Phase 1 Batch 2 |
 | `plans/sprint-35-e2e-refresh-round-2.md` | Created | Plan PR |
 
 ---
@@ -763,19 +830,38 @@ const confirmBtn = page.getByRole("dialog").getByRole("button", { name: "Delete"
 const confirmBtn = page.getByRole("button", { name: "Delete", exact: true }).last();
 ```
 
-**Pattern P** (PR #317 alert variant — verify before applying)
+**Pattern P** (PR #317 alert variant — VERIFIED NON-ISSUE)
+
+`contact-list.tsx:753-755` retains `role="alert"` on the blocked-row Alert. Existing locators in `contact-bulk-blocked-alert.spec.ts` work as-is. **No changes needed.**
+
+**Pattern T** (sonner toast — server-action errors)
 
 ```typescript
-// CURRENT (in contact-bulk-blocked-alert.spec.ts):
-const blockedAlert = page
-  .getByRole("alert")
-  .filter({ hasText: /blocked|team|could not|skipped/i })
-  .or(page.getByTestId("bulk-blocked-alert"));
+// WRONG — server-action errors render via toast.error(), not as role="alert":
+const inlineError = page.getByRole("alert").filter({ hasText: /team/i });
 
-// IF role="alert" was removed in PR #317, promote testid to primary:
-const blockedAlert = page.getByTestId("bulk-blocked-alert")
-  .or(page.getByRole("alert").filter({ hasText: /blocked|team|could not|skipped/i }));
+// CORRECT — sonner toast locator:
+const inlineError = page
+  .locator('[data-sonner-toast]')
+  .filter({ hasText: /team|sponsor|remove/i });
+
+// FALLBACK if sonner attributes differ in this version:
+const inlineError = page.getByText(/A team member|cannot remove/i).first();
 ```
+
+Spec MUST verify the actual sonner DOM structure in dev mode (open form, trigger guard, inspect rendered toast) before committing the locator.
+
+**Pattern X** (team list header text drift — PRODUCTION FIX, Phase 0b)
+
+```typescript
+// src/app/admin/teams/team-list.tsx:342 — BEFORE
+{["Team Name", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(...)}
+
+// AFTER
+{["Team", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(...)}
+```
+
+Spec assertion at `team-create-edit.spec.ts:84` already enforces no "Team Name" present; correct on Sprint 32 contract.
 
 ### dotenv config snippet
 
@@ -851,13 +937,14 @@ Per `feedback_builder_pr_create_auth` and `feedback_builders_open_their_own_prs`
 
 | Task | Estimate | Owner |
 |------|----------|-------|
-| Phase 0: dotenv fix | S (~30 min) | Forge-direct |
-| Phase 1 Batch 1: 4 contact specs | M (~2h including Pattern P verification) | Spec |
-| Phase 1 Batch 2: 3 team/score specs | M (~1.5h including edit-trigger verification) | Spec |
-| Watchdog review × 2 PRs | S–M (~1h total) | Watchdog |
-| Orphan contact cleanup | S (~10 min) | Forge-direct |
-| **Total estimated wall-clock** | **~4–5h** (per Sprint 34 budget: expect overrun if Pattern P or Bolt escalation fires) | — |
+| Phase 0a: dotenv fix | S (~30 min) | Forge-direct |
+| Phase 0b: team-list header rename | S (~30 min including Bolt PR cycle) | Bolt |
+| Phase 1 Batch 1: 4 contact specs | M (~2.5h including Pattern T verification + sonner locator discovery) | Spec |
+| Phase 1 Batch 2: 3 team/score specs | M-L (~2.5h including paid-team fixture work for delete spec) | Spec |
+| Watchdog review × 4 PRs | M (~1.5h total — 4 Watchdog cycles + likely 1-2 fixup rounds) | Watchdog |
+| Orphan contact cleanup + paid-fixture cleanup | S (~15 min) | Forge-direct |
+| **Total estimated wall-clock** | **~6–8h** (Watchdog-revised; Sprint 34 overran by 75–100%, similar variance budgeted here) | — |
 
 ---
 
-*Cite `feedback_test_refresh_can_surface_prod_bugs`: Sprint 34 overran its 1.5–2h estimate by 75–100% due to E/F/G/H pattern discovery + Bolt escalation. Sprint 35 front-loaded all pattern discovery in this plan. If Pattern P does NOT require a production code change, estimate holds. If Bolt escalation is needed for any spec (edit trigger label, combobox aria-label, Alert testid), add 1–1.5h.*
+*Citation: `feedback_test_refresh_can_surface_prod_bugs`. Watchdog's plan-PR review surfaced 2 new patterns (T + X) that require production-code fixes (Phase 0b) AND a structural rewrite of `team-delete-type-to-confirm.spec.ts` with a paid-team fixture. Original Compass estimate of 4–5h assumed all 7 specs were spec-only changes. Revised to 6–8h to reflect Bolt escalation + fixture work + the ~75% Sprint-34 variance baseline.*

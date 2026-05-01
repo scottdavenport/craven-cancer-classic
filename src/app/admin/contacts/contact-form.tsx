@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,11 +31,15 @@ import type { Contact } from "@/types/database";
 type ContactType = "player" | "sponsor" | "donor" | "volunteer" | "other";
 type ShirtSize = "S" | "M" | "L" | "XL" | "2XL" | "3XL";
 
+interface ValidityState {
+  canSubmit: boolean;
+  submitting: boolean;
+}
+
 interface ContactFormProps {
   initial?: Contact;
   onSubmit: (input: ContactInput) => Promise<void>;
-  onCancel: () => void;
-  submitLabel?: string;
+  onValidityChange?: (state: ValidityState) => void;
 }
 
 type FieldErrors = Partial<Record<string, string>>;
@@ -68,6 +72,7 @@ function nullify(v: string): string | null {
 export function ContactForm({
   initial,
   onSubmit,
+  onValidityChange,
 }: ContactFormProps) {
   const [salutation, setSalutation] = useState(initial?.salutation ?? "");
   const [firstName, setFirstName] = useState(initial?.first_name ?? "");
@@ -113,13 +118,23 @@ export function ContactForm({
   );
 
   const [errors, setErrors] = useState<FieldErrors>({});
-  const [, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   // Derived visibility flags
   const isPlayer = types.includes("player");
   const isVolunteer = types.includes("volunteer");
   const isDonor = types.includes("donor");
   const showShirtSize = isPlayer || isVolunteer;
+
+  // Notify parent when submit-ability or in-flight state changes
+  const hasErrors = Object.keys(errors).length > 0;
+  const noTypesChecked = types.length === 0;
+  useEffect(() => {
+    onValidityChange?.({
+      canSubmit: !hasErrors && !noTypesChecked,
+      submitting,
+    });
+  }, [hasErrors, noTypesChecked, submitting, onValidityChange]);
 
   function setFieldError(field: string, msg: string | null) {
     setErrors((prev) => {

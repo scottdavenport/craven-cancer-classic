@@ -25,7 +25,7 @@ const noop = async () => {};
 describe("ContactForm — sprint-19 PR-C polish", () => {
   describe("marketing consent Switch", () => {
     it("renders role='switch' for marketing consent (not a raw checkbox)", () => {
-      render(<ContactForm onSubmit={noop} onCancel={noop} />);
+      render(<ContactForm onSubmit={noop} />);
 
       // PR C: raw <input type="checkbox"> replaced by <Switch> (role="switch")
       const switchEl = screen.getByRole("switch");
@@ -62,7 +62,6 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
             } as import("@/types/database").Contact
           }
           onSubmit={noop}
-          onCancel={noop}
         />
       );
 
@@ -78,7 +77,7 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
 
   describe("actions div padding", () => {
     it("submit button is NOT rendered inside ContactForm (moved to DialogFooter)", () => {
-      render(<ContactForm onSubmit={noop} onCancel={noop} />);
+      render(<ContactForm onSubmit={noop} />);
 
       // #325 fix: Save/Create/Cancel buttons relocated to ContactModal's DialogFooter.
       // ContactForm renders no submit button — the pb-4 doubled-padding constraint
@@ -90,7 +89,7 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
 
   describe("salutation field width", () => {
     it("salutation input or its wrapper has max-w-[120px]", () => {
-      const { container } = render(<ContactForm onSubmit={noop} onCancel={noop} />);
+      const { container } = render(<ContactForm onSubmit={noop} />);
 
       const salutationInput = container.querySelector("#cf-salutation");
       expect(salutationInput).toBeTruthy();
@@ -102,6 +101,47 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
         salutationInput!.parentElement?.className.includes("max-w-[120px]") ?? false;
 
       expect(inputHasClass || parentHasClass).toBe(true);
+    });
+  });
+
+  // Sprint 33 / PR #329: onValidityChange callback — disabled-state for B1 + B2
+  describe("onValidityChange — disabled states (B1 + B2)", () => {
+    it("reports canSubmit=false when no types are checked", () => {
+      const onChange = vi.fn();
+      render(<ContactForm onSubmit={vi.fn()} onValidityChange={onChange} />);
+      // Last call: canSubmit should be false (no types checked by default)
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.canSubmit).toBe(false);
+    });
+
+    it("reports canSubmit=true after at least one type is checked", () => {
+      const onChange = vi.fn();
+      render(<ContactForm onSubmit={vi.fn()} onValidityChange={onChange} />);
+
+      const playerCheckbox = screen.getByRole("checkbox", { name: /player/i });
+      fireEvent.click(playerCheckbox);
+
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.canSubmit).toBe(true);
+    });
+
+    it("reports canSubmit=false again after unchecking the only type", () => {
+      const onChange = vi.fn();
+      render(<ContactForm onSubmit={vi.fn()} onValidityChange={onChange} />);
+
+      const playerCheckbox = screen.getByRole("checkbox", { name: /player/i });
+      fireEvent.click(playerCheckbox); // check
+      fireEvent.click(playerCheckbox); // uncheck
+
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.canSubmit).toBe(false);
+    });
+
+    it("reports submitting=false at rest", () => {
+      const onChange = vi.fn();
+      render(<ContactForm onSubmit={vi.fn()} onValidityChange={onChange} />);
+      const lastCall = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+      expect(lastCall.submitting).toBe(false);
     });
   });
 
@@ -140,7 +180,6 @@ describe("ContactForm — sprint-19 PR-C polish", () => {
             } as import("@/types/database").Contact
           }
           onSubmit={noop}
-          onCancel={noop}
         />
       );
 

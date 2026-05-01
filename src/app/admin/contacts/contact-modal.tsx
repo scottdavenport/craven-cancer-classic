@@ -34,6 +34,8 @@ export function ContactModal({
   onDelete,
 }: ContactModalProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const title =
     mode === "create"
@@ -83,8 +85,10 @@ export function ContactModal({
             <ContactForm
               initial={contact ?? undefined}
               onSubmit={handleSubmit}
-              onCancel={() => onOpenChange(false)}
-              submitLabel={mode === "create" ? "Create" : "Save"}
+              onValidityChange={({ canSubmit: cs, submitting: s }) => {
+                setCanSubmit(cs);
+                setSubmitting(s);
+              }}
             />
           </div>
 
@@ -102,11 +106,12 @@ export function ContactModal({
             <Button
               type="button"
               variant="outline"
+              disabled={submitting}
               onClick={() => onOpenChange(false)}
             >
               Cancel
             </Button>
-            <Button type="submit" form="contact-form">
+            <Button type="submit" form="contact-form" disabled={!canSubmit || submitting}>
               {mode === "create" ? "Create" : "Save"}
             </Button>
           </DialogFooter>

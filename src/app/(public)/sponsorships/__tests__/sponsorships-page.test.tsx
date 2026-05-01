@@ -1,5 +1,5 @@
 /**
- * sponsorships-page.test.tsx — Sprint 23 RED phase
+ * sponsorships-page.test.tsx — Sprint 23 RED phase + Sprint 33 three-section update
  *
  * Integration tests for the rewritten /sponsorships page.
  * The current page (src/app/(public)/sponsorships/page.tsx) does NOT yet implement:
@@ -11,6 +11,11 @@
  *   - Removal of bg-purple, bg-purple-hover, font-display
  *   - Soft-delete and inactive item filtering (existing fetch already filters these;
  *     these tests verify the contracts continue to hold after the rewrite)
+ *
+ * Sprint 33 additions (#302):
+ *   - Page restructured into three stacked sections (Sponsorships, Tributes, Supporters)
+ *   - Mock updated to handle three category-filtered queries (or single + client partition)
+ *   - All three sections must render with correct items
  *
  * All tests here will fail until Bolt's GREEN PR rewrites the page and implements
  * SponsorshipCard + SponsorshipGrid replacement.
@@ -514,5 +519,247 @@ describe("SponsorshipsPage — Sprint 23 redesign (RED)", () => {
     expect(pageText).toContain(
       "transportation, lodging, and medical equipment for cancer patients in active treatment"
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Sprint 33 RED — three-section layout on /sponsorships
+// ---------------------------------------------------------------------------
+
+// Mock the new section components (they don't exist yet — RED)
+vi.mock("@/app/(public)/sponsorships/sponsorship-section", () => ({
+  SponsorshipSection: ({
+    items,
+  }: {
+    items: Array<{ id: string; name: string; price_cents: number }>;
+  }) => (
+    <section data-testid="section-sponsorships">
+      {items.map((item) => (
+        <div key={item.id} data-testid={`sponsorship-item-${item.id}`}>{item.name}</div>
+      ))}
+    </section>
+  ),
+}));
+
+vi.mock("@/app/(public)/sponsorships/tribute-section", () => ({
+  TributeSection: ({
+    items,
+  }: {
+    items: Array<{ id: string; name: string; price_cents: number }>;
+  }) => (
+    <section data-testid="section-tributes">
+      {items.map((item) => (
+        <div key={item.id} data-testid={`tribute-item-${item.id}`}>{item.name}</div>
+      ))}
+    </section>
+  ),
+}));
+
+vi.mock("@/app/(public)/sponsorships/supporter-section", () => ({
+  SupporterSection: ({
+    items,
+  }: {
+    items: Array<{ id: string; name: string; price_cents: number }>;
+  }) => (
+    <section data-testid="section-supporters">
+      {items.map((item) => (
+        <div key={item.id} data-testid={`supporter-item-${item.id}`}>{item.name}</div>
+      ))}
+    </section>
+  ),
+}));
+
+// Sprint 33: additional items for three-category testing
+const BALLOONS_ITEM = makeItem({
+  id: "balloons",
+  name: "Balloons",
+  price_cents: 2000,
+  sort_order: 14,
+});
+
+const TEE_SIGN_ITEM = makeItem({
+  id: "tee-sign",
+  name: "Tee Sign",
+  price_cents: 10000,
+  sort_order: 15,
+});
+
+const YARD_SIGN_ITEM = makeItem({
+  id: "yard-sign",
+  name: "Yard Sign",
+  price_cents: 10000,
+  sort_order: 16,
+});
+
+/**
+ * Build a mock that supports three-category-filtered queries.
+ * The page may either:
+ *   a) Make 3 separate queries with .eq('category', 'sponsorship'|'tribute'|'supporter')
+ *   b) Make 1 query and partition client-side
+ *
+ * This mock handles both by tracking category eq calls and returning the
+ * appropriate items per section.
+ */
+function buildThreeSectionMock(opts: {
+  sponsorshipItems?: MockSponsorshipItem[];
+  tributeItems?: MockSponsorshipItem[];
+  supporterItems?: MockSponsorshipItem[];
+  eventSettings?: MockEventSettings;
+} = {}) {
+  const {
+    sponsorshipItems = ALL_10_ITEMS,
+    tributeItems = [BALLOONS_ITEM],
+    supporterItems = [TEE_SIGN_ITEM, YARD_SIGN_ITEM],
+    eventSettings = null,
+  } = opts;
+
+  const allItems = [...sponsorshipItems, ...tributeItems, ...supporterItems];
+
+  const fromMock = vi.fn().mockImplementation((table: string) => {
+    if (table === "sponsorship_items" || table === "sponsorship_items_active") {
+      let resolvedItems = allItems;
+
+      const buildTerminalChain = (items: MockSponsorshipItem[]) => {
+        const orderInner = vi.fn().mockResolvedValue({ data: items, error: null });
+        return { order: orderInner };
+      };
+
+      const eqCategoryFn = vi.fn().mockImplementation((field: string, value: string) => {
+        if (field === "category") {
+          if (value === "sponsorship") resolvedItems = sponsorshipItems;
+          else if (value === "tribute") resolvedItems = tributeItems;
+          else if (value === "supporter") resolvedItems = supporterItems;
+        }
+        return buildTerminalChain(resolvedItems);
+      });
+
+      const isMock = vi.fn().mockImplementation(() => buildTerminalChain(resolvedItems));
+      const eq2Mock = vi.fn().mockImplementation(() => ({
+        is: isMock,
+        order: vi.fn().mockResolvedValue({ data: resolvedItems, error: null }),
+        eq: eqCategoryFn,
+      }));
+      const eq1Mock = vi.fn().mockReturnValue({
+        eq: eq2Mock,
+        is: isMock,
+        order: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: resolvedItems, error: null }),
+        }),
+      });
+
+      return { select: vi.fn().mockReturnValue({ eq: eq1Mock }) };
+    }
+
+    if (table === "event_settings") {
+      const singleMock = vi.fn().mockResolvedValue({ data: eventSettings, error: null });
+      const maybeSingleMock = vi.fn().mockResolvedValue({ data: eventSettings, error: null });
+      const eqMock = vi.fn().mockReturnValue({ single: singleMock, maybeSingle: maybeSingleMock });
+      return { select: vi.fn().mockReturnValue({ eq: eqMock }) };
+    }
+
+    return {
+      select: vi.fn().mockReturnValue({
+        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        eq: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+      }),
+    };
+  });
+
+  return { from: fromMock };
+}
+
+describe("SponsorshipsPage — three-section layout (Sprint 33 RED, #302)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
+  it("S33-1 — renders section-sponsorships section with sponsorship items", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    render(await Page());
+    expect(screen.getByTestId("section-sponsorships")).toBeInTheDocument();
+  });
+
+  it("S33-2 — renders section-tributes section with Balloons item", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    render(await Page());
+    expect(screen.getByTestId("section-tributes")).toBeInTheDocument();
+  });
+
+  it("S33-3 — renders section-supporters section with Tee Sign and Yard Sign", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    render(await Page());
+    expect(screen.getByTestId("section-supporters")).toBeInTheDocument();
+  });
+
+  it("S33-4 — Sponsorships section appears before Tributes in DOM order", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    const { container } = render(await Page());
+
+    const sections = Array.from(
+      container.querySelectorAll("[data-testid^='section-']")
+    ).map((el) => el.getAttribute("data-testid"));
+
+    const sponsorIdx = sections.indexOf("section-sponsorships");
+    const tributeIdx = sections.indexOf("section-tributes");
+    expect(sponsorIdx).toBeGreaterThanOrEqual(0);
+    expect(tributeIdx).toBeGreaterThanOrEqual(0);
+    expect(sponsorIdx).toBeLessThan(tributeIdx);
+  });
+
+  it("S33-5 — Tributes section appears before Supporters in DOM order", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    const { container } = render(await Page());
+
+    const sections = Array.from(
+      container.querySelectorAll("[data-testid^='section-']")
+    ).map((el) => el.getAttribute("data-testid"));
+
+    const tributeIdx = sections.indexOf("section-tributes");
+    const supporterIdx = sections.indexOf("section-supporters");
+    expect(tributeIdx).toBeGreaterThanOrEqual(0);
+    expect(supporterIdx).toBeGreaterThanOrEqual(0);
+    expect(tributeIdx).toBeLessThan(supporterIdx);
+  });
+
+  it("S33-6 — Balloons item appears in tribute section (not sponsorships)", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    render(await Page());
+
+    expect(screen.getByTestId("tribute-item-balloons")).toBeInTheDocument();
+    expect(screen.queryByTestId("sponsorship-item-balloons")).not.toBeInTheDocument();
+  });
+
+  it("S33-7 — Tee Sign and Yard Sign appear in supporters section only", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    render(await Page());
+
+    expect(screen.getByTestId("supporter-item-tee-sign")).toBeInTheDocument();
+    expect(screen.getByTestId("supporter-item-yard-sign")).toBeInTheDocument();
+    expect(screen.queryByTestId("sponsorship-item-tee-sign")).not.toBeInTheDocument();
+  });
+
+  it("S33-8 — sponsorship items appear in sponsorships section only", async () => {
+    setClient(buildThreeSectionMock());
+    const Page = await loadPage();
+    render(await Page());
+
+    // Champion should be in sponsorships section, not in tributes
+    expect(screen.getByTestId("sponsorship-item-champion")).toBeInTheDocument();
+    expect(screen.queryByTestId("tribute-item-champion")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("supporter-item-champion")).not.toBeInTheDocument();
   });
 });

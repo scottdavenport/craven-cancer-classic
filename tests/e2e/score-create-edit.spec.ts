@@ -25,7 +25,7 @@ import { test } from "./fixtures/admin-auth";
 test.describe("Sprint 32 — Admin score create/edit (centered modal, team dropdown)", () => {
   test("Add Score opens a centered modal, not a side drawer", async ({ adminPage: page }) => {
     await page.goto("/admin/scores");
-    await expect(page.getByRole("heading", { name: /scores/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Scores", exact: true })).toBeVisible();
 
     await page.getByRole("button", { name: /add score/i }).click();
 

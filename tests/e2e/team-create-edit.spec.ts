@@ -22,8 +22,6 @@ baseTest.skip(
 
 import { test } from "./fixtures/admin-auth";
 
-const TEST_CAPTAIN_EMAIL = `e2e-captain-s32-${Date.now()}@example.com`;
-
 test.describe("Sprint 32 — Admin team create/edit (centered modal, captain identity)", () => {
   test("Add Team opens a centered modal, not a side drawer", async ({ adminPage: page }) => {
     await page.goto("/admin/teams");

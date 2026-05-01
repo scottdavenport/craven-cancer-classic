@@ -29,7 +29,9 @@ async function loginAsAdmin(page: Page) {
   // Fill in email/password form
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
+  // Disambiguate from the "Sign in with Google" OAuth button — match the
+  // form submit button by exact text.
+  await page.getByRole("button", { name: "Sign In", exact: true }).click();
 
   // Wait for redirect to admin area
   await page.waitForURL(/\/admin/, { timeout: 10_000 });

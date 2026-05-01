@@ -77,6 +77,7 @@ function makeItem(
     sold_count: 1,
     active: true,
     benefits: [],
+    category: "sponsorship" as const,
     created_at: new Date().toISOString(),
     deleted_at: null,
     deleted_by: null,

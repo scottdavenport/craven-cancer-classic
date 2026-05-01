@@ -131,6 +131,7 @@ function makeSponsorshipItem(overrides: Partial<WithDeletedByName<SponsorshipIte
     sold_count: 0,
     active: true,
     benefits: [],
+    category: "sponsorship" as const,
     sort_order: 1,
     year: 2026,
     created_at: new Date().toISOString(),

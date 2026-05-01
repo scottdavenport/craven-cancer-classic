@@ -113,6 +113,7 @@ function makeSponsorshipItem(overrides: Partial<WithDeletedByName<SponsorshipIte
     description: null,
     benefits: {},
     active: true,
+    category: "sponsorship" as const,
     max_quantity: null,
     sold_count: 0,
     sort_order: 1,

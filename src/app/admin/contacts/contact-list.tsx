@@ -751,11 +751,28 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
       {blockedAlert && (
         <div
           role="alert"
+          aria-live="polite"
           data-testid="bulk-blocked-alert"
-          className="flex items-start gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-[0.8125rem]"
+          className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-muted/40 px-4 py-3 text-[0.8125rem]"
         >
+          <svg
+            width="16"
+            height="16"
+            viewBox="0 0 16 16"
+            fill="none"
+            className="flex-shrink-0 mt-0.5 text-warning"
+            aria-hidden="true"
+          >
+            <path
+              d="M8 5v3.5M8 11h.01M7.13 1.86 1.4 12.13a1 1 0 0 0 .87 1.5h11.46a1 1 0 0 0 .87-1.5L8.87 1.86a1 1 0 0 0-1.74 0Z"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
           <div className="flex-1">
-            <p className="font-semibold text-destructive mb-1">
+            <p className="font-semibold text-warning mb-1">
               Some contacts could not be updated
             </p>
             <ul className="space-y-0.5 text-foreground">

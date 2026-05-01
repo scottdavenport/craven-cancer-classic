@@ -8,6 +8,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -381,6 +386,7 @@ export function ContactForm({
                 {errors.handicap && (
                   <p className="text-xs text-destructive">{errors.handicap}</p>
                 )}
+                <p className="text-xs text-muted-foreground">Whole number, 0–54. Optional.</p>
               </div>
               {/* Shirt Size rendered here only when Player is checked AND Volunteer is NOT checked */}
               {!isVolunteer && (
@@ -452,6 +458,32 @@ export function ContactForm({
               <Label htmlFor="cf-show-on-wall" className="cursor-pointer">
                 Show name on tribute wall
               </Label>
+              <Tooltip>
+                <TooltipTrigger
+                  type="button"
+                  aria-label="What is the tribute wall?"
+                  className="flex-shrink-0 text-muted-foreground hover:text-foreground"
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 16 16"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.5" />
+                    <path
+                      d="M8 7.5v3.5M8 5h.01"
+                      stroke="currentColor"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </TooltipTrigger>
+                <TooltipContent>
+                  The tribute wall is a public page listing everyone who donated. Turn this off to record the donation without showing this person&apos;s name publicly.
+                </TooltipContent>
+              </Tooltip>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cf-recognition-name">Recognition Name</Label>

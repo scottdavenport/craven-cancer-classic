@@ -155,7 +155,7 @@ function TributeCard({ item, onSelect }: TributeCardProps) {
       {/* Description — placeholder; Aria #308 refines */}
       <p className="mt-2 flex-1 text-sm leading-relaxed text-muted-foreground">
         {item.description ??
-          "Add a tribute to honor a warrior in our community."}
+          "Add a tribute to honor a loved one."}
       </p>
 
       {/* CTA */}

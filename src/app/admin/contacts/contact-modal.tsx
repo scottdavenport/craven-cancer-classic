@@ -34,6 +34,8 @@ export function ContactModal({
   onDelete,
 }: ContactModalProps) {
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [canSubmit, setCanSubmit] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const title =
     mode === "create"
@@ -72,7 +74,7 @@ export function ContactModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
-          className="sm:max-w-[800px] flex flex-col overflow-hidden p-0"
+          className="sm:max-w-[800px] max-h-[90vh] flex flex-col overflow-hidden p-0"
           showCloseButton={false}
         >
           <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
@@ -83,13 +85,15 @@ export function ContactModal({
             <ContactForm
               initial={contact ?? undefined}
               onSubmit={handleSubmit}
-              onCancel={() => onOpenChange(false)}
-              submitLabel={mode === "create" ? "Create" : "Save"}
+              onValidityChange={({ canSubmit: cs, submitting: s }) => {
+                setCanSubmit(cs);
+                setSubmitting(s);
+              }}
             />
           </div>
 
-          {mode === "edit" && contact && (
-            <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+          <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+            {mode === "edit" && contact && (
               <Button
                 type="button"
                 variant="outline"
@@ -98,8 +102,19 @@ export function ContactModal({
               >
                 Delete contact
               </Button>
-            </DialogFooter>
-          )}
+            )}
+            <Button
+              type="button"
+              variant="outline"
+              disabled={submitting}
+              onClick={() => onOpenChange(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" form="contact-form" disabled={!canSubmit || submitting}>
+              {mode === "create" ? "Create" : "Save"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

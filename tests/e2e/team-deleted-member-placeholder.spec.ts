@@ -53,6 +53,8 @@ test.describe("Team roster shows deleted-contact placeholder", () => {
       await page.getByLabel(/first name/i).fill("PlaceholderTest");
       await page.getByLabel(/last name/i).fill("Member");
       await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
+      // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
+      await page.getByRole("checkbox", { name: "Player", exact: true }).check();
       await page.getByRole("button", { name: /save/i }).click();
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 

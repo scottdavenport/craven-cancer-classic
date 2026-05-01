@@ -49,12 +49,14 @@ function buildRecentlyHonoredMock(purchases: MockPurchase[]) {
   // supabase.from('sponsorship_purchases')
   //   .select('tribute_recipient, created_at')
   //   .not('tribute_recipient', 'is', null)
+  //   .eq('payment_status', 'paid')
   //   .order('created_at', { ascending: false })
   //   .limit(20)
 
   const limitMock = vi.fn().mockResolvedValue({ data: purchases, error: null });
   const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-  const notMock = vi.fn().mockReturnValue({ order: orderMock });
+  const eqMock = vi.fn().mockReturnValue({ order: orderMock });
+  const notMock = vi.fn().mockReturnValue({ eq: eqMock });
   const selectMock = vi.fn().mockReturnValue({ not: notMock });
 
   return {
@@ -234,7 +236,8 @@ describe("RecentlyHonored — server component (Sprint 33 RED)", () => {
       const mockFrom = vi.fn();
       const limitMock = vi.fn().mockResolvedValue({ data: [], error: null });
       const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const notMock = vi.fn().mockReturnValue({ order: orderMock });
+      const eqMock = vi.fn().mockReturnValue({ order: orderMock });
+      const notMock = vi.fn().mockReturnValue({ eq: eqMock });
       const selectMock = vi.fn().mockReturnValue({ not: notMock });
 
       mockFrom.mockImplementation((table: string) => {
@@ -263,7 +266,8 @@ describe("RecentlyHonored — server component (Sprint 33 RED)", () => {
       const mockFrom = vi.fn();
       const limitMock = vi.fn().mockResolvedValue({ data: [], error: null });
       const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const notMock = vi.fn().mockReturnValue({ order: orderMock });
+      const eqMock = vi.fn().mockReturnValue({ order: orderMock });
+      const notMock = vi.fn().mockReturnValue({ eq: eqMock });
       const selectMock = vi.fn().mockReturnValue({ not: notMock });
 
       mockFrom.mockImplementation((table: string) => {
@@ -289,7 +293,8 @@ describe("RecentlyHonored — server component (Sprint 33 RED)", () => {
       const mockFrom = vi.fn();
       const limitMock = vi.fn().mockResolvedValue({ data: [], error: null });
       const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const notMock = vi.fn().mockReturnValue({ order: orderMock });
+      const eqMock = vi.fn().mockReturnValue({ order: orderMock });
+      const notMock = vi.fn().mockReturnValue({ eq: eqMock });
       const selectMock = vi.fn().mockReturnValue({ not: notMock });
 
       mockFrom.mockImplementation((table: string) => {
@@ -312,7 +317,8 @@ describe("RecentlyHonored — server component (Sprint 33 RED)", () => {
       const mockFrom = vi.fn();
       const limitMock = vi.fn().mockResolvedValue({ data: [], error: null });
       const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
-      const notMock = vi.fn().mockReturnValue({ order: orderMock });
+      const eqMock = vi.fn().mockReturnValue({ order: orderMock });
+      const notMock = vi.fn().mockReturnValue({ eq: eqMock });
       const selectMock = vi.fn().mockReturnValue({ not: notMock });
 
       mockFrom.mockImplementation((table: string) => {
@@ -334,6 +340,31 @@ describe("RecentlyHonored — server component (Sprint 33 RED)", () => {
         "is",
         null
       );
+    });
+
+    it("filters to only paid sponsorship_purchases (payment_status = 'paid')", async () => {
+      const mockFrom = vi.fn();
+      const limitMock = vi.fn().mockResolvedValue({ data: [], error: null });
+      const orderMock = vi.fn().mockReturnValue({ limit: limitMock });
+      const eqSpy = vi.fn().mockReturnValue({ order: orderMock });
+      const notMock = vi.fn().mockReturnValue({ eq: eqSpy });
+      const selectMock = vi.fn().mockReturnValue({ not: notMock });
+
+      mockFrom.mockImplementation((table: string) => {
+        if (table === "sponsorship_purchases") return { select: selectMock };
+        return {
+          select: vi.fn().mockReturnValue({
+            single: vi.fn().mockResolvedValue({ data: null, error: null }),
+          }),
+        };
+      });
+
+      setClient({ from: mockFrom });
+
+      await loadAndRenderRecentlyHonored();
+
+      // Privacy contract: only paid rows must be returned — never pending/abandoned
+      expect(eqSpy).toHaveBeenCalledWith("payment_status", "paid");
     });
   });
 });

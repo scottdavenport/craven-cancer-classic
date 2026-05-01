@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { SponsorshipGrid } from "./sponsorship-grid";
+import { SponsorshipSection } from "./sponsorship-section";
+import { TributeSection } from "./tribute-section";
+import { RecentlyHonored } from "./recently-honored";
+import { SupporterSection } from "./supporter-section";
 import { ProspectCaptureForm } from "@/components/public/prospect-capture-form";
-import { SectionEyebrow } from "@/components/public/section-eyebrow";
 import { PublicEmptyState } from "@/components/public/public-empty-state";
 import { formatLifetimeRaised } from "@/lib/sponsors-utils";
+import type { SponsorshipItem } from "@/types/database";
 
 export const metadata: Metadata = {
   title: "Sponsorship Opportunities",
@@ -12,7 +15,7 @@ export const metadata: Metadata = {
     "Support the Craven Cancer Classic. Browse sponsorship packages and make a direct impact.",
 };
 
-async function getSponsorshipItems() {
+async function getSponsorshipItems(): Promise<SponsorshipItem[]> {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
@@ -25,7 +28,7 @@ async function getSponsorshipItems() {
     .order("price_cents", { ascending: false })
     .order("sort_order", { ascending: true });
 
-  return data ?? [];
+  return (data ?? []) as SponsorshipItem[];
 }
 
 async function getLifetimeRaisedCents(): Promise<number | null> {
@@ -48,6 +51,16 @@ export default async function SponsorshipsPage() {
   ]);
 
   const lifetimeFormatted = formatLifetimeRaised(lifetimeRaisedCents);
+
+  // Partition items by category client-side.
+  // Items without a category value default to 'sponsorship' (pre-migration rows).
+  const sponsorshipItems = items.filter(
+    (i) => !i.category || i.category === "sponsorship"
+  );
+  const tributeItems = items.filter((i) => i.category === "tribute");
+  const supporterItems = items.filter((i) => i.category === "supporter");
+
+  const hasAnyItems = items.length > 0;
 
   return (
     <div>
@@ -124,37 +137,42 @@ export default async function SponsorshipsPage() {
         </div>
       </section>
 
-      {/* Grid section */}
-      <section className="px-4 py-16 sm:py-24">
-        <div className="mx-auto max-w-5xl">
-          {/* Section header — above grid */}
-          {items.length > 0 && (
-            <div className="mb-10 text-center">
-              <SectionEyebrow tone="brand">
-                2026 Sponsorship Packages
-              </SectionEyebrow>
-              <h2
+      {/* Three-section layout — Sponsorships → Tributes → Supporters */}
+      <div className="px-4 py-16 sm:py-24">
+        <div className="mx-auto max-w-5xl space-y-20">
+          {hasAnyItems ? (
+            <>
+              {/* Section 1: Sponsorships */}
+              <SponsorshipSection items={sponsorshipItems} />
+
+              {/* Section 2: Tributes */}
+              <TributeSection items={tributeItems} />
+
+              {/* Recently Honored — renders below Tributes per plan line 86 */}
+              <RecentlyHonored />
+
+              {/* Section 3: Supporters */}
+              <SupporterSection items={supporterItems} />
+
+              {/* Reassurance strip — below all sections, Aria-approved */}
+              <div
+                className="rounded-lg px-6 py-4 text-center text-sm"
                 style={{
-                  fontFamily: "var(--font-manrope)",
-                  fontWeight: 800,
-                  fontSize: "clamp(1.75rem, 3.5vw, 2.5rem)",
-                  lineHeight: 1.15,
-                  letterSpacing: "-0.015em",
-                  color: "var(--foreground)",
+                  backgroundColor: "var(--neutral-50)",
+                  color: "var(--muted-foreground)",
                 }}
               >
-                Pick your level
-              </h2>
-              <p className="mt-3 mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
-                Each package supports the tournament directly. Cards are listed
-                by level — choose what fits, then we&apos;ll handle the details
-                at checkout.
-              </p>
-            </div>
-          )}
-
-          {items.length > 0 ? (
-            <SponsorshipGrid items={items} />
+                Selected sponsors appear on our{" "}
+                <a
+                  href="/sponsors"
+                  className="underline underline-offset-2 hover:no-underline"
+                >
+                  2026 Partners page
+                </a>{" "}
+                alongside our other supporters. A tax receipt is emailed after
+                checkout.
+              </div>
+            </>
           ) : (
             <div className="mx-auto max-w-lg">
               <PublicEmptyState
@@ -171,29 +189,8 @@ export default async function SponsorshipsPage() {
               />
             </div>
           )}
-
-          {/* Reassurance strip — below grid, Aria-approved */}
-          {items.length > 0 && (
-            <div
-              className="mt-12 rounded-lg px-6 py-4 text-center text-sm"
-              style={{
-                backgroundColor: "var(--neutral-50)",
-                color: "var(--muted-foreground)",
-              }}
-            >
-              Selected sponsors appear on our{" "}
-              <a
-                href="/sponsors"
-                className="underline underline-offset-2 hover:no-underline"
-              >
-                2026 Partners page
-              </a>{" "}
-              alongside our other supporters. A tax receipt is emailed after
-              checkout.
-            </div>
-          )}
         </div>
-      </section>
+      </div>
     </div>
   );
 }

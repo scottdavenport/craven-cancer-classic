@@ -111,6 +111,13 @@ vi.mock("@/components/public/prospect-capture-form", () => ({
   ProspectCaptureForm: () => <div data-testid="prospect-form" />,
 }));
 
+// Stub RecentlyHonored so the async server component doesn't fire its own
+// Supabase query during page-level tests. recently-honored.test.tsx owns
+// the query contract.
+vi.mock("@/app/(public)/sponsorships/recently-honored", () => ({
+  RecentlyHonored: () => <div data-testid="recently-honored-stub" />,
+}));
+
 // Mock the old SponsorshipGrid which the current page uses
 vi.mock("@/app/(public)/sponsorships/sponsorship-grid", () => ({
   SponsorshipGrid: ({
@@ -209,7 +216,10 @@ function buildSupabaseMock(opts: {
       // Build a chainable mock that handles .eq('category', ...) filtering
       let resolvedItems = allItems;
 
-      const orderMock = vi.fn().mockResolvedValue({ data: resolvedItems, error: null });
+      // Support double .order() chain: .order(...).order(...).resolves(data)
+      const orderMock = vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({ data: resolvedItems, error: null }),
+      });
 
       const isMock = vi.fn().mockReturnValue({ order: orderMock });
 

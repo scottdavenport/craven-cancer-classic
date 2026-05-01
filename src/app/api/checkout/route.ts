@@ -282,12 +282,14 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
     purchaser_email,
     purchaser_phone,
     company_name,
+    tribute_recipient: tributeRecipientRaw,
   } = body as {
     item_id: string;
     purchaser_name: string;
     purchaser_email: string;
     purchaser_phone?: string;
     company_name?: string;
+    tribute_recipient?: string;
   };
 
   if (!item_id || !purchaser_name || !purchaser_email) {
@@ -302,7 +304,7 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
   // Fetch the sponsorship item server-side — never trust client-supplied price
   const { data: sponsorshipItem, error: itemError } = await supabase
     .from("sponsorship_items")
-    .select("id, name, price_cents, active")
+    .select("id, name, price_cents, active, category")
     .eq("id", item_id)
     .single();
 
@@ -320,21 +322,47 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
     );
   }
 
+  const isTribute = (sponsorshipItem as { category?: string }).category === "tribute";
+
+  // Tribute validation: tribute items require a non-blank recipient
+  if (isTribute) {
+    const trimmed = typeof tributeRecipientRaw === "string"
+      ? tributeRecipientRaw.trim()
+      : "";
+    if (!trimmed) {
+      return NextResponse.json(
+        { error: "tribute purchases require an honoree name" },
+        { status: 400 }
+      );
+    }
+  }
+
+  // Trim recipient for tribute items; ignore for non-tribute items
+  const tribute_recipient = isTribute
+    ? (tributeRecipientRaw as string).trim()
+    : undefined;
+
   // price_cents is already in cents (bigint) — use directly
   const unit_amount = sponsorshipItem.price_cents;
 
-  // Create purchase record
+  // Create purchase record — include tribute_recipient only for tribute purchases
+  const basePayload = {
+    item_id,
+    purchaser_name,
+    purchaser_email,
+    purchaser_phone: purchaser_phone || null,
+    company_name: company_name || null,
+    payment_status: "pending" as const,
+    amount_paid_cents: 0,
+  };
+
   const { data: purchase, error: purchaseError } = await supabase
     .from("sponsorship_purchases")
-    .insert({
-      item_id,
-      purchaser_name,
-      purchaser_email,
-      purchaser_phone: purchaser_phone || null,
-      company_name: company_name || null,
-      payment_status: "pending" as const,
-      amount_paid_cents: 0,
-    })
+    .insert(
+      isTribute
+        ? { ...basePayload, tribute_recipient: tribute_recipient ?? null }
+        : basePayload
+    )
     .select()
     .single();
 
@@ -345,6 +373,21 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
     );
   }
 
+  // Line item name: tribute items get honoree suffix; others use item name only
+  const lineItemName = isTribute
+    ? `${sponsorshipItem.name} — in honor of ${tribute_recipient}`
+    : sponsorshipItem.name;
+
+  // Stripe metadata: only include tribute_recipient for tribute purchases
+  const stripeMetadata: Record<string, string> = {
+    purchase_id: purchase.id,
+    item_id,
+    type: "sponsorship",
+  };
+  if (isTribute) {
+    stripeMetadata.tribute_recipient = tribute_recipient as string;
+  }
+
   const checkoutSession = await getStripe().checkout.sessions.create({
     payment_method_types: ["card"],
     mode: "payment",
@@ -353,7 +396,7 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
         price_data: {
           currency: "usd",
           product_data: {
-            name: `Craven Cancer Classic - ${sponsorshipItem.name}`,
+            name: lineItemName,
             description: company_name
               ? `Sponsored by ${company_name}`
               : `Purchased by ${purchaser_name}`,
@@ -363,11 +406,7 @@ async function handleSponsorshipCheckout(body: Record<string, unknown>) {
         quantity: 1,
       },
     ],
-    metadata: {
-      purchase_id: purchase.id,
-      item_id,
-      type: "sponsorship",
-    },
+    metadata: stripeMetadata,
     customer_email: purchaser_email,
     success_url: `${process.env.NEXT_PUBLIC_SITE_URL}/sponsorships?success=true`,
     cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}/sponsorships?canceled=true`,

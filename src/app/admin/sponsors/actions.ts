@@ -62,6 +62,7 @@ export async function getSponsorshipItems(): Promise<Pick<SponsorshipItem, "id" 
     .select("id, name, price_cents, year")
     .eq("year", currentYear)
     .eq("active", true)
+    .eq("category", "sponsorship")
     .order("sort_order")
     .order("price_cents", { ascending: false });
 

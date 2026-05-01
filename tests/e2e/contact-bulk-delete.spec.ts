@@ -29,7 +29,7 @@ async function createTestContact(
   await page.getByRole("textbox", { name: "Email" }).fill(`bulk-del-${idx}-${Date.now()}@example.com`);
   // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
   await page.getByRole("checkbox", { name: "Player", exact: true }).check();
-  await page.getByRole("button", { name: /save/i }).click();
+  await page.getByRole("button", { name: /create|save/i }).click();
   await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 }
 

@@ -55,7 +55,7 @@ test.describe("Team roster shows deleted-contact placeholder", () => {
       await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
       // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
       await page.getByRole("checkbox", { name: "Player", exact: true }).check();
-      await page.getByRole("button", { name: /save/i }).click();
+      await page.getByRole("button", { name: /create|save/i }).click();
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
       // ---- Step 3: Soft-delete this contact ----
@@ -63,7 +63,8 @@ test.describe("Team roster shows deleted-contact placeholder", () => {
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByRole("button", { name: /delete/i }).click();
 
-      const confirmBtn = page.getByRole("button", { name: /confirm|yes/i });
+      // ConfirmDialog uses confirmLabel="Delete" — match exactly to avoid "Delete contact"
+      const confirmBtn = page.getByRole("button", { name: "Delete", exact: true });
       if (await confirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
         await confirmBtn.click();
       }

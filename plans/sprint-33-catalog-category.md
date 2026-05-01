@@ -234,6 +234,7 @@ Surface points (~10): `Database['public']['Tables']['sponsorship_items']['Row' |
 - `src/app/(public)/sponsorships/__tests__/sections.test.tsx` — three sections render, each with the right items.
 - `src/app/(public)/sponsorships/__tests__/recently-honored.test.tsx` — server query + render shape.
 - `src/app/(public)/sponsors/__tests__/sponsors-page.test.tsx` — assertion update: filter to category=sponsorship only.
+- `src/app/(public)/__tests__/sponsors-page.test.tsx` — sibling test file at the outer `(public)/__tests__/` path; mocks the same `sponsorship_items` query chain. Same assertion update as above (both break the same way when the page adds `.eq('category', 'sponsorship')`).
 
 ## Auth / hooks
 

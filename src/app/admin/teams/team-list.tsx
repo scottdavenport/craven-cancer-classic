@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -160,16 +160,20 @@ export function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: Delete
     : "—";
   const amountDollars = (team.amount_paid_cents / 100).toFixed(2);
 
-  // Fetch score count when dialog opens
-  function handleOpenChange(nextOpen: boolean) {
-    if (nextOpen && scoreCount === null) {
+  // Fetch score count when dialog opens (useEffect handles parent-controlled open prop;
+  // base-ui Dialog.Root only fires onOpenChange for internal transitions, not parent prop changes)
+  useEffect(() => {
+    if (open && scoreCount === null) {
       getScoreCount(team.id).then(setScoreCount);
     }
-    if (!nextOpen) {
+    if (!open) {
       setConfirmText("");
       setError(null);
       setScoreCount(null);
     }
+  }, [open, team.id, scoreCount]);
+
+  function handleOpenChange(nextOpen: boolean) {
     onOpenChange(nextOpen);
   }
 

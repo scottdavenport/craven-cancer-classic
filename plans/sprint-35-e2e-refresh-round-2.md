@@ -42,7 +42,7 @@ No new product surfaces. No schema changes. What changes is that after this spri
 | H | `getByText(TEST_EMAIL)` in Trash → `getByText(FULL_NAME)` | Trash column is `full_name`, not email; assertions on email text always fail |
 | TS | Static names → per-run timestamps | Static test names accumulate in PROD across runs; strict-mode locators collide on the second run; use `Date.now()` suffix in email AND derive `FULL_NAME` from the name constants |
 | **T** | `getByRole("alert")` → sonner toast locator | Server-action errors (type-removal guard, generic create/update failures) surface via `toast.error()` from sonner. Sonner toasts have NO `role="alert"`. Use `page.getByText(<expected error text>)` scoped to `[data-sonner-toast]` or the visible toast region. Confirmed at `contact-modal.tsx:48-49,63-64`. |
-| **X** | Team list header text drift vs cell content | `team-list.tsx:342` ships header `["Team Name", "Captain", ...]` but the cell at line 378 renders `team.captain_display_name`. Sprint 32 dropped the column but never renamed the header. **Production-code fix required** — rename "Team Name" → "Team" in `team-list.tsx:342`. This is a Bolt task in Phase 0b, NOT a spec-only change. |
+| **X** | Team list header text drift vs cell content | Header text "Team Name" drifted vs cells rendering `captain_display_name`. Sprint 32 closeout miss across **2 sites** (verified `grep -rn '"Team Name"' src/`): `team-list.tsx:342` (admin teams list) AND `trash-tabs.tsx:162` (trash teams tab). **Production-code fix required** — rename "Team Name" → "Team" in BOTH files. This is a Bolt task in Phase 0b, NOT a spec-only change. |
 
 **Pattern P (PR #317 alert variant) — VERIFIED NON-ISSUE.** Watchdog confirmed `contact-list.tsx:753-755` retains `role="alert"` AND adds `aria-live="polite"`. The existing `getByRole("alert")` locators in `contact-bulk-blocked-alert.spec.ts` work as-is. **No surgery needed.** This was the right call to flag in pre-flight; it just resolved cleanly.
 
@@ -544,28 +544,33 @@ Forge opens the PR as scottdavenport on a fresh branch off main.
 
 ---
 
-### Phase 0b — Bolt: team-list header rename (Pattern X)
+### Phase 0b — Bolt: team list header rename (Pattern X) — 2 sites
 
-**File:** `src/app/admin/teams/team-list.tsx`
-**Change:** Rename the first column header from `"Team Name"` to `"Team"` at line 342. Cell content unchanged (still renders `team.captain_display_name`).
+**Files:**
+1. `src/app/admin/teams/team-list.tsx:342` (admin teams list header)
+2. `src/app/admin/trash/trash-tabs.tsx:162` (trash teams tab header)
+
+**Change:** Rename "Team Name" → "Team" in both. Cell content unchanged in both (`team.captain_display_name`).
 
 ```typescript
-// BEFORE
-{["Team Name", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(
-  (h) => (...)
-)}
-
+// 1. team-list.tsx:342 — BEFORE
+{["Team Name", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(...)}
 // AFTER
-{["Team", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(
-  (h) => (...)
-)}
+{["Team", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(...)}
+
+// 2. trash-tabs.tsx:162 — BEFORE
+columns={{ header: "Team Name", renderName: (row) => row.captain_display_name || "(no captain)" }}
+// AFTER
+columns={{ header: "Team", renderName: (row) => row.captain_display_name || "(no captain)" }}
 ```
+
+**Pre-flight verified** via `grep -rn '"Team Name"' src/` → exactly 2 hits, both listed above. No other production surface uses the literal string.
 
 **Rationale:** Per `memory/projects/craven.md` data model — "team identity = captain's full name everywhere — admin lists, leaderboard, error messages, Stripe receipts." The header text was a Sprint 32 closeout miss. Spec at `team-create-edit.spec.ts:84` correctly enforces the post-Sprint-32 contract by asserting "Team Name" is NOT present.
 
-**Effort:** XS (single-line change in one file). Bolt opens own PR per `feedback_builders_open_their_own_prs`.
+**Effort:** XS (2 single-line changes in 2 files). Bolt opens own PR per `feedback_builders_open_their_own_prs`.
 
-**Commit:** `fix(admin): rename team list "Team Name" header → "Team" (Sprint 32 closeout, #331 Pattern X)`
+**Commit:** `fix(admin): rename "Team Name" header → "Team" in teams list + trash tab (Sprint 32 closeout, #331 Pattern X)`
 
 **Phase 0a + 0b ship in parallel** — different files, no dependency.
 
@@ -703,11 +708,11 @@ All acceptance criteria are written as verifiable test outcomes per Compass stan
 
 ### score-create-edit.spec.ts (5 tests)
 
-23. Test "Add Score opens a centered modal": dialog is visible and centered.
-24. Test "Add Score modal has a team dropdown, NOT a freeform team name text input": no `getByLabel(/^team name$/i)` visible; combobox present.
-25. Test "Team dropdown lists captain names": combobox opens and options are non-empty.
-26. Test "Score list row shows captain name as team identity, no team_name column": no "Team Name" header in scores table.
-27. Test "Score with no team shows fallback string (not blank)": score table renders without crashing; first row is visible if rows exist.
+24. Test "Add Score opens a centered modal": dialog is visible and centered.
+25. Test "Add Score modal has a team dropdown, NOT a freeform team name text input": no `getByLabel(/^team name$/i)` visible; combobox present.
+26. Test "Team dropdown lists captain names": combobox opens and options are non-empty.
+27. Test "Score list row shows captain name as team identity, no team_name column": no "Team Name" header in scores table.
+28. Test "Score with no team shows fallback string (not blank)": score table renders without crashing; first row is visible if rows exist.
 
 ---
 
@@ -739,7 +744,7 @@ Per `feedback_test_refresh_can_surface_prod_bugs`: "Test-only" spec refresh spri
 - The type-removal-guard error message text from `actions.ts` doesn't match the spec's expected pattern — may need a copy update from Aria.
 - A new alert/toast component without test-friendly attributes blocks Spec from writing a stable locator.
 
-### 3. PROD writes and orphan contact cleanup
+### 5. PROD writes and orphan contact cleanup
 
 Specs write to PROD (no staging by design — per `memory/projects/craven.md`). `contact-multi-type.spec.ts` creates up to 11 contacts per run (one per test, using `e2e-*@example.com` addresses with timestamps). After the sprint, Forge runs orphan cleanup via service-key REST DELETE:
 
@@ -751,15 +756,15 @@ Per `feedback_use_service_key_for_data_ops`: Forge executes this directly, not h
 
 `team-delete-type-to-confirm.spec.ts` deletes a real team per run (destructive). Monitor team count in PROD; if depleted, a seed team is needed.
 
-### 4. No migrations in this sprint
+### 6. No migrations in this sprint
 
 All changes are spec-file and `playwright.config.ts` changes only. No schema changes. No `apply_migration` calls. The `apply_migration` MCP read-only blocker (seen in Sprint 32/33/34) is irrelevant.
 
-### 5. `feedback_skip_is_not_pass` enforcement in Spec prompts
+### 7. `feedback_skip_is_not_pass` enforcement in Spec prompts
 
 Forge MUST include explicit language in each Spec prompt: "Verification gate is `X passed` in output, not `X skipped cleanly`. If tests skip, report the skip reason explicitly. Do not present skipped tests as passing."
 
-### 6. Spec agent worktree isolation
+### 8. Spec agent worktree isolation
 
 Each Spec batch must use its own git worktree of the craven-cancer-classic repo. From Sprint 34 retro: Spec1 didn't rebase before final push, and would have silently reverted Spec2's changes without the worktree isolation.
 
@@ -781,6 +786,7 @@ Each Spec agent works exclusively in its own `/tmp/craven-sprint-35-batchN/` wor
 |------|-------------|--------------|
 | `playwright.config.ts` | Modified — add dotenv loader | Phase 0a (Forge-direct) |
 | `src/app/admin/teams/team-list.tsx` | Modified — line 342 "Team Name" → "Team" header rename | Phase 0b (Bolt) |
+| `src/app/admin/trash/trash-tabs.tsx` | Modified — line 162 "Team Name" → "Team" header rename | Phase 0b (Bolt) |
 | `tests/e2e/contact-multi-type.spec.ts` | Modified — Pattern E (18 hits) + G | Phase 1 Batch 1 |
 | `tests/e2e/contact-bulk-subscribe.spec.ts` | Verify only — likely no change | Phase 1 Batch 1 |
 | `tests/e2e/contact-bulk-blocked-alert.spec.ts` | Verify only — Pattern P resolved as non-issue | Phase 1 Batch 1 |
@@ -851,15 +857,21 @@ const inlineError = page.getByText(/A team member|cannot remove/i).first();
 
 Spec MUST verify the actual sonner DOM structure in dev mode (open form, trigger guard, inspect rendered toast) before committing the locator.
 
-**Pattern X** (team list header text drift — PRODUCTION FIX, Phase 0b)
+**Pattern X** (team list header text drift — PRODUCTION FIX, Phase 0b — 2 sites)
 
 ```typescript
 // src/app/admin/teams/team-list.tsx:342 — BEFORE
 {["Team Name", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(...)}
-
 // AFTER
 {["Team", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(...)}
+
+// src/app/admin/trash/trash-tabs.tsx:162 — BEFORE
+columns={{ header: "Team Name", renderName: (row) => row.captain_display_name || "(no captain)" }}
+// AFTER
+columns={{ header: "Team", renderName: (row) => row.captain_display_name || "(no captain)" }}
 ```
+
+Pre-flight `grep -rn '"Team Name"' src/` → exactly 2 hits. No other surface affected.
 
 Spec assertion at `team-create-edit.spec.ts:84` already enforces no "Team Name" present; correct on Sprint 32 contract.
 

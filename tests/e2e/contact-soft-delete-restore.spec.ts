@@ -14,8 +14,10 @@ baseTest.skip(
 
 import { test } from "./fixtures/admin-auth";
 
-const TEST_EMAIL = `e2e-restore-${Date.now()}@example.com`;
-const TEST_FULL_NAME = `E2ERestore ${Date.now()}`;
+const TS = Date.now();
+const TEST_EMAIL = `e2e-restore-${TS}@example.com`;
+const TEST_LAST = `Restore${TS}`;
+const TEST_FULL_NAME = `E2ERestore ${TEST_LAST}`;
 
 test.describe("Contact soft-delete and restore", () => {
   test("soft-deletes a contact, finds it in Trash, restores it", async ({ adminPage: page }) => {
@@ -25,9 +27,11 @@ test.describe("Contact soft-delete and restore", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
 
     await page.getByLabel(/first name/i).fill("E2ERestore");
-    await page.getByLabel(/last name/i).fill(String(Date.now()));
-    await page.getByLabel(/email/i).fill(TEST_EMAIL);
-    await page.getByRole("button", { name: /save/i }).click();
+    await page.getByLabel(/last name/i).fill(TEST_LAST);
+    await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
+    // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
+    await page.getByRole("checkbox", { name: "Player", exact: true }).check();
+    await page.getByRole("button", { name: /create|save/i }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
     // ---- Step 2: Delete the contact ----
@@ -37,7 +41,8 @@ test.describe("Contact soft-delete and restore", () => {
     await page.getByRole("button", { name: /delete/i }).click();
 
     // Handle confirmation if present
-    const confirmBtn = page.getByRole("button", { name: /confirm|yes/i });
+    // ConfirmDialog uses confirmLabel="Delete" — match exactly to avoid "Delete contact"
+    const confirmBtn = page.getByRole("button", { name: "Delete", exact: true });
     if (await confirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await confirmBtn.click();
     }
@@ -54,12 +59,12 @@ test.describe("Contact soft-delete and restore", () => {
       await contactsTab.click();
     }
 
-    // Test contact should appear in Trash
-    await expect(page.getByText(TEST_EMAIL)).toBeVisible({ timeout: 5_000 });
+    // Test contact should appear in Trash (Trash shows name, not email)
+    await expect(page.getByText(TEST_FULL_NAME)).toBeVisible({ timeout: 5_000 });
 
     // ---- Step 4: Restore the contact ----
     const contactRow = page.locator(`tr, li, [data-testid="trash-row"]`).filter({
-      hasText: TEST_EMAIL,
+      hasText: TEST_FULL_NAME,
     });
     await contactRow.getByRole("button", { name: /restore/i }).click();
 
@@ -67,7 +72,7 @@ test.describe("Contact soft-delete and restore", () => {
     await expect(page.getByText(/restored|success/i)).toBeVisible({ timeout: 5_000 });
 
     // Contact disappears from Trash
-    await expect(page.getByText(TEST_EMAIL)).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(TEST_FULL_NAME)).not.toBeVisible({ timeout: 5_000 });
 
     // ---- Step 5: Verify contact is back in contacts list ----
     await page.goto("/admin/contacts");
@@ -76,7 +81,7 @@ test.describe("Contact soft-delete and restore", () => {
     // ---- Cleanup: soft-delete again ----
     await page.getByText(TEST_EMAIL).click();
     await page.getByRole("button", { name: /delete/i }).click();
-    const cleanup = page.getByRole("button", { name: /confirm|yes/i });
+    const cleanup = page.getByRole("button", { name: "Delete", exact: true });
     if (await cleanup.isVisible({ timeout: 2_000 }).catch(() => false)) {
       await cleanup.click();
     }

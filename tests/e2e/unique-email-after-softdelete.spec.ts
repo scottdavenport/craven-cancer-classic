@@ -19,7 +19,10 @@ baseTest.skip(
 
 import { test } from "./fixtures/admin-auth";
 
-const SHARED_EMAIL = `e2e-unique-${Date.now()}@example.com`;
+const TS = Date.now();
+const SHARED_EMAIL = `e2e-unique-${TS}@example.com`;
+const ORIG_LAST = `Orig${TS}`;
+const REPL_LAST = `Repl${TS}`;
 
 test.describe("Partial unique index — email reuse after soft-delete", () => {
   test(
@@ -30,35 +33,39 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await page.getByRole("button", { name: /new contact/i }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByLabel(/first name/i).fill("UniqueFirst");
-      await page.getByLabel(/last name/i).fill("Original");
-      await page.getByLabel(/email/i).fill(SHARED_EMAIL);
-      await page.getByRole("button", { name: /save/i }).click();
+      await page.getByLabel(/last name/i).fill(ORIG_LAST);
+      await page.getByRole("textbox", { name: "Email" }).fill(SHARED_EMAIL);
+      // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
+      await page.getByRole("checkbox", { name: "Player", exact: true }).check();
+      await page.getByRole("button", { name: /create|save/i }).click();
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
-      await expect(page.getByText("UniqueFirst Original")).toBeVisible();
+      await expect(page.getByText(`UniqueFirst ${ORIG_LAST}`)).toBeVisible();
 
       // ---- Step 2: Soft-delete the first contact ----
-      await page.getByText("UniqueFirst Original").click();
+      await page.getByText(`UniqueFirst ${ORIG_LAST}`).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByRole("button", { name: /delete/i }).click();
 
-      const confirmBtn = page.getByRole("button", { name: /confirm|yes/i });
-      if (await confirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
-        await confirmBtn.click();
-      }
+      // ConfirmDialog always opens — click the exact "Delete" confirm button (not "Delete contact")
+      await page.getByRole("button", { name: "Delete", exact: true }).click();
 
-      await expect(page.getByText("UniqueFirst Original")).not.toBeVisible({ timeout: 5_000 });
+      // Wait for deletion to complete (async server action) and dialogs to close
+      await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 15_000 });
+      await expect(page.getByText(`UniqueFirst ${ORIG_LAST}`)).not.toBeVisible({ timeout: 5_000 });
 
       // ---- Step 3: Create second contact with SAME email — should succeed ----
       await page.getByRole("button", { name: /new contact/i }).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByLabel(/first name/i).fill("UniqueFirst");
-      await page.getByLabel(/last name/i).fill("Replacement");
-      await page.getByLabel(/email/i).fill(SHARED_EMAIL);
-      await page.getByRole("button", { name: /save/i }).click();
+      await page.getByLabel(/last name/i).fill(REPL_LAST);
+      await page.getByRole("textbox", { name: "Email" }).fill(SHARED_EMAIL);
+      // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
+      await page.getByRole("checkbox", { name: "Player", exact: true }).check();
+      await page.getByRole("button", { name: /create|save/i }).click();
 
       // Should succeed — no duplicate error
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
-      await expect(page.getByText("UniqueFirst Replacement")).toBeVisible({ timeout: 5_000 });
+      await expect(page.getByText(`UniqueFirst ${REPL_LAST}`)).toBeVisible({ timeout: 5_000 });
 
       // ---- Step 4: Try to restore the original contact → should conflict ----
       await page.goto("/admin/trash");
@@ -69,7 +76,7 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
 
       // Find the original contact in Trash
       const originalRow = page.locator(`tr, li, [data-testid="trash-row"]`).filter({
-        hasText: "UniqueFirst Original",
+        hasText: `UniqueFirst ${ORIG_LAST}`,
       });
       await expect(originalRow).toBeVisible({ timeout: 5_000 });
 
@@ -83,13 +90,10 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
 
       // ---- Cleanup: delete the replacement contact ----
       await page.goto("/admin/contacts");
-      await page.getByText("UniqueFirst Replacement").click();
+      await page.getByText(`UniqueFirst ${REPL_LAST}`).click();
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByRole("button", { name: /delete/i }).click();
-      const cleanup = page.getByRole("button", { name: /confirm|yes/i });
-      if (await cleanup.isVisible({ timeout: 2_000 }).catch(() => false)) {
-        await cleanup.click();
-      }
+      await page.getByRole("button", { name: "Delete", exact: true }).click();
     }
   );
 });

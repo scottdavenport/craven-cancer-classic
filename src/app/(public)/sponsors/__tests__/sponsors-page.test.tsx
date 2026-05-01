@@ -115,6 +115,7 @@ type MockTier = {
   id: string;
   name: string;
   sort_order: number;
+  price_cents: number;
   active: boolean;
   deleted_at: string | null;
 };
@@ -136,6 +137,7 @@ function makeTier(overrides: Partial<MockTier> = {}): MockTier {
     id: "tier-default",
     name: "Default Tier",
     sort_order: 3,
+    price_cents: 50_000,
     active: true,
     deleted_at: null,
     ...overrides,
@@ -435,7 +437,7 @@ describe("SponsorsPage — redesign (Sprint 22 RED, #250)", () => {
   it("(RED) 33 — champion tier grid has class 'partner-grid--champion'", async () => {
     setClient(
       buildSupabaseMock({
-        tiers: [makeTier({ id: "tier-champion", name: "Champion", sort_order: 1 })],
+        tiers: [makeTier({ id: "tier-champion", name: "Champion", sort_order: 1, price_cents: 500_000 })],
         sponsors: [makeSponsor({ id: "s1", name: "Champ Co", tier_id: "tier-champion" })],
       })
     );
@@ -453,7 +455,7 @@ describe("SponsorsPage — redesign (Sprint 22 RED, #250)", () => {
   it("(RED) 34 — eagle tier grid has class 'partner-grid--eagle'", async () => {
     setClient(
       buildSupabaseMock({
-        tiers: [makeTier({ id: "tier-eagle", name: "Eagle", sort_order: 2 })],
+        tiers: [makeTier({ id: "tier-eagle", name: "Eagle", sort_order: 2, price_cents: 250_000 })],
         sponsors: [makeSponsor({ id: "s2", name: "Eagle Co", tier_id: "tier-eagle" })],
       })
     );
@@ -471,7 +473,7 @@ describe("SponsorsPage — redesign (Sprint 22 RED, #250)", () => {
   it("(RED) 35 — standard tier grid has class 'partner-grid--standard'", async () => {
     setClient(
       buildSupabaseMock({
-        tiers: [makeTier({ id: "tier-gold", name: "Gold", sort_order: 3 })],
+        tiers: [makeTier({ id: "tier-gold", name: "Gold", sort_order: 3, price_cents: 100_000 })],
         sponsors: [makeSponsor({ id: "s3", name: "Gold Co", tier_id: "tier-gold" })],
       })
     );
@@ -487,7 +489,7 @@ describe("SponsorsPage — redesign (Sprint 22 RED, #250)", () => {
   // ── Test 36: Tier with 7 sponsors renders with partner-grid--compact class ──
 
   it("(RED) 36 — tier with 7 sponsors renders with class 'partner-grid--compact'", async () => {
-    const compactTier = makeTier({ id: "tier-compact", name: "Compact Tier", sort_order: 1 });
+    const compactTier = makeTier({ id: "tier-compact", name: "Compact Tier", sort_order: 1, price_cents: 500_000 });
     const compactSponsors = Array.from({ length: 7 }, (_, i) =>
       makeSponsor({
         id: `s-compact-${i + 1}`,

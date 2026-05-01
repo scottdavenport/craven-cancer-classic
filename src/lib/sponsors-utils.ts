@@ -8,23 +8,25 @@
 export type TierSize = "champion" | "eagle" | "standard" | "compact";
 
 /**
- * Maps a tier's sort_order + sponsor count to a display size bucket.
+ * Maps a tier's price_cents + sponsor count to a display size bucket.
  *
- * Base mapping:
- *   sort_order = 1 → "champion"
- *   sort_order = 2 → "eagle"
- *   sort_order >= 3 → "standard"
+ * Price bucket mapping:
+ *   price_cents >= 500_000 ($5,000+)  → "champion" (96px logo)
+ *   price_cents >= 200_000 ($2,000+)  → "eagle"    (72px logo)
+ *   price_cents >= 100_000 ($1,000+)  → "standard" (56px logo)
+ *   price_cents <  100_000 (< $1,000) → "compact"  (48px logo)
  *
  * Compact override: any tier with sponsorCount > 6 returns "compact"
- * regardless of its sort_order.
+ * regardless of its price_cents.
  * Boundary: exactly 6 sponsors does NOT trigger compact.
  */
-export function getTierSize(sortOrder: number, sponsorCount: number): TierSize {
+export function getTierSize(priceCents: number, sponsorCount: number): TierSize {
   if (sponsorCount > 6) return "compact";
 
-  if (sortOrder === 1) return "champion";
-  if (sortOrder === 2) return "eagle";
-  return "standard";
+  if (priceCents >= 500_000) return "champion";
+  if (priceCents >= 200_000) return "eagle";
+  if (priceCents >= 100_000) return "standard";
+  return "compact";
 }
 
 /**

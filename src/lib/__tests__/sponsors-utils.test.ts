@@ -13,41 +13,58 @@ import { describe, it, expect } from "vitest";
 import { getTierSize, formatLifetimeRaised } from "@/lib/sponsors-utils";
 
 // ---------------------------------------------------------------------------
-// getTierSize(sortOrder: number, sponsorCount: number): "champion" | "eagle" | "standard" | "compact"
+// getTierSize(priceCents: number, sponsorCount: number): "champion" | "eagle" | "standard" | "compact"
+// Price bucket routing — #225
 // ---------------------------------------------------------------------------
 
 describe("getTierSize", () => {
-  describe("single-sponsor tier", () => {
-    it("(1, 1) → 'champion'", () => {
-      expect(getTierSize(1, 1)).toBe("champion");
+  describe("price bucket — single-sponsor tier", () => {
+    it("(500_000, 1) → 'champion' — $5,000 is champion threshold", () => {
+      expect(getTierSize(500_000, 1)).toBe("champion");
     });
 
-    it("(2, 1) → 'eagle'", () => {
-      expect(getTierSize(2, 1)).toBe("eagle");
+    it("(750_000, 1) → 'champion' — above champion threshold", () => {
+      expect(getTierSize(750_000, 1)).toBe("champion");
     });
 
-    it("(3, 1) → 'standard'", () => {
-      expect(getTierSize(3, 1)).toBe("standard");
+    it("(200_000, 1) → 'eagle' — $2,000 is eagle threshold", () => {
+      expect(getTierSize(200_000, 1)).toBe("eagle");
     });
 
-    it("(99, 1) → 'standard' — any sort_order > 2 falls to standard", () => {
-      expect(getTierSize(99, 1)).toBe("standard");
+    it("(250_000, 1) → 'eagle' — Golf Gift ($2,500) at eagle weight", () => {
+      expect(getTierSize(250_000, 1)).toBe("eagle");
+    });
+
+    it("(100_000, 1) → 'standard' — $1,000 is standard threshold", () => {
+      expect(getTierSize(100_000, 1)).toBe("standard");
+    });
+
+    it("(150_000, 1) → 'standard' — Golf Carts ($1,500) at standard weight", () => {
+      expect(getTierSize(150_000, 1)).toBe("standard");
+    });
+
+    it("(50_000, 1) → 'compact' — $500 is below standard threshold", () => {
+      expect(getTierSize(50_000, 1)).toBe("compact");
+    });
+
+    it("(99_999, 1) → 'compact' — just below standard threshold", () => {
+      expect(getTierSize(99_999, 1)).toBe("compact");
     });
   });
 
   describe("compact override — more than 6 sponsors", () => {
-    it("(1, 7) → 'compact' — compact override applies to champion tier", () => {
-      expect(getTierSize(1, 7)).toBe("compact");
+    it("(500_000, 7) → 'compact' — compact override applies to champion price", () => {
+      expect(getTierSize(500_000, 7)).toBe("compact");
     });
 
-    it("(2, 7) → 'compact' — compact override applies to eagle tier", () => {
-      expect(getTierSize(2, 7)).toBe("compact");
+    it("(200_000, 7) → 'compact' — compact override applies to eagle price", () => {
+      expect(getTierSize(200_000, 7)).toBe("compact");
     });
   });
 
   describe("boundary — exactly 6 sponsors is NOT compact", () => {
-    it("(1, 6) → 'champion' — 6 sponsors does not trigger compact", () => {
-      expect(getTierSize(1, 6)).toBe("champion");
+    it("(500_000, 6) → 'champion' — 6 sponsors does not trigger compact", () => {
+      expect(getTierSize(500_000, 6)).toBe("champion");
     });
   });
 });

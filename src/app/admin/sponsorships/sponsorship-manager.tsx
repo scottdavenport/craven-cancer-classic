@@ -18,10 +18,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil } from "lucide-react";
+import { Plus, Pencil, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
-import { SponsorshipDrawer } from "./sponsorship-drawer";
+import { SponsorshipModal } from "./sponsorship-modal";
 import {
   getSponsorshipItems,
   getLinkedSponsorNames,
@@ -30,12 +30,78 @@ import {
 } from "./actions";
 import type { SponsorshipPurchase } from "@/types/database";
 
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+type SponsorshipCategory = "sponsorship" | "tribute" | "supporter";
+type CategoryFilter = "all" | SponsorshipCategory;
+
+const CATEGORY_FILTER_OPTIONS: { value: CategoryFilter; label: string }[] = [
+  { value: "all", label: "All" },
+  { value: "sponsorship", label: "Sponsorship" },
+  { value: "tribute", label: "Tribute" },
+  { value: "supporter", label: "Supporter" },
+];
+
+// ---------------------------------------------------------------------------
+// CategoryFilterSelect — inline listbox (no portal) so test isolation works
+// ---------------------------------------------------------------------------
+
+interface CategoryFilterSelectProps {
+  value: CategoryFilter;
+  onChange: (value: CategoryFilter) => void;
+}
+
+function CategoryFilterSelect({ value, onChange }: CategoryFilterSelectProps) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel =
+    CATEGORY_FILTER_OPTIONS.find((o) => o.value === value)?.label ?? "All";
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        data-testid="category-filter"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((prev) => !prev)}
+        className="flex h-7 items-center gap-1.5 rounded-lg border border-input bg-transparent px-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+      >
+        {selectedLabel}
+        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+      </button>
+      {open && (
+        <ul
+          role="listbox"
+          className="absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
+        >
+          {CATEGORY_FILTER_OPTIONS.map((opt) => (
+            <li
+              key={opt.value}
+              role="option"
+              aria-selected={value === opt.value}
+              className="cursor-default px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+            >
+              {opt.label}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 interface SponsorshipManagerProps {
   items: SponsorshipItemWithCount[];
   purchases: SponsorshipPurchase[];
 }
 
-type DrawerState = {
+type ModalState = {
   open: boolean;
   mode: "create" | "edit";
   sponsorship: SponsorshipItemWithCount | null;
@@ -48,13 +114,18 @@ type CascadeDialogState = {
   loading: boolean;
 };
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function SponsorshipManager({
   items: initialItems,
   purchases,
 }: SponsorshipManagerProps) {
   const [items, setItems] = useState<SponsorshipItemWithCount[]>(initialItems);
   const [isPending, startTransition] = useTransition();
-  const [drawer, setDrawer] = useState<DrawerState>({
+  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+  const [modal, setModal] = useState<ModalState>({
     open: false,
     mode: "create",
     sponsorship: null,
@@ -68,9 +139,36 @@ export function SponsorshipManager({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [pendingDeleteItem, setPendingDeleteItem] = useState<SponsorshipItemWithCount | null>(null);
 
+  // ---------------------------------------------------------------------------
+  // Derived: filtered lists
+  // ---------------------------------------------------------------------------
+
+  const filteredItems =
+    categoryFilter === "all"
+      ? items
+      : items.filter((item) => item.category === categoryFilter);
+
+  // Build a set of filtered item IDs so purchases can be filtered by category via item_id
+  const filteredItemIds = new Set(filteredItems.map((item) => item.id));
+
+  const filteredPurchases =
+    categoryFilter === "all"
+      ? purchases
+      : purchases.filter((p) => filteredItemIds.has(p.item_id));
+
+  const showTributeRecipient = categoryFilter === "tribute";
+
+  // ---------------------------------------------------------------------------
+  // Stats (always based on full, unfiltered sets)
+  // ---------------------------------------------------------------------------
+
   const totalRevenue = purchases
     .filter((p) => p.payment_status === "paid")
     .reduce((sum, p) => sum + p.amount_paid_cents, 0);
+
+  // ---------------------------------------------------------------------------
+  // Handlers
+  // ---------------------------------------------------------------------------
 
   function refetch() {
     startTransition(async () => {
@@ -83,7 +181,7 @@ export function SponsorshipManager({
     });
   }
 
-  function handleDrawerSuccess() {
+  function handleModalSuccess() {
     refetch();
   }
 
@@ -117,6 +215,10 @@ export function SponsorshipManager({
     return `${count} sponsors are linked to this package: ${nameList}. They'll show '(no package)' until you reassign them.`;
   }
 
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
   return (
     <div className="space-y-6" style={{ opacity: isPending ? 0.6 : 1 }}>
       {/* Stats */}
@@ -143,13 +245,24 @@ export function SponsorshipManager({
         </Card>
       </div>
 
+      {/* Category filter chip */}
+      <div className="flex items-center gap-3">
+        <span className="text-sm font-medium text-muted-foreground">Filter:</span>
+        <CategoryFilterSelect
+          value={categoryFilter}
+          onChange={setCategoryFilter}
+        />
+      </div>
+
       {/* Sponsorship items */}
       <Card className="shadow-sm border border-border/60">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="font-sans text-base font-semibold">Packages ({items.length})</CardTitle>
+          <CardTitle className="font-sans text-base font-semibold">
+            Packages ({filteredItems.length})
+          </CardTitle>
           <Button
             size="sm"
-            onClick={() => setDrawer({ open: true, mode: "create", sponsorship: null })}
+            onClick={() => setModal({ open: true, mode: "create", sponsorship: null })}
           >
             <Plus className="mr-1 h-4 w-4" />
             Add Package
@@ -170,19 +283,19 @@ export function SponsorshipManager({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.length === 0 ? (
+                {filteredItems.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={7}>
                       <AdminEmptyState title="No sponsorship packages yet" />
                     </TableCell>
                   </TableRow>
                 ) : (
-                  items.map((item) => (
+                  filteredItems.map((item) => (
                     <TableRow
                       key={item.id}
                       className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer"
                       onClick={() =>
-                        setDrawer({ open: true, mode: "edit", sponsorship: item })
+                        setModal({ open: true, mode: "edit", sponsorship: item })
                       }
                     >
                       <TableCell>
@@ -232,7 +345,7 @@ export function SponsorshipManager({
                           size="icon-sm"
                           onClick={(e) => {
                             e.stopPropagation();
-                            setDrawer({ open: true, mode: "edit", sponsorship: item });
+                            setModal({ open: true, mode: "edit", sponsorship: item });
                           }}
                         >
                           <Pencil className="h-3.5 w-3.5" />
@@ -248,7 +361,7 @@ export function SponsorshipManager({
       </Card>
 
       {/* Purchases */}
-      {purchases.length > 0 && (
+      {filteredPurchases.length > 0 && (
         <Card className="shadow-sm border border-border/60">
           <CardHeader>
             <CardTitle className="font-sans text-base font-semibold">Recent Purchases</CardTitle>
@@ -260,13 +373,16 @@ export function SponsorshipManager({
                   <TableRow className="bg-neutral-50">
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Purchaser</TableHead>
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Company</TableHead>
+                    {showTributeRecipient && (
+                      <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Honored</TableHead>
+                    )}
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
                     <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Amount</TableHead>
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {purchases.map((p) => (
+                  {filteredPurchases.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
                         <p className="text-[0.9375rem] font-medium">{p.purchaser_name}</p>
@@ -277,6 +393,11 @@ export function SponsorshipManager({
                       <TableCell className="text-sm">
                         {p.company_name || "—"}
                       </TableCell>
+                      {showTributeRecipient && (
+                        <TableCell className="text-sm">
+                          {p.tribute_recipient || "—"}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span
                           className={
@@ -309,12 +430,12 @@ export function SponsorshipManager({
         </Card>
       )}
 
-      <SponsorshipDrawer
-        open={drawer.open}
-        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
-        mode={drawer.mode}
-        sponsorship={drawer.sponsorship}
-        onSubmit={handleDrawerSuccess}
+      <SponsorshipModal
+        open={modal.open}
+        onOpenChange={(open) => setModal((d) => ({ ...d, open }))}
+        mode={modal.mode}
+        sponsorship={modal.sponsorship}
+        onSubmit={handleModalSuccess}
         onDeleteRequest={handleDeleteRequest}
       />
 
@@ -349,7 +470,7 @@ export function SponsorshipManager({
                 }
                 toast.success("Package deleted");
                 setConfirmOpen(false);
-                setDrawer((d) => ({ ...d, open: false }));
+                setModal((d) => ({ ...d, open: false }));
                 refetch();
               }}
             >
@@ -398,7 +519,7 @@ export function SponsorshipManager({
                 }
                 toast.success("Package deleted");
                 setCascadeDialog((d) => ({ ...d, open: false }));
-                setDrawer((d) => ({ ...d, open: false }));
+                setModal((d) => ({ ...d, open: false }));
                 refetch();
               }}
             >

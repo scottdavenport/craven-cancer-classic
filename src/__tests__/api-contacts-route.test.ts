@@ -5,18 +5,15 @@
  * for the contacts table (no public RLS insert policy). It uses the
  * service-role client to bypass RLS.
  *
- * Covers: happy path, missing required fields, duplicate email (23505),
- * invalid/unknown type values, service-role key usage, malformed JSON,
- * oversized free-text fields, and injection-safe payload forwarding.
+ * Covers: happy path, missing required fields, duplicate email (23505 → 409),
+ * strict type validation (rejects unknown values with 400, accepts the 5
+ * canonical types including volunteer), service-role key usage, malformed
+ * JSON, field-length caps (full_name, email, notes, company_name), and
+ * injection-safe payload forwarding.
  *
- * FLAGS (do not fix here — report to Forge):
- *   1. Invalid type values silently coerce to "other" instead of returning 400.
- *      This means "volunteer", "intruder", etc. are accepted as "other"
- *      with no feedback to the caller.
- *   2. 'volunteer' is not in the allowed type enum — routes through "other".
- *   3. Duplicate email (PG 23505) maps to a generic 500, not a 409.
- *   4. No field-length validation — oversized inputs (10k+ chars) are
- *      accepted and passed through to Supabase.
+ * Hardened in #320 — the four flags previously pinned by these tests
+ * (silent type coercion, missing volunteer, 23505 → 500, no length caps)
+ * are now correctly handled by the route.
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -141,8 +138,8 @@ describe("POST /api/contacts", () => {
       expect(insertArg.notes).toBe("Just a note");
     });
 
-    it("accepts all valid type values: player, sponsor, donor, other", async () => {
-      for (const type of ["player", "sponsor", "donor", "other"]) {
+    it("accepts all valid type values: player, sponsor, donor, volunteer, other", async () => {
+      for (const type of ["player", "sponsor", "donor", "volunteer", "other"]) {
         vi.clearAllMocks();
         mockInsert.mockResolvedValue({ error: null });
         const res = await POST(makeRequest({ ...VALID_BODY, type }));
@@ -226,29 +223,26 @@ describe("POST /api/contacts", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Invalid type value — FLAGGED: silently defaults to "other" (not 400)
+  // Type value validation — strict whitelist with default-to-other on absent
   // ---------------------------------------------------------------------------
 
-  describe("invalid type value (documents actual coercion behavior)", () => {
-    it("coerces unknown type 'intruder' to 'other' — returns 201, inserts types: ['other']", async () => {
-      // FLAG: This should ideally return 400 for unknown type values.
-      // The route silently coerces any non-allowlisted type to "other".
+  describe("type value validation", () => {
+    it("returns 400 for unknown type values (no silent coercion)", async () => {
       const res = await POST(makeRequest({ ...VALID_BODY, type: "intruder" }));
-      expect(res.status).toBe(201);
-      const insertArg = mockInsert.mock.calls[0][0];
-      expect(insertArg.types).toEqual(["other"]);
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/type must be one of/i);
+      expect(mockInsert).not.toHaveBeenCalled();
     });
 
-    it("coerces 'volunteer' to 'other' — volunteer is missing from the enum", async () => {
-      // FLAG: 'volunteer' is not in the allowed type list (player|sponsor|donor|other).
-      // If volunteer is a valid contact type in the product, the route needs updating.
+    it("accepts 'volunteer' as a valid type (post-Sprint-31)", async () => {
       const res = await POST(makeRequest({ ...VALID_BODY, type: "volunteer" }));
       expect(res.status).toBe(201);
       const insertArg = mockInsert.mock.calls[0][0];
-      expect(insertArg.types).toEqual(["other"]);
+      expect(insertArg.types).toEqual(["volunteer"]);
     });
 
-    it("coerces absent type to 'other' (type is optional — defaults to 'other')", async () => {
+    it("defaults absent type to 'other' (type is optional)", async () => {
       const { type: _omit, ...body } = VALID_BODY;
       void _omit;
       const res = await POST(makeRequest(body));
@@ -256,25 +250,41 @@ describe("POST /api/contacts", () => {
       const insertArg = mockInsert.mock.calls[0][0];
       expect(insertArg.types).toEqual(["other"]);
     });
+
+    it("treats empty-string type the same as absent (defaults to 'other')", async () => {
+      const res = await POST(makeRequest({ ...VALID_BODY, type: "" }));
+      expect(res.status).toBe(201);
+      const insertArg = mockInsert.mock.calls[0][0];
+      expect(insertArg.types).toEqual(["other"]);
+    });
   });
 
   // ---------------------------------------------------------------------------
-  // Duplicate email — FLAGGED: returns 500 instead of 409
+  // Duplicate email — maps PG 23505 to 409
   // ---------------------------------------------------------------------------
 
   describe("duplicate email (PG 23505)", () => {
-    it("returns 500 for duplicate email — FLAGGED: route does not distinguish 23505 as 409", async () => {
-      // FLAG: The acceptance criteria asks for a 409 on duplicate email.
-      // The route currently maps ALL supabase errors (including 23505) to 500.
-      // This test documents actual behavior; Forge should schedule a fix to
-      // detect error.code === '23505' and return 409.
+    it("returns 409 with friendly message when insert hits 23505", async () => {
       mockInsert.mockResolvedValue({
         error: { code: "23505", message: "duplicate key value violates unique constraint" },
       });
       const res = await POST(makeRequest(VALID_BODY));
-      expect(res.status).toBe(500);
+      expect(res.status).toBe(409);
       const json = await res.json();
-      expect(json.error).toMatch(/failed to save/i);
+      expect(json.error).toMatch(/already on file/i);
+    });
+
+    it("does not leak the raw PG error message on 23505", async () => {
+      mockInsert.mockResolvedValue({
+        error: {
+          code: "23505",
+          message: 'duplicate key value violates unique constraint "contacts_email_unique_when_present"',
+        },
+      });
+      const res = await POST(makeRequest(VALID_BODY));
+      const json = await res.json();
+      expect(json.error).not.toContain("contacts_email_unique_when_present");
+      expect(json.error).not.toContain("duplicate key");
     });
   });
 
@@ -338,29 +348,52 @@ describe("POST /api/contacts", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Adversarial: oversized free-text fields — FLAGGED: no length validation
+  // Field-length validation — caps prevent DB column overflow + abuse
   // ---------------------------------------------------------------------------
 
-  describe("adversarial: oversized free-text fields", () => {
-    it("accepts notes field of 10,000 chars — FLAGGED: no length guard in route", async () => {
-      // FLAG: The route has no field-length validation. A 10k-char notes field
-      // is accepted and passed straight to Supabase. Recommend adding a max-length
-      // guard (e.g., 2000 chars for notes) to prevent DB column overflow or abuse.
-      const hugeNotes = "x".repeat(10000);
-      const res = await POST(makeRequest({ ...VALID_BODY, notes: hugeNotes }));
-      // Documents actual behavior: accepted (201)
-      expect(res.status).toBe(201);
-      const insertArg = mockInsert.mock.calls[0][0];
-      // The oversized string is forwarded as-is, trimmed but not truncated
-      expect(insertArg.notes).toBe(hugeNotes);
+  describe("field-length validation", () => {
+    it("returns 400 for notes longer than 2000 chars", async () => {
+      const oversized = "x".repeat(2001);
+      const res = await POST(makeRequest({ ...VALID_BODY, notes: oversized }));
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/notes must be 2000 characters or fewer/i);
+      expect(mockInsert).not.toHaveBeenCalled();
     });
 
-    it("accepts full_name of 1,000 chars — no length guard", async () => {
-      const hugeName = "A".repeat(1000);
-      const res = await POST(makeRequest({ ...VALID_BODY, full_name: hugeName }));
+    it("accepts notes exactly at the 2000-char cap", async () => {
+      const atCap = "x".repeat(2000);
+      const res = await POST(makeRequest({ ...VALID_BODY, notes: atCap }));
       expect(res.status).toBe(201);
       const insertArg = mockInsert.mock.calls[0][0];
-      expect(insertArg.full_name).toBe(hugeName);
+      expect(insertArg.notes).toBe(atCap);
+    });
+
+    it("returns 400 for full_name longer than 200 chars", async () => {
+      const oversized = "A".repeat(201);
+      const res = await POST(makeRequest({ ...VALID_BODY, full_name: oversized }));
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/full_name must be 200 characters or fewer/i);
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 for email longer than 254 chars (RFC 5321)", async () => {
+      const oversized = "a".repeat(250) + "@x.io"; // 255 chars
+      const res = await POST(makeRequest({ ...VALID_BODY, email: oversized }));
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/email must be 254 characters or fewer/i);
+      expect(mockInsert).not.toHaveBeenCalled();
+    });
+
+    it("returns 400 for company_name longer than 200 chars", async () => {
+      const oversized = "C".repeat(201);
+      const res = await POST(makeRequest({ ...VALID_BODY, company_name: oversized }));
+      expect(res.status).toBe(400);
+      const json = await res.json();
+      expect(json.error).toMatch(/company_name must be 200 characters or fewer/i);
+      expect(mockInsert).not.toHaveBeenCalled();
     });
   });
 

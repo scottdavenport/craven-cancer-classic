@@ -34,8 +34,7 @@ export async function RecentlyHonored() {
     return (
       <div data-testid="recently-honored-empty" className="mt-8 text-center">
         <p className="text-sm text-muted-foreground">
-          {/* TODO-aria-308: empty-state copy for Recently Honored list */}
-          No tributes yet — be the first to honor someone.
+          Be the first to add a tribute.
         </p>
       </div>
     );
@@ -50,8 +49,7 @@ export async function RecentlyHonored() {
           color: "var(--foreground)",
         }}
       >
-        {/* TODO-aria-308: heading for Recently Honored list */}
-        Recently Honored
+        Recently honored
       </h3>
       <ul className="mx-auto max-w-sm space-y-2 text-center">
         {recipients.map((name, index) => (

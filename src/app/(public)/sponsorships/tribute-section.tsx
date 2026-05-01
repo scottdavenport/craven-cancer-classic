@@ -70,7 +70,7 @@ export function TributeSection({ items }: TributeSectionProps) {
             color: "var(--foreground)",
           }}
         >
-          Tributes — Honor a warrior
+          Tributes — Honor a loved one
         </h2>
         <p className="mt-3 mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
           Celebrate someone fighting cancer or honor their memory by adding a
@@ -253,6 +253,9 @@ function TributePurchaseForm({ item, onCancel }: TributePurchaseFormProps) {
           <Label htmlFor="tribute_recipient">
             In honor of <span aria-hidden="true" className="text-destructive">*</span>
           </Label>
+          <p className="text-xs text-muted-foreground">
+            We&rsquo;ll print this name on the balloon at the event.
+          </p>
           <Input
             id="tribute_recipient"
             name="tribute_recipient"

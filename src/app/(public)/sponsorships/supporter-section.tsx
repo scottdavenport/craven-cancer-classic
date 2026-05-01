@@ -20,7 +20,7 @@ interface SupporterSectionProps {
 export function SupporterSection({ items }: SupporterSectionProps) {
   return (
     <section data-testid="section-supporters" data-section-type="supporter">
-      {/* Section header — placeholder copy; Aria #308 finalizes */}
+      {/* Section header */}
       <div className="mb-10 text-center">
         <h2
           style={{
@@ -32,13 +32,10 @@ export function SupporterSection({ items }: SupporterSectionProps) {
             color: "var(--foreground)",
           }}
         >
-          {/* TODO-aria-308: section heading for Supporters */}
           Supporters
         </h2>
         <p className="mt-3 mx-auto max-w-xl text-sm leading-relaxed text-muted-foreground">
-          {/* TODO-aria-308: section intro for Supporters */}
-          Put your name on a physical sign at the tournament. Tee signs and
-          yard signs are placed on course for the day of the event.
+          Put your name on the course. Tee signs and yard signs are placed throughout the fairways on the day of the event.
         </p>
       </div>
 

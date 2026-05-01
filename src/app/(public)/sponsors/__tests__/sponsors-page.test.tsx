@@ -173,12 +173,12 @@ function buildSupabaseMock(opts: {
   // Track which table is being queried for chained mocks
   const fromMock = vi.fn().mockImplementation((table: string) => {
     if (table === "sponsorship_items") {
+      // Chain: .select(...).eq('active', true).eq('category', 'sponsorship').order(...)
+      const order = vi.fn().mockResolvedValue({ data: tiers, error: null });
+      const eqCategory = vi.fn().mockReturnValue({ order });
+      const eqActive = vi.fn().mockReturnValue({ eq: eqCategory, order });
       return {
-        select: vi.fn().mockReturnValue({
-          eq: vi.fn().mockReturnValue({
-            order: vi.fn().mockResolvedValue({ data: tiers, error: null }),
-          }),
-        }),
+        select: vi.fn().mockReturnValue({ eq: eqActive }),
       };
     }
 

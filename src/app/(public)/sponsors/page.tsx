@@ -57,6 +57,7 @@ async function getPageData() {
     .from("sponsorship_items")
     .select("id, name, sort_order, active, deleted_at, price_cents")
     .eq("active", true)
+    .eq("category", "sponsorship")
     .order("sort_order");
 
   // Filter soft-deleted items in JS

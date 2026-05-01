@@ -8,16 +8,25 @@ import type { SponsorshipItem } from "@/types/database";
 
 export type SponsorshipItemWithCount = SponsorshipItem & { active_sponsor_count: number };
 
-export async function getSponsorshipItems(): Promise<SponsorshipItemWithCount[]> {
+type SponsorshipCategory = "sponsorship" | "tribute" | "supporter";
+
+export async function getSponsorshipItems(
+  { category }: { category?: SponsorshipCategory } = {}
+): Promise<SponsorshipItemWithCount[]> {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
+  let itemsQuery = supabase
+    .from("sponsorship_items_active")
+    .select("*")
+    .eq("year", currentYear);
+
+  if (category !== undefined) {
+    itemsQuery = itemsQuery.eq("category", category);
+  }
+
   const [itemsRes, sponsorsRes] = await Promise.all([
-    supabase
-      .from("sponsorship_items_active")
-      .select("*")
-      .eq("year", currentYear)
-      .order("price_cents", { ascending: false }),
+    itemsQuery.order("price_cents", { ascending: false }),
     supabase
       .from("sponsors_active")
       .select("tier_id")
@@ -52,15 +61,25 @@ export async function getLinkedSponsorNames(tierId: string): Promise<string[]> {
   return (data ?? []).map((s) => s.name as string);
 }
 
-export async function getSponsorshipPurchases() {
+export async function getSponsorshipPurchases(
+  { category }: { category?: SponsorshipCategory } = {}
+) {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
 
-  const { data, error } = await supabase
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = supabase
     .from("sponsorship_purchases")
-    .select("*")
-    .eq("year", currentYear)
-    .order("created_at", { ascending: false });
+    .select("*, sponsorship_items!inner(category)")
+    .eq("year", currentYear);
+
+  if (category !== undefined) {
+    // Filter by the joined sponsorship_items.category column.
+    // Cast to any: Supabase type inference doesn't expose joined columns in .eq() overloads.
+    query = query.eq("category", category);
+  }
+
+  const { data, error } = await query.order("created_at", { ascending: false });
 
   if (error) throw new Error(error.message);
   return data;
@@ -70,12 +89,19 @@ export async function createSponsorshipItem(formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();
 
+  const categoryRaw = formData.get("category") as string | null;
+  const category: SponsorshipCategory =
+    categoryRaw === "tribute" || categoryRaw === "supporter"
+      ? categoryRaw
+      : "sponsorship";
+
   const { error } = await supabase.from("sponsorship_items").insert({
     name: formData.get("name") as string,
     description: (formData.get("description") as string) || null,
     price_cents: Math.round(parseFloat(formData.get("price") as string) * 100),
     max_quantity: parseInt(formData.get("max_quantity") as string) || null,
     active: formData.get("active") !== "false",
+    category,
   });
 
   if (error) return { error: error.message };
@@ -89,6 +115,12 @@ export async function updateSponsorshipItem(id: string, formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();
 
+  const categoryRaw = formData.get("category") as string | null;
+  const category: SponsorshipCategory =
+    categoryRaw === "tribute" || categoryRaw === "supporter"
+      ? categoryRaw
+      : "sponsorship";
+
   const { error } = await supabase
     .from("sponsorship_items")
     .update({
@@ -97,6 +129,7 @@ export async function updateSponsorshipItem(id: string, formData: FormData) {
       price_cents: Math.round(parseFloat(formData.get("price") as string) * 100),
       max_quantity: parseInt(formData.get("max_quantity") as string) || null,
       active: formData.get("active") !== "false",
+      category,
     })
     .eq("id", id);
 

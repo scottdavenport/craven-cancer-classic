@@ -159,13 +159,22 @@ function buildSupabaseMock(opts: { tiersToReturn?: typeof STUB_TIERS } = {}) {
   });
 
   const makeTierChain = () => {
-    const orderFn = vi.fn().mockResolvedValue({ data: tiersToReturn, error: null });
     const eqCategoryFn = vi.fn().mockImplementation((field: string, value: string) => {
       if (field === "category" && value === "sponsorship") {
         _categoryFilterApplied = true;
       }
-      return { order: orderFn };
+      // Simulate DB-side category filter: return only items matching the category value,
+      // treating items without a category field as 'sponsorship' (the default).
+      const filtered = field === "category"
+        ? tiersToReturn.filter(
+            (t) => (t as { category?: string }).category === value ||
+              (t as { category?: string }).category === undefined
+          )
+        : tiersToReturn;
+      const orderFnFiltered = vi.fn().mockResolvedValue({ data: filtered, error: null });
+      return { order: orderFnFiltered };
     });
+    const orderFn = vi.fn().mockResolvedValue({ data: tiersToReturn, error: null });
     const eqActiveFn = vi.fn().mockReturnValue({
       order: orderFn,
       eq: eqCategoryFn,
@@ -393,6 +402,7 @@ describe("SponsorsPage — category=sponsorship filter (Sprint 33 RED, #302)", (
       active: true,
       deleted_at: null,
       price_cents: 2000,
+      category: "tribute" as const,
     };
 
     // Include Balloons in the pool but mock so the category filter should exclude it
@@ -421,6 +431,7 @@ describe("SponsorsPage — category=sponsorship filter (Sprint 33 RED, #302)", (
       active: true,
       deleted_at: null,
       price_cents: 10000,
+      category: "supporter" as const,
     };
 
     buildSupabaseMock({

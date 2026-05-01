@@ -3,12 +3,12 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { SponsorshipForm } from "./sponsorship-form";
 import {
@@ -18,7 +18,7 @@ import {
 } from "./actions";
 import type { SponsorshipItem } from "@/types/database";
 
-interface SponsorshipDrawerProps {
+interface SponsorshipModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
@@ -30,7 +30,7 @@ interface SponsorshipDrawerProps {
   onDelete?: () => void;
 }
 
-export function SponsorshipDrawer({
+export function SponsorshipModal({
   open,
   onOpenChange,
   mode,
@@ -38,7 +38,7 @@ export function SponsorshipDrawer({
   onSubmit,
   onDeleteRequest,
   onDelete,
-}: SponsorshipDrawerProps) {
+}: SponsorshipModalProps) {
   const [loading, setLoading] = useState(false);
 
   const title =
@@ -70,26 +70,20 @@ export function SponsorshipDrawer({
   function handleDeleteClick() {
     if (!sponsorship) return;
     if (onDeleteRequest) {
-      // Delegate cascade check + confirm to the parent
       onDeleteRequest(sponsorship as SponsorshipItemWithCount);
     } else if (onDelete) {
-      // Legacy path (no cascade support)
       onDelete();
     }
   }
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="sm:max-w-[480px] flex flex-col overflow-hidden p-0"
-        showCloseButton={false}
-      >
-        <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
-          <SheetTitle>{title}</SheetTitle>
-        </SheetHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[800px]" showCloseButton={false}>
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4">
+        <div className="py-2">
           <SponsorshipForm
             defaultValues={mode === "edit" ? (sponsorship ?? undefined) : undefined}
             onSubmit={handleFormSubmit}
@@ -99,7 +93,7 @@ export function SponsorshipDrawer({
         </div>
 
         {mode === "edit" && sponsorship && (
-          <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+          <DialogFooter className="border-t border-border/60 pt-4 mt-2">
             <Button
               type="button"
               variant="outline"
@@ -109,9 +103,9 @@ export function SponsorshipDrawer({
             >
               Delete package
             </Button>
-          </SheetFooter>
+          </DialogFooter>
         )}
-      </SheetContent>
-    </Sheet>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -20,7 +20,16 @@ export interface SponsorshipFormValues {
   description: string;
   max_quantity: string;
   active: string;
+  category: string;
 }
+
+type SponsorshipCategory = "sponsorship" | "tribute" | "supporter";
+
+const CATEGORY_ITEMS: Record<SponsorshipCategory, string> = {
+  sponsorship: "Sponsorship",
+  tribute: "Tribute",
+  supporter: "Supporter",
+};
 
 interface SponsorshipFormProps {
   defaultValues?: Partial<SponsorshipItem>;
@@ -38,13 +47,17 @@ export function SponsorshipForm({
   const [active, setActive] = useState(
     defaultValues?.active !== false ? "true" : "false"
   );
+  const [category, setCategory] = useState<SponsorshipCategory>(
+    (defaultValues?.category as SponsorshipCategory) ?? "sponsorship"
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const form = e.currentTarget;
     const formData = new FormData(form);
-    // active is controlled — inject current value
+    // controlled fields — inject current values
     formData.set("active", active);
+    formData.set("category", category);
     await onSubmit(formData);
   }
 
@@ -93,6 +106,25 @@ export function SponsorshipForm({
             defaultValue={defaultValues?.max_quantity ?? ""}
           />
           <p className="text-xs text-muted-foreground">Leave blank for unlimited</p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="sf-category">Category</Label>
+          {/* Hidden input ensures FormData always carries the value */}
+          <input type="hidden" name="category" value={category} />
+          <Select
+            value={category}
+            onValueChange={(v) => setCategory((v ?? "sponsorship") as SponsorshipCategory)}
+            items={CATEGORY_ITEMS}
+          >
+            <SelectTrigger id="sf-category" className="h-8 w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sponsorship">Sponsorship</SelectItem>
+              <SelectItem value="tribute">Tribute</SelectItem>
+              <SelectItem value="supporter">Supporter</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="sf-active">Status</Label>

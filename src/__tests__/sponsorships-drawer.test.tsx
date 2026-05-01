@@ -57,7 +57,7 @@ Object.defineProperty(window, "location", {
 // ---------------------------------------------------------------------------
 
 import { SponsorshipManager } from "@/app/admin/sponsorships/sponsorship-manager";
-import { SponsorshipDrawer } from "@/app/admin/sponsorships/sponsorship-drawer";
+import { SponsorshipModal } from "@/app/admin/sponsorships/sponsorship-modal";
 import type { SponsorshipPurchase } from "@/types/database";
 import type { SponsorshipItemWithCount } from "@/app/admin/sponsorships/actions";
 
@@ -211,14 +211,14 @@ describe("SponsorshipManager — drawer integration", () => {
   });
 });
 
-describe("SponsorshipDrawer — standalone", () => {
+describe("SponsorshipModal — standalone", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it("renders create mode title when open=true mode=create", () => {
     render(
-      <SponsorshipDrawer
+      <SponsorshipModal
         open={true}
         onOpenChange={vi.fn()}
         mode="create"
@@ -233,7 +233,7 @@ describe("SponsorshipDrawer — standalone", () => {
     const item = makeItem({ name: "Diamond Package" });
 
     render(
-      <SponsorshipDrawer
+      <SponsorshipModal
         open={true}
         onOpenChange={vi.fn()}
         mode="edit"
@@ -246,7 +246,7 @@ describe("SponsorshipDrawer — standalone", () => {
 
   it("does not render delete button in create mode", () => {
     render(
-      <SponsorshipDrawer
+      <SponsorshipModal
         open={true}
         onOpenChange={vi.fn()}
         mode="create"

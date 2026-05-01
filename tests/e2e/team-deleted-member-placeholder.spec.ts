@@ -52,7 +52,7 @@ test.describe("Team roster shows deleted-contact placeholder", () => {
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByLabel(/first name/i).fill("PlaceholderTest");
       await page.getByLabel(/last name/i).fill("Member");
-      await page.getByLabel(/email/i).fill(TEST_EMAIL);
+      await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
       await page.getByRole("button", { name: /save/i }).click();
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 

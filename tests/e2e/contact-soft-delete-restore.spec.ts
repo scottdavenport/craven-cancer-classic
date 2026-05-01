@@ -26,7 +26,7 @@ test.describe("Contact soft-delete and restore", () => {
 
     await page.getByLabel(/first name/i).fill("E2ERestore");
     await page.getByLabel(/last name/i).fill(String(Date.now()));
-    await page.getByLabel(/email/i).fill(TEST_EMAIL);
+    await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
     await page.getByRole("button", { name: /save/i }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 

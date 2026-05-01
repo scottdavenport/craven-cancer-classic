@@ -13,7 +13,7 @@
  * - show_on_wall / recognition_name fields do not exist
  * - shirt_size / handicap are not in the form
  * - Save button is never disabled in the current form
- * - The edit UI is a side drawer, not a centered modal
+ * - The edit UI is a centered modal (Dialog), not a side drawer
  */
 
 import { test as baseTest, expect, type Page } from "@playwright/test";
@@ -44,7 +44,7 @@ async function fillBasicFields(
 ) {
   await page.getByLabel(/first name/i).fill(opts.firstName);
   await page.getByLabel(/last name/i).fill(opts.lastName);
-  await page.getByLabel(/email/i).fill(opts.email);
+  await page.getByRole("textbox", { name: "Email" }).fill(opts.email);
 }
 
 async function softDeleteContact(page: Page, fullName: string) {

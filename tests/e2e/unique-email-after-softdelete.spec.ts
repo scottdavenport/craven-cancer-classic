@@ -31,7 +31,7 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByLabel(/first name/i).fill("UniqueFirst");
       await page.getByLabel(/last name/i).fill("Original");
-      await page.getByLabel(/email/i).fill(SHARED_EMAIL);
+      await page.getByRole("textbox", { name: "Email" }).fill(SHARED_EMAIL);
       await page.getByRole("button", { name: /save/i }).click();
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
       await expect(page.getByText("UniqueFirst Original")).toBeVisible();
@@ -53,7 +53,7 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByLabel(/first name/i).fill("UniqueFirst");
       await page.getByLabel(/last name/i).fill("Replacement");
-      await page.getByLabel(/email/i).fill(SHARED_EMAIL);
+      await page.getByRole("textbox", { name: "Email" }).fill(SHARED_EMAIL);
       await page.getByRole("button", { name: /save/i }).click();
 
       // Should succeed — no duplicate error

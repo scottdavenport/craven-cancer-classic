@@ -168,6 +168,7 @@ type MockSponsorshipItem = {
   sort_order: number;
   description: string | null;
   benefits: string[];
+  category: "sponsorship" | "tribute" | "supporter";
 };
 
 function makeItem(overrides: Partial<MockSponsorshipItem> = {}): MockSponsorshipItem {
@@ -183,6 +184,7 @@ function makeItem(overrides: Partial<MockSponsorshipItem> = {}): MockSponsorship
     sort_order: 99,
     description: null,
     benefits: [],
+    category: "sponsorship",
     ...overrides,
   };
 }
@@ -534,9 +536,25 @@ vi.mock("@/app/(public)/sponsorships/sponsorship-section", () => ({
     items: Array<{ id: string; name: string; price_cents: number }>;
   }) => (
     <section data-testid="section-sponsorships">
-      {items.map((item) => (
-        <div key={item.id} data-testid={`sponsorship-item-${item.id}`}>{item.name}</div>
-      ))}
+      {items.map((item) => {
+        const slug = item.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "")
+          .replace(/-+/g, "-")
+          .replace(/^-|-$/g, "");
+        return (
+          <div
+            key={item.id}
+            id={slug}
+            data-testid={`sponsorship-item-${item.id}`}
+            data-price-cents={item.price_cents}
+          >
+            {/* Sprint 23 backward-compat: child card testid */}
+            <div data-testid={`sponsorship-card-${item.id}`}>{item.name}</div>
+          </div>
+        );
+      })}
     </section>
   ),
 }));
@@ -575,6 +593,7 @@ const BALLOONS_ITEM = makeItem({
   name: "Balloons",
   price_cents: 2000,
   sort_order: 14,
+  category: "tribute",
 });
 
 const TEE_SIGN_ITEM = makeItem({
@@ -582,6 +601,7 @@ const TEE_SIGN_ITEM = makeItem({
   name: "Tee Sign",
   price_cents: 10000,
   sort_order: 15,
+  category: "supporter",
 });
 
 const YARD_SIGN_ITEM = makeItem({
@@ -589,6 +609,7 @@ const YARD_SIGN_ITEM = makeItem({
   name: "Yard Sign",
   price_cents: 10000,
   sort_order: 16,
+  category: "supporter",
 });
 
 /**
@@ -619,8 +640,11 @@ function buildThreeSectionMock(opts: {
     if (table === "sponsorship_items" || table === "sponsorship_items_active") {
       let resolvedItems = allItems;
 
+      // Support double .order() chain: .order(...).order(...).resolves(data)
       const buildTerminalChain = (items: MockSponsorshipItem[]) => {
-        const orderInner = vi.fn().mockResolvedValue({ data: items, error: null });
+        const orderInner = vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: items, error: null }),
+        });
         return { order: orderInner };
       };
 
@@ -636,7 +660,9 @@ function buildThreeSectionMock(opts: {
       const isMock = vi.fn().mockImplementation(() => buildTerminalChain(resolvedItems));
       const eq2Mock = vi.fn().mockImplementation(() => ({
         is: isMock,
-        order: vi.fn().mockResolvedValue({ data: resolvedItems, error: null }),
+        order: vi.fn().mockReturnValue({
+          order: vi.fn().mockResolvedValue({ data: resolvedItems, error: null }),
+        }),
         eq: eqCategoryFn,
       }));
       const eq1Mock = vi.fn().mockReturnValue({

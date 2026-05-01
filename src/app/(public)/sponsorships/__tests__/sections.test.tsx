@@ -209,7 +209,10 @@ function buildSupabaseMock(opts: {
       // Build a chainable mock that handles .eq('category', ...) filtering
       let resolvedItems = allItems;
 
-      const orderMock = vi.fn().mockResolvedValue({ data: resolvedItems, error: null });
+      // Support double .order() chain: .order(...).order(...).resolves(data)
+      const orderMock = vi.fn().mockReturnValue({
+        order: vi.fn().mockResolvedValue({ data: resolvedItems, error: null }),
+      });
 
       const isMock = vi.fn().mockReturnValue({ order: orderMock });
 

@@ -144,9 +144,9 @@ Reproducer sequence (matches #350 exactly):
 2. Check the "Player" checkbox — `fireEvent.click(screen.getByLabelText(/player/i))`.
 3. Type `"abc"` into the handicap field — `await userEvent.type(screen.getByLabelText(/handicap/i), "abc")`.
 4. Blur the handicap field — `fireEvent.blur(screen.getByLabelText(/handicap/i))`.
-5. Assert the handicap error is visible: `expect(screen.getByText(/invalid handicap/i)).toBeInTheDocument()`. *(Confirms pre-condition: error is set.)*
+5. Assert the handicap error is visible: `expect(screen.getByText(/handicap must be a whole number/i)).toBeInTheDocument()`. *(Confirms pre-condition: error is set.)*
 6. Uncheck "Player" — `fireEvent.click(screen.getByLabelText(/player/i))`.
-7. Assert handicap error is no longer in the document: `expect(screen.queryByText(/invalid handicap/i)).not.toBeInTheDocument()`. *(Confirms fix: error cleared.)*
+7. Assert handicap error is no longer in the document: `expect(screen.queryByText(/handicap must be a whole number/i)).not.toBeInTheDocument()`. *(Confirms fix: error cleared.)*
 
 Note: The test asserts on the visible error message rather than on `canSubmit` directly, because the test file has no `onValidityChange` spy wired through a controlling wrapper. The visible-error assertion is sufficient — if `errors.handicap` was not cleared, the error message would re-appear once the field is re-shown. This pattern is consistent with T1–T6 in the existing blur-validation block.
 

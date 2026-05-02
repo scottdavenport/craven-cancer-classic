@@ -2,7 +2,7 @@
  * Sprint 37 — Issue #137
  * Component coverage for contact-form.tsx: 5% → 60%+
  *
- * 25 tests across 7 describe blocks covering:
+ * 26 tests across 7 describe blocks covering:
  *   - Blur validation (email, phone, ZIP)
  *   - Identity validation (all-blank rejection matrix)
  *   - Submit gate (blocked when invalid)
@@ -495,5 +495,40 @@ describe("ContactModal — Cancel resets unsaved form state", () => {
     await waitFor(() => {
       expect(screen.getByLabelText(/first name/i)).toHaveValue("");
     });
+  });
+});
+
+describe("ContactForm — type toggling", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("T26: when Player is unchecked after an invalid handicap was blurred, canSubmit becomes true", async () => {
+    render(<ContactForm onSubmit={vi.fn()} />);
+
+    // Step 1: Check Player checkbox
+    fireEvent.click(screen.getByLabelText(/player/i));
+
+    // Step 2-3: Set an out-of-range value via fireEvent.change.
+    // Note: userEvent.type with "abc" is rejected by jsdom on type="number" inputs;
+    // "99" (> 54 max) is a valid number that fails validateHandicap's range check.
+    fireEvent.change(screen.getByLabelText(/handicap/i), { target: { value: "99" } });
+
+    // Step 4: Blur to trigger validation
+    fireEvent.blur(screen.getByLabelText(/handicap/i));
+
+    // Step 5: Pre-condition — handicap error is visible
+    expect(screen.getByText(/handicap must be a whole number/i)).toBeInTheDocument();
+
+    // Step 6: Uncheck Player (hides the handicap section; DOM unmounts the error element)
+    fireEvent.click(screen.getByLabelText(/player/i));
+
+    // Step 7: Re-check Player to remount the handicap section.
+    // If errors.handicap was NOT cleared from state, the error re-appears on remount.
+    // If it WAS cleared (fix applied), the error stays gone.
+    fireEvent.click(screen.getByLabelText(/player/i));
+
+    // Step 8: Post-condition — handicap error must not be present after re-mount
+    expect(screen.queryByText(/handicap must be a whole number/i)).not.toBeInTheDocument();
   });
 });

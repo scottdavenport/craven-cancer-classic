@@ -149,9 +149,11 @@ export function ContactForm({
   }
 
   function toggleType(type: ContactType) {
-    setTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
-    );
+    setTypes((prev) => {
+      const next = prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type];
+      if (type === "player" && !next.includes("player")) setFieldError("handicap", null);
+      return next;
+    });
   }
 
   function validateEmail(val: string): boolean {

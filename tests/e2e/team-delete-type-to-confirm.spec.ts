@@ -281,15 +281,6 @@ test.describe("Team delete — type-to-confirm dialog", () => {
         await expect(confirmLabel).toBeVisible({ timeout: 5_000 });
 
         // ---- DeleteTeamDialog: wait for score count to load ----
-        // KNOWN PROD BUG (escalated to Forge/Bolt): base-ui Dialog.Root.useControlledProp
-        // updates internal open state via super.setState() (bypassing setOpen), so
-        // onOpenChange is NOT called when open prop changes externally from TeamModal.
-        // As a result, getScoreCount() is never triggered and scoreCount stays null
-        // indefinitely — keeping the Delete button permanently disabled regardless of
-        // type-to-confirm match.
-        // Fix: TeamModal/DeleteTeamDialog should use a useEffect to trigger getScoreCount
-        // when open=true, rather than relying on onOpenChange.
-        // Once fixed, "Loading score data" should disappear and the button should enable.
         await expect(
           page.getByText("Loading score data", { exact: false })
         ).not.toBeVisible({ timeout: 15_000 });

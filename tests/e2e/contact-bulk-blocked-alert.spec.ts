@@ -190,10 +190,30 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
       .waitFor({ state: "visible", timeout: 5_000 })
       .catch(() => null);
 
-    // Select visible contacts (all are in team_members — all should be blocked for Player removal)
-    const headerCheckbox = page.locator("thead").getByRole("checkbox");
-    if (await headerCheckbox.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await headerCheckbox.check();
+    // Select first 5 contacts (or fewer if fewer exist) — stays well under the 500-row bulk-action cap.
+    // Scoped to tbody to exclude the header checkbox.
+    const checkboxes = page.locator("tbody").getByRole("checkbox");
+    const count = await checkboxes.count();
+    if (count < 1) {
+      test.info().annotations.push({
+        type: "skip-reason",
+        description: "No contacts visible after team filter — team may have no members in current seed.",
+      });
+      return;
+    }
+    // Cap at 3 rows — team-filtered lists re-render after each selection
+    // (startTransition), so the visible row count may shrink during the loop.
+    const selectCount = Math.min(count, 3);
+    for (let i = 0; i < selectCount; i++) {
+      // Re-evaluate current row count before each iteration — DOM may re-render.
+      const currentCount = await page.locator("tbody").getByRole("checkbox").count();
+      if (i >= currentCount) break;
+      const cb = page.locator("tbody").getByRole("checkbox").nth(i);
+      await cb.waitFor({ state: "visible", timeout: 5_000 });
+      // Use dispatchEvent rather than check()/click() — check() blocks on pending
+      // navigations that Next.js router triggers after row interactions (prefetch),
+      // causing indefinite hangs on the 3rd+ row in team-filtered views.
+      await cb.dispatchEvent("click");
     }
 
     // Wait for the bulk-action bar's "X selected" indicator — this confirms
@@ -204,18 +224,7 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
     if (!bulkBarVisible) {
       test.info().annotations.push({
         type: "skip-reason",
-        description: "Header checkbox check did not produce a selection (filtered list may be empty). Skipping bulk-bar assertion.",
-      });
-      return;
-    }
-
-    // Guard: bulk-type actions are disabled when >500 contacts selected.
-    // If the over-limit banner is visible, annotate and exit cleanly.
-    const overLimitBanner = page.getByText(/500 or fewer/i).first();
-    if (await overLimitBanner.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      test.info().annotations.push({
-        type: "skip-reason",
-        description: "Over-500-contact limit reached — Remove type combobox is intentionally absent. Cannot exercise the Alert path in this run.",
+        description: "Row checkbox checks did not produce a selection (filtered list may be empty). Skipping bulk-bar assertion.",
       });
       return;
     }

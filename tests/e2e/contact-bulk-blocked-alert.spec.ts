@@ -8,10 +8,8 @@
  * Requires: E2E_ADMIN_EMAIL + E2E_ADMIN_PASSWORD in env
  * Skipped automatically when credentials are not configured.
  *
- * FAILING on unmodified main because:
- * - bulkRemoveContactType doesn't exist (only bulkUpdateContacts)
- * - No blocked-row Alert component exists in contact-list.tsx
- * - The bulk action bar has Set-Type only (no Add/Remove split)
+ * Sprint 31 shipped the blocked-row Alert UI (PRs #265, #268-#270).
+ * These tests exercise the Sprint 31 blocked-row Alert path.
  */
 
 import { test as baseTest, expect } from "@playwright/test";
@@ -178,11 +176,19 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
     }
 
     await teamFilter.click();
-    const firstTeam = page.getByRole("option").first();
+    // nth(0) is "All Teams" — skip it and pick the first real team (nth(1)).
+    const firstTeam = page.getByRole("option").nth(1);
     if (!(await firstTeam.isVisible({ timeout: 2_000 }).catch(() => false))) {
       return;
     }
     await firstTeam.click();
+    // Wait for the async getContacts re-fetch (startTransition) to settle.
+    // The tbody row appearing is more deterministic than networkidle in CI.
+    await page
+      .locator("tbody tr")
+      .first()
+      .waitFor({ state: "visible", timeout: 5_000 })
+      .catch(() => null);
 
     // Select visible contacts (all are in team_members — all should be blocked for Player removal)
     const headerCheckbox = page.locator("thead").getByRole("checkbox");
@@ -190,8 +196,27 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
       await headerCheckbox.check();
     }
 
-    const selCount = await page.getByRole("checkbox", { checked: true }).count();
-    if (selCount < 1) {
+    // Wait for the bulk-action bar's "X selected" indicator — this confirms
+    // React state has updated (selected.size > 0) rather than just the visual
+    // checkbox state, which Playwright marks synchronously on .check().
+    const selectedIndicator = page.getByText(/\d+ selected/).first();
+    const bulkBarVisible = await selectedIndicator.isVisible({ timeout: 3_000 }).catch(() => false);
+    if (!bulkBarVisible) {
+      test.info().annotations.push({
+        type: "skip-reason",
+        description: "Header checkbox check did not produce a selection (filtered list may be empty). Skipping bulk-bar assertion.",
+      });
+      return;
+    }
+
+    // Guard: bulk-type actions are disabled when >500 contacts selected.
+    // If the over-limit banner is visible, annotate and exit cleanly.
+    const overLimitBanner = page.getByText(/500 or fewer/i).first();
+    if (await overLimitBanner.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      test.info().annotations.push({
+        type: "skip-reason",
+        description: "Over-500-contact limit reached — Remove type combobox is intentionally absent. Cannot exercise the Alert path in this run.",
+      });
       return;
     }
 

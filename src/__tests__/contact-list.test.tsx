@@ -227,3 +227,74 @@ describe("ContactList — sprint-30 Select items prop (#261 follow-up)", () => {
     expect(triggers[3].textContent).not.toContain("1e7bf5bc-1635-4f33-a2e1-e34c8a1b4d1b");
   });
 });
+
+// ---------------------------------------------------------------------------
+// Issue #359 — header checkbox indeterminate state wiring
+// ---------------------------------------------------------------------------
+
+describe("header checkbox indeterminate state", () => {
+  function getHeaderCheckbox() {
+    return screen.getByRole("checkbox", { name: "Select all visible contacts" });
+  }
+
+  it("header checkbox has indeterminate=true when some but not all visible contacts are selected", async () => {
+    const user = userEvent.setup();
+    const contacts = [
+      makeContact({ id: "a", first_name: "Alice", last_name: "A", full_name: "Alice A" }),
+      makeContact({ id: "b", first_name: "Bob", last_name: "B", full_name: "Bob B" }),
+    ];
+    render(<ContactList contacts={contacts} teams={[]} />);
+
+    // Select exactly one row by its named checkbox
+    await user.click(screen.getByRole("checkbox", { name: "Select Alice A" }));
+
+    expect(getHeaderCheckbox()).toHaveAttribute("aria-checked", "mixed");
+  });
+
+  it("header checkbox has indeterminate=false when all visible contacts are selected", async () => {
+    const user = userEvent.setup();
+    const contacts = [
+      makeContact({ id: "a", first_name: "Alice", last_name: "A", full_name: "Alice A" }),
+      makeContact({ id: "b", first_name: "Bob", last_name: "B", full_name: "Bob B" }),
+    ];
+    render(<ContactList contacts={contacts} teams={[]} />);
+
+    // Select both rows
+    await user.click(screen.getByRole("checkbox", { name: "Select Alice A" }));
+    await user.click(screen.getByRole("checkbox", { name: "Select Bob B" }));
+
+    expect(getHeaderCheckbox()).toHaveAttribute("aria-checked", "true");
+  });
+
+  it("header checkbox has indeterminate=false when no contacts are selected", () => {
+    const contacts = [
+      makeContact({ id: "a", first_name: "Alice", last_name: "A", full_name: "Alice A" }),
+      makeContact({ id: "b", first_name: "Bob", last_name: "B", full_name: "Bob B" }),
+    ];
+    render(<ContactList contacts={contacts} teams={[]} />);
+
+    // Nothing clicked — default state
+    expect(getHeaderCheckbox()).toHaveAttribute("aria-checked", "false");
+  });
+
+  it("clicking header checkbox when indeterminate selects all visible contacts", async () => {
+    const user = userEvent.setup();
+    const contacts = [
+      makeContact({ id: "a", first_name: "Alice", last_name: "A", full_name: "Alice A" }),
+      makeContact({ id: "b", first_name: "Bob", last_name: "B", full_name: "Bob B" }),
+      makeContact({ id: "c", first_name: "Carol", last_name: "C", full_name: "Carol C" }),
+    ];
+    render(<ContactList contacts={contacts} teams={[]} />);
+
+    // Select exactly 1 row to put header into indeterminate
+    await user.click(screen.getByRole("checkbox", { name: "Select Alice A" }));
+    expect(getHeaderCheckbox()).toHaveAttribute("aria-checked", "mixed");
+
+    // Click the header checkbox — should select all 3
+    await user.click(getHeaderCheckbox());
+
+    expect(screen.getByRole("checkbox", { name: "Select Alice A" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("checkbox", { name: "Select Bob B" })).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByRole("checkbox", { name: "Select Carol C" })).toHaveAttribute("aria-checked", "true");
+  });
+});

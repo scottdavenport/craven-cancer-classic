@@ -96,7 +96,7 @@ describe("Checkbox — checked visual state", () => {
   it("checked checkbox icon has text-white class", () => {
     const { container } = render(<Checkbox aria-label="test" checked onCheckedChange={() => {}} />);
     const icon = container.querySelector("svg.lucide-check");
-    expect(icon!.className.baseVal ?? icon!.getAttribute("class")).toContain("text-white");
+    expect(icon!.getAttribute("class")).toContain("text-white");
   });
 });
 

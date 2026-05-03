@@ -36,8 +36,9 @@ _Closes UAT findings F17 · F18 · W2.12 from `plans/admin-uat-2026-05.md` (PR #
 - **`aria-checked` mapping:** `false` → unchecked, `true` → checked, `"mixed"` → indeterminate.
 
 ### 3. Focus-visible ring
-- Current: `focus-visible:ring-2 focus-visible:ring-ring` where `--ring` is `#6B5DB8` (purple). This is mismatched — checkboxes should use brand teal, not purple.
-- **Decision:** Replace ring token with `focus-visible:ring-brand` and set `focus-visible:ring-offset-2` (was `ring-offset-1`). This aligns with `--sidebar-ring: #5797a6` used elsewhere for brand-teal focus contexts.
+- Current: `focus-visible:ring-2 focus-visible:ring-ring` where `--ring` is `#6B5DB8` (the accent-scale token, purple).
+- **This is a deliberate divergence from the existing form-primitive convention.** Every other form primitive in the codebase — Input, Select, Textarea, Switch, Button, Badge — uses `ring-ring/50`. This PR does NOT fix those; it diverges for checkbox specifically because the selection cascade across 5 surfaces makes the purple ring most visually wrong here (a focused, checked row has a teal fill but a purple ring, which reads as broken).
+- **Decision:** Replace `ring-ring` with `focus-visible:ring-brand` and set `focus-visible:ring-offset-2` (was `ring-offset-1`). The brand-teal token (`--color-brand: #5797a6`) matches `--sidebar-ring` used in brand-teal focus contexts elsewhere. The other primitives share the same `--ring` misalignment; that is a separate audit and migration if Scott decides the accent-scale ring should not be used on any form element.
 
 ### 4. Indicator icon source
 - `lucide-react` is already installed (confirmed via usage in the codebase). Use `<Check>` (checked) and `<Minus>` (indeterminate) from `lucide-react`. Both at `size={10} strokeWidth={3}` to stay crisp at 16×16px.
@@ -117,11 +118,13 @@ grep -rn "from '@/components/ui/checkbox'\|from \"@/components/ui/checkbox\"" sr
 ```
 Expected output: `4` (contact-list.tsx, contact-form.tsx, registration-form.tsx, src/__tests__/checkbox-233.test.tsx). If the count is higher, a new consumer was added and must be verified for visual correctness.
 
-**Pre-flight grep 2 — no raw input[type=checkbox] introduced**
+**Pre-flight grep 2 — raw input[type=checkbox] count**
 ```
 grep -rn 'type="checkbox"\|type='"'"'checkbox'"'"'' src/ | grep -v "node_modules\|.test.\|checkbox-233"
 ```
-Expected output: 0 lines.
+Expected output: **1 line** — `src/app/admin/contacts/import/import-client.tsx:269`.
+
+Disposition: this surface is **out of scope for Sprint α and already correctly styled**. The checkbox at line 269 is a raw `<input type="checkbox">` inside the CSV import modal (a per-row "select this row to import" control). It already carries `className="... text-brand focus:ring-brand ..."` — the correct brand-teal tokens. Bolt must NOT modify this file. If the count is `0` or `>1`, a surface was added or removed unexpectedly and must be investigated before the PR opens.
 
 **Pre-flight grep 3 — existing test file untouched**
 ```
@@ -238,7 +241,7 @@ expect(icon).not.toBeNull();
 
 ## Dependencies
 
-**Blocks:** Follow-on ticket to wire `indeterminate={someVisibleSelected && !allVisibleSelected}` on the header checkbox in `contact-list.tsx:817-821`.
+**Blocks:** #359 — "Wire indeterminate state to contacts select-all header (Sprint α follow-on)". That issue tracks wiring `indeterminate={!allVisibleSelected && someVisibleSelected}` on the header checkbox in `contact-list.tsx:817-821` where `someVisibleSelected` is already computed at line 281.
 
 **Blocked by:** None. This is the root fix.
 

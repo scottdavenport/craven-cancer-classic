@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sprint α — Checkbox States Design Preview</title>
+  <style>
+    :root {
+      --brand:       #5797a6;
+      --brand-dark:  #3A6B83;
+      --background:  #FAFBFC;
+      --foreground:  #1A2E3A;
+      --border:      #DAE3E8;
+      --muted-fg:    #5F7A87;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #F1F4F6;
+      padding: 40px;
+      color: var(--foreground);
+    }
+
+    h1 {
+      font-size: 1.125rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: var(--foreground);
+      letter-spacing: -0.01em;
+    }
+    .subtitle {
+      font-size: 0.8125rem;
+      color: var(--muted-fg);
+      margin-bottom: 32px;
+    }
+
+    .states-grid {
+      display: flex;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+
+    .state-card {
+      background: #FFFFFF;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      padding: 24px 28px 20px;
+      min-width: 148px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      box-shadow: 0 2px 6px rgba(26,46,58,0.08), 0 1px 2px rgba(26,46,58,0.04);
+    }
+
+    .state-label {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted-fg);
+    }
+
+    /* ── Checkbox shell ─────────────────────────────────────────────────────── */
+    .checkbox {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 4px;
+      border: 1.5px solid var(--border);
+      background: var(--background);
+      cursor: pointer;
+      transition: background 100ms, border-color 100ms;
+      /* hit-area expansion */
+      padding: 2px;
+      margin: -2px;
+    }
+
+    /* checked + indeterminate fill */
+    .checkbox.checked,
+    .checkbox.indeterminate {
+      background: var(--brand);
+      border-color: var(--brand);
+    }
+
+    /* disabled */
+    .checkbox.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* focus-visible ring simulation */
+    .checkbox.focus-visible {
+      outline: none;
+      box-shadow:
+        0 0 0 2px var(--background),
+        0 0 0 4px var(--brand);
+    }
+
+    /* icon inside */
+    .checkbox svg {
+      display: block;
+      flex-shrink: 0;
+      pointer-events: none;
+    }
+
+    /* ── Code annotation ────────────────────────────────────────────────────── */
+    .annotation {
+      font-size: 0.6875rem;
+      color: var(--muted-fg);
+      text-align: center;
+      line-height: 1.5;
+    }
+    .annotation code {
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.625rem;
+      background: #EEF0F2;
+      border-radius: 3px;
+      padding: 1px 4px;
+      color: var(--brand-dark);
+    }
+
+    /* ── Row example ────────────────────────────────────────────────────────── */
+    .row-example {
+      margin-top: 40px;
+      background: #FFFFFF;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(26,46,58,0.08);
+      overflow: hidden;
+    }
+    .row-example h2 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted-fg);
+      padding: 14px 20px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8125rem;
+    }
+    thead {
+      background: #F7F8F9;
+    }
+    th, td {
+      padding: 10px 16px;
+      text-align: left;
+    }
+    th {
+      font-size: 0.6875rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.14em;
+      color: var(--muted-fg);
+    }
+    tr + tr { border-top: 1px solid var(--border); }
+    tr.selected-row { background: rgba(87,151,166, 0.06); }
+  </style>
+</head>
+<body>
+
+  <h1>Sprint α — Checkbox States</h1>
+  <p class="subtitle">Design preview · craven-cancer-classic · <code style="font-family:monospace;font-size:0.75rem">src/components/ui/checkbox.tsx</code></p>
+
+  <div class="states-grid">
+
+    <!-- UNCHECKED -->
+    <div class="state-card">
+      <span class="state-label">Unchecked</span>
+      <div class="checkbox" aria-checked="false" role="checkbox"></div>
+      <div class="annotation">
+        <code>bg-background</code><br/>
+        <code>border-border</code><br/>
+        no icon
+      </div>
+    </div>
+
+    <!-- CHECKED -->
+    <div class="state-card">
+      <span class="state-label">Checked</span>
+      <div class="checkbox checked" aria-checked="true" role="checkbox">
+        <!-- Check icon: lucide Check size=10 strokeWidth=3 -->
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+             data-lucide="check">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+      </div>
+      <div class="annotation">
+        <code>bg-brand</code><br/>
+        <code>border-brand</code><br/>
+        <code>&lt;Check size=10 sw=3&gt;</code>
+      </div>
+    </div>
+
+    <!-- INDETERMINATE -->
+    <div class="state-card">
+      <span class="state-label">Indeterminate</span>
+      <div class="checkbox indeterminate" aria-checked="mixed" role="checkbox">
+        <!-- Minus icon: lucide Minus size=10 strokeWidth=3 -->
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+             data-lucide="minus">
+          <path d="M5 12h14"/>
+        </svg>
+      </div>
+      <div class="annotation">
+        <code>bg-brand</code><br/>
+        <code>border-brand</code><br/>
+        <code>&lt;Minus size=10 sw=3&gt;</code>
+      </div>
+    </div>
+
+    <!-- FOCUS-VISIBLE -->
+    <div class="state-card">
+      <span class="state-label">Focus-visible</span>
+      <div class="checkbox focus-visible" role="checkbox">
+      </div>
+      <div class="annotation">
+        <code>ring-2 ring-brand</code><br/>
+        <code>ring-offset-2</code><br/>
+        teal 2px ring
+      </div>
+    </div>
+
+    <!-- FOCUS-VISIBLE CHECKED -->
+    <div class="state-card">
+      <span class="state-label">Focused + Checked</span>
+      <div class="checkbox checked focus-visible" aria-checked="true" role="checkbox">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+             data-lucide="check">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+      </div>
+      <div class="annotation">
+        <code>bg-brand</code><br/>
+        <code>ring-2 ring-brand</code><br/>
+        <code>ring-offset-2</code>
+      </div>
+    </div>
+
+    <!-- DISABLED UNCHECKED -->
+    <div class="state-card">
+      <span class="state-label">Disabled</span>
+      <div class="checkbox disabled" aria-disabled="true" aria-checked="false" role="checkbox"></div>
+      <div class="annotation">
+        <code>opacity-50</code><br/>
+        <code>cursor-not-allowed</code><br/>
+        no interaction
+      </div>
+    </div>
+
+    <!-- DISABLED CHECKED -->
+    <div class="state-card">
+      <span class="state-label">Disabled + Checked</span>
+      <div class="checkbox checked disabled" aria-disabled="true" aria-checked="true" role="checkbox">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+             data-lucide="check">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+      </div>
+      <div class="annotation">
+        <code>bg-brand opacity-50</code><br/>
+        <code>cursor-not-allowed</code>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Row context example -->
+  <div class="row-example">
+    <h2>Context: Contacts table (F18)</h2>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:44px;">
+            <!-- Header: indeterminate (some selected) -->
+            <div class="checkbox indeterminate" title="Select all (indeterminate — some selected)">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                   stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+              </svg>
+            </div>
+          </th>
+          <th>Name</th>
+          <th>Email</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="selected-row">
+          <td>
+            <div class="checkbox checked">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+                   stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20 6 9 17l-5-5"/>
+              </svg>
+            </div>
+          </td>
+          <td>Alice Doe</td>
+          <td>alice@example.com</td>
+          <td>Player</td>
+        </tr>
+        <tr>
+          <td><div class="checkbox"></div></td>
+          <td>Bob Smith</td>
+          <td>bob@example.com</td>
+          <td>Sponsor</td>
+        </tr>
+        <tr>
+          <td><div class="checkbox"></div></td>
+          <td>Carol Jones</td>
+          <td>carol@example.com</td>
+          <td>Volunteer</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Filter row context example -->
+  <div class="row-example" style="margin-top:16px;">
+    <h2>Context: Captains-only filter (W2.12)</h2>
+    <div style="display:flex; align-items:center; gap:8px; padding:14px 20px; font-size:0.8125rem; color:var(--muted-fg);">
+      <div class="checkbox checked">
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+             stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 6 9 17l-5-5"/>
+        </svg>
+      </div>
+      <span>Captains only</span>
+    </div>
+  </div>
+
+  <!-- TYPES section context example -->
+  <div class="row-example" style="margin-top:16px;">
+    <h2>Context: TYPES bucket in contact-form (F17)</h2>
+    <div style="display:flex; flex-wrap:wrap; gap:24px; padding:16px 20px;">
+      <!-- Player: checked -->
+      <div style="display:flex; align-items:center; gap:8px; font-size:0.8125rem;">
+        <div class="checkbox checked">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+               stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 6 9 17l-5-5"/>
+          </svg>
+        </div>
+        <label style="cursor:pointer; font-weight:400; color:var(--foreground);">Player</label>
+      </div>
+      <!-- Sponsor: unchecked -->
+      <div style="display:flex; align-items:center; gap:8px; font-size:0.8125rem;">
+        <div class="checkbox"></div>
+        <label style="cursor:pointer; font-weight:400; color:var(--foreground);">Sponsor</label>
+      </div>
+      <!-- Volunteer: unchecked -->
+      <div style="display:flex; align-items:center; gap:8px; font-size:0.8125rem;">
+        <div class="checkbox"></div>
+        <label style="cursor:pointer; font-weight:400; color:var(--foreground);">Volunteer</label>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>

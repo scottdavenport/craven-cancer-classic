@@ -240,7 +240,7 @@
 - W3.2 Year filter
 - W3.3 Create team — captain selection from contact search, member additions
 - W3.4 Edit team members — add/remove via contact search
-- W3.5 Delete team (type-to-confirm pattern per S35 #336)
+- W3.5 Delete team — soft-delete-to-Trash. Type-to-confirm gated behind paid status (`requiresTypeConfirm = isPaid` at `team-list.tsx:154`). Pending teams get a simple Cancel/Delete confirm; paid teams get the type-the-team-name input (per S35 #336).
 - W3.6 Mark team paid (registration fee)
 - W3.7 Score count surfaces correctly per team
 - W3.8 Deleted member placeholder rendering (per S35 #338 — RSC display data via prop, not useState)
@@ -248,10 +248,102 @@
 
 **E2E coverage:** ✅ 3 specs cover create/edit, type-to-confirm delete, deleted-member placeholder
 
-**UAT status:** Pending walk-through.
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). 5 of 9 W-numbered workflows verified at runtime; 1 (W3.5) verified by code-inspection of the unpaid-team gating; 1 (W3.7) verified by code-inspection (functional verification deferred — DB has 0 scores today); 1 (W3.8) deferred — untestable today (no soft-deleted team-member exists in DB).
 
 **Findings:**
-- _(populated as we walk through)_
+
+- ✅ **W3.1 list loads cleanly.** Captain name renders as team identity (`feedback_craven_team_display_rule` invariant holds). Badges correct: MORNING session (gray uppercase), Pending payment (amber), 3 open slots (amber). Members count `1/4`.
+- ✅ **W3.4 edit modal verified.** Editable fields: Session dropdown, Captain (with X to clear), Player 2/3/4 search by name/email. Save Team + Cancel + Delete team all present.
+- ✅ **W3.5 partial — soft-delete confirm dialog correct on unpaid team.** Helper copy clean: "Members: 1/4 · Captain: Scott Davenport" + "The team will be moved to Trash. You can restore from Admin → Trash later." Type-to-confirm IS wired (`team-list.tsx:154` → `requiresTypeConfirm = isPaid`) but only triggers for paid teams; the only team in DB today is `Pending`, so the type-the-team-name input was correctly NOT shown. Trust e2e spec (`tests/e2e/team-delete-type-to-confirm.spec.ts`) for paid-team coverage.
+- ✅ **W3.7 wiring verified by code-inspection.** Score count fetched in delete-confirm dialog only (`team-list.tsx:163-174` via `getScoreCount`). Functional verification deferred (DB has 0 scores).
+- ⏸ **W3.8 deleted-member placeholder — untestable today.** Requires a soft-deleted team-member contact who appears in a team's member list. None exist. Re-verify when first deletion-with-team-membership occurs OR rely on e2e spec (`tests/e2e/team-deleted-member-placeholder.spec.ts`) for coverage.
+
+- 🟡 **F-T1 TEAM and CAPTAIN columns are redundant.** P2.
+  - Both columns always display the same string since Sprint 32 (team identity = captain name per `feedback_craven_team_display_rule`). Wasted horizontal real estate.
+  - **Fix (per Scott — locked):** drop the CAPTAIN column entirely. Optionally repurpose the freed space for captain phone/email — admin's most-frequent need is contacting captain (surfaces during Mark-Paid + Edit flows).
+  - **Files touched:** `src/app/admin/teams/team-list.tsx` (column definition).
+  - **Bundle hint:** sits with other Teams list-UX work (F-T4, F-T5).
+
+- 🟡 **F-T2 Edit/New Team modal layout inconsistent with Contacts edit.** P2.
+  - Teams modal = flat field list, no section bands. Contacts modal (per F12 redesign target) = banded sections (Identity / Contact / Classification / Address / Notes).
+  - **Fix:** apply the same Pixel banding pattern to Teams modal — Session + Captain in one band, Players 2-4 in another.
+  - **Files touched:** `src/app/admin/teams/team-form.tsx`, `team-modal.tsx`.
+  - **Bundle hint:** admin form-consistency sprint with F12/F13/F17/F19 + F-T6/F-T7/F-T8/F-T9.
+
+- 🟡 **F-T3 Edit Team modal footer split is awkward.** P2.
+  - Save Team + Cancel sit in one strip (left-aligned, mid-modal); Delete team sits in a separate bottom-right strip outside the form area. Two visually disjoint footers.
+  - **Fix:** consolidate to one footer with `justify-between`: `[Delete team] ←─→ [Cancel] [Save Team]`. Same pattern as F13.a (Contacts).
+  - **Files touched:** `src/app/admin/teams/team-form.tsx` or `team-modal.tsx`.
+  - **Bundle hint:** cross-cutting destructive-button-placement sprint (F13.a + F-T3 + F-T6 same fix family).
+
+- 🔴 **F-T4 Cross-cutting — hover-only row controls.** P2 cross-cutting. **Locked by Scott.**
+  - Today: Contacts has always-visible row checkboxes (cluttered); Teams has always-visible Edit + Mark Paid buttons (cluttered). Both wrong per the new pattern.
+  - **Locked pattern:** per-row checkboxes + action buttons appear on row hover only, hidden at rest. Single Pixel pattern → cascades across all admin list components.
+  - Add **Delete** to the hover-row action set on Teams (today only inside Edit modal — admin can't delete from the row).
+  - **Files touched:** `src/app/admin/contacts/contact-list.tsx`, `src/app/admin/teams/team-list.tsx`, future Sponsors/Sponsorships/Photos/Scores list components when they get the same pattern.
+  - **Sprint candidate:** standalone cross-cutting list-UX sprint.
+
+- 🔴 **F-T5 Cross-cutting — standardize row click behavior.** P2 cross-cutting. **Locked by Scott.**
+  - Contacts = whole-row click opens edit. Teams = dedicated buttons, no row click. Inconsistent.
+  - **Locked decision:** dedicated buttons (visible on hover per F-T4). Drop the whole-row click affordance on Contacts.
+  - **Bundle hint:** same sprint as F-T4.
+
+- 🟡 **F-T6 Delete confirm — Cancel and Delete buttons are right-clustered adjacent.** P2.
+  - Same destructive-separation risk as F13.a (Contacts) / F-T3 (Edit modal). Today: `[Cancel] [Delete]` ~1cm apart, mis-click risk.
+  - **Fix:** `justify-between` → `[Delete] ←─→ [Cancel]`.
+  - **Files touched:** delete confirm dialog (likely inline in `team-list.tsx` or a `DeleteTeamDialog` component).
+  - **Bundle hint:** cross-cutting destructive-placement (F13.a + F-T3 + F-T6 same sprint).
+
+- 🟡 **F-T7 Mark Paid is inline form, should be modal.** P2.
+  - Today: clicking Mark Paid replaces the row's actions area with an inline `Amount paid ($) [700] Confirm Cancel` form below the row. Causes layout shift, no focus management, breaks the dialog pattern that Edit + Delete already use.
+  - **Fix:** modal centered on screen, focus trap, ESC to dismiss — same pattern as Edit + Delete dialogs.
+  - **Files touched:** `src/app/admin/teams/team-list.tsx` (replace `MarkPaidForm` inline with modal-wrapped variant).
+  - **Bundle hint:** admin form-consistency sprint with F-T2/F-T8.
+
+- 🔴 **F-T8 Mark Paid lacks payment method capture.** P1.
+  - Today: only collects $ amount. Schema doesn't track HOW the team paid (`teams.payment_method` doesn't exist; `teams.payment_status` exists with CHECK constraint `('pending', 'paid', 'comped')` per `supabase/migrations/20260414000001_initial_schema.sql:155` — but no source attribution).
+  - **Bonus dead-code observation:** `team-list.tsx:33-48` `PaymentStatusBadge` has a CSS class for `failed` status, which the schema CHECK constraint forbids. Either widen the CHECK to add `failed` (intent: future Stripe failure path) or drop the badge styling. Out-of-scope for F-T8 itself, but worth a tiny cleanup PR or fold into S40.
+  - **Foundational for F2 unified revenue source-of-truth.** If `teams.amount_paid_cents` is supposed to aggregate ALL channels per team (per F2 fix path), we need source attribution.
+  - **Modal redesign (couples with F-T7):**
+    - Amount paid (required, dollars input)
+    - Payment method (required Select): Check / Cash / Venmo / Zelle / Wire / Comped / Stripe / Other
+    - Reference number (optional, shown when method = Check or Wire)
+    - Date paid (optional, default today)
+  - **Schema work:** `ALTER TABLE teams ADD COLUMN payment_method text NULL`. Stripe webhook auto-sets `'stripe'`; manual Mark-Paid logger sets the chosen method. Symmetric work on `sponsors.payment_method` per F2 (sponsors webhook + manual log paths share the same gap).
+  - **Sprint candidate: S40** — bundles cleanly with F2/F3 dashboard revenue work since both touch the revenue source-of-truth model.
+
+- 🔴 **F-T9 Inline contact-create bypasses Sprint 31 multi-type rules — affects BOTH Teams and Sponsors via shared component.** P1.
+  - **Trigger:** typing a non-matching name in Player 2/3/4 search (or Captain search) reveals an inline "New Contact" form. Today captures only First/Last/Email/Phone (+ Cancel/Create Contact buttons).
+  - **Source-of-truth file:** the inline create lives in the **shared component** `src/components/admin/contact-typeahead.tsx` (single-select `ContactTypeahead` exported at line 36; multi-select `ContactTypeaheadMulti` exported at line 379). Used by:
+    - **Teams** — `team-form.tsx:131,140,149,158` (4 usages: Captain + Player 2/3/4) via `ContactTypeahead`
+    - **Sponsors** — `sponsor-form.tsx:227` (sponsor-contacts list) via `ContactTypeaheadMulti`
+  - **Bypass:** no type checkboxes, no type-gated fields. The form never sets `types[]` and never asks for type-specific fields like handicap/shirt-size.
+  - **Data-quality cascade:**
+    - F18 bulk-action gate (no-types-checked invariant) flips them malformed post-create
+    - Handicap-driven leaderboard/scoring logic gets NULL handicaps for tournament players
+    - Sprint 31 invariant ("≥1 type required to save") silently bypassed via the typeahead backdoor in BOTH teams and sponsors flows
+  - **Fix path (Option B — caller-supplied default type, recommended):**
+    - Add `defaultTypes?: ContactType[]` prop to both `ContactTypeahead` and `ContactTypeaheadMulti` exports
+    - Inline create form auto-applies the caller's `defaultTypes` and renders the relevant type-gated fields
+    - Caller in `team-form.tsx` passes `defaultTypes={['player']}` → form shows Handicap + Shirt Size + Recognition Name
+    - Caller in `sponsor-form.tsx` passes `defaultTypes={['sponsor']}` → form shows Sponsor-gated fields (whatever S31 wired for Sponsor)
+    - Type checkboxes still appear for admin override; pre-checked per the implicit context
+    - Title in inline form derives from `defaultTypes` ("New Player" / "New Sponsor Contact" / "New Contact" if multi/none) — Aria gate
+  - **Single-component fix scope.** One PR to `contact-typeahead.tsx` cascades to both teams + sponsors callers automatically. Lower S40 scope estimate than originally written.
+  - **Sprint candidate: S40** (data-integrity cluster — F2/F3/F-T8/F-T9 all share the "single source of truth + don't accept malformed records" theme).
+
+- 💡 **F-T10 (defer) — No year picker UI on Teams page.** P3.
+  - Subtitle locks scope to current year ("Build and manage golf teams for the current year"). No control to view past years' rosters.
+  - Non-issue today (only 2026 data exists). Becomes useful when annual tournament has 2+ years of historical data — returning teams, donor history.
+  - **Action:** revisit in 2027.
+
+---
+
+### Teams surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** 7 of 9 W-numbered workflows verified or wiring-verified. W3.7 (score count) and W3.8 (deleted-member placeholder) functional verification deferred until DB state supports it.
+
+**Findings on this surface:** F-T1, F-T2, F-T3, F-T4, F-T5, F-T6, F-T7, F-T8, F-T9, F-T10. **10 distinct findings.** Single highest-leverage cluster: **F-T4 + F-T5 cross-cutting hover-only row controls** (cascades across every admin list surface). Single highest-priority data-integrity finding: **F-T9 inline contact-create stub** (silently produces malformed Player records via team-creation backdoor) — bundle with F2/F3/F-T8 in S40.
 
 ---
 

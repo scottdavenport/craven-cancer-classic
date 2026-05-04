@@ -374,10 +374,115 @@
 
 **E2E coverage:** ❌ **NONE.** Component-level Vitest tests exist (`__tests__/sponsor-form.test.tsx`, `sponsor-drawer.test.tsx`, `sponsor-list.test.tsx`) but no E2E.
 
-**UAT status:** Pending walk-through.
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). All 8 workflows W4.1–W4.8 walked. W4.4 verified via inspection (delete affordance lives in edit drawer, soft-delete pattern matches other surfaces). W4.6/W4.7 verified via code-read (avoided actual upload/delete on prod data).
 
-**Findings:**
-- _(populated as we walk through — high-priority area given zero E2E coverage)_
+**Findings on this surface:**
+
+- 🔴 **F-S21 Edit drawer doesn't render existing linked contacts AND any Update click silently unlinks them.** **P0 data-corruption trap.**
+  - **Symptom:** Open edit drawer for a sponsor with linked contacts (e.g., Sports Connection → Allan Haseley). The Contacts section shows only the search input — no chip, no list entry, nothing visible. Admin sees "no contacts linked" when 1 IS linked in DB.
+  - **Trap:** Click Update on ANY field change (name, level, website, etc.) → form submits `contact_ids=""` → server's `updateSponsor` reconciliation computes `toRemove = existingIds - submittedIds = [Allan Haseley]` → silent DELETE from `sponsor_contacts`.
+  - **Root cause:** `sponsor-form.tsx:64` uses `useState(seedContacts)` where `seedContacts` derives from `initialContacts` prop. `initialContacts` is async-loaded by `sponsor-drawer.tsx:50` via `getSponsorContacts(sponsor.id).then(setInitialContacts)`. By the time the data arrives, the form's `selectedContacts` state is frozen at `[]`. **Same anti-pattern as Sprint 35 #338** (`feedback_no_usestate_from_prop_for_rsc_data`).
+  - **Reconciliation logic:** `actions.ts:212-244` reads existing `sponsor_contacts`, computes diff, deletes orphans. The check `contactIdsRaw !== null` evaluates true on `""`, so reconciliation runs even when form sends empty string.
+  - **Affected today:** Sports Connection + Scottie Davenport - Shopmonkey (1 linked contact each). Every future linked sponsor is at risk.
+  - **Fix scope (~30 min Bolt):**
+    - Replace `useState(seedContacts)` with `useState([])` + `useEffect(() => setSelectedContacts(initialContacts), [initialContacts])` in `sponsor-form.tsx`
+    - OR remount the form on sponsor change via `key={sponsor?.id}` on `<SponsorForm>` in `sponsor-drawer.tsx`
+    - Add a regression test in `__tests__/sponsor-form.test.tsx`: mount with empty `initialContacts`, then update prop, assert chip appears
+  - **Severity:** P0. Silent data corruption. Should ship before any further sponsor edits to ensure existing links are not lost.
+
+- 🟡 **F-S1 Sponsors table not responsive — AMOUNT column truncates at narrow viewports.** P2.
+  - At default viewport, header reads `AMO…`; cell values are clipped. Scott had to widen the window to see the AMOUNT column.
+  - **Fix:** apply horizontal scroll on the table container at narrow widths, or set explicit min-width per column.
+
+- 🟡 **F-S5 Sidebar bottom: avatar badge overlaps `Sign Out` text.** P2.
+  - The round "N" avatar collides with the "View Site" / "Sign Out" footer text. Pure layout bug.
+  - **Fix:** add bottom padding to the sidebar nav block to account for the avatar/footer height, or relocate the avatar.
+  - **Cross-surface:** affects every admin surface, not just Sponsors. Single fix, broad impact.
+
+- 🟡 **F-S8 Empty-state copy is filter-agnostic.** P2.
+  - When the result set is empty due to a filter mismatch (Inactive toggle with 0 inactive sponsors, year=2025 with no 2025 sponsors), the empty-state shows "No sponsors yet / Add your first sponsor to see it here." — implying creation when the real cause is filtering.
+  - Reproduced on Inactive toggle (0 results) AND year=2025 (0 results). Both show the same generic copy.
+  - **Fix:** detect filter-active state and show "No sponsors match your filters / Clear filters" with a CTA. Pattern should cascade to all admin lists.
+
+- 🟡 **F-S12 No client-side guard on Sponsorship Level required-ness.** P2.
+  - `sponsors.tier_id` is NOT NULL with no DB default. Form's "Select a level" placeholder is the only signal of unselected state. Create button is not disabled when level is empty. Submitting throws server-side error with no graceful UI surfacing.
+  - **Fix:** disable Create button until both `name` is non-empty AND `tier_id` is selected. Surface the constraint inline if user attempts submission.
+
+- 🟡 **F-S20 Sponsor name not trimmed server-side.** P2.
+  - `actions.ts:154` and `actions.ts:199` pass `formData.get("name") as string` directly to insert/update. Trailing/leading whitespace persists to DB. Verified: typing "ThinkCode " (trailing space) and clicking Update would persist with trailing space.
+  - **Fix (one-liner):** `name: ((formData.get("name") as string) ?? "").trim()` on both insert and update paths.
+
+- 🟡 **F-S23 No content-type validation on logo upload.** P2 (Sentinel-level concern).
+  - `actions.ts:337-370` (`uploadSponsorLogo`) validates file size (5MB max) + sanitizes SVGs but does NOT validate `file.type` against the allowed set (`image/png`, `image/jpeg`, `image/webp`, `image/svg+xml`). The `accept` HTML attribute is client-side only.
+  - **Risk:** mislabeled file (e.g., `evil.exe` renamed to `logo.png`) would be accepted and stored in the public bucket.
+  - **Fix:** add `if (!ALLOWED_TYPES.includes(file.type)) return { error: "Unsupported file type" }` after the size check.
+
+- 🟢 **F-S2 Sponsorship levels not in price order.** P3.
+  - Dropdown order: Champion $5K, Eagle $2.5K, Golf Gift $2.5K, Celebration Lunch $2K, Wall Sponsor $700, Golf Carts $1K, Bloody Mary Bar $1K, Thursday Night $700, Morning Biscuit Sponsor $500, Shot of the Day $500. Not strictly descending price.
+  - **Fix:** order by `price_cents DESC` server-side (or `display_order` if intentionally curated). Surface display order in `sponsorship_items` table.
+
+- 🟢 **F-S3 / F-S7 Mike Evans logo affordance missing entirely from DOM.** P3.
+  - Other 10 rows render `button "View [name] logo"` (a clickable thumbnail). Mike Evans's row has no such button — the entire affordance is absent, not just an empty image. Render path skips the button when there's no logo URL on this one specific row.
+  - Other sponsors with no logo (BSH shows initials, Lynne Davenport shows watermark fallback) DO have buttons. Mike Evans is the only outlier.
+  - **Fix:** `LogoCell` should always render a button affordance, even on null `logo_url`, with a placeholder visual. Single-file change to `sponsor-list.tsx:LogoCell`.
+
+- 🟢 **F-S6 All 11 sponsors show `$0` AMOUNT and `PENDING` status.** P3 — verify before event.
+  - Real state, not a bug — Stripe webhook updates haven't fired because no sponsor has paid yet. Worth verifying the pipeline (Stripe → webhook → `payment_status='paid'` + `amount_paid_cents > 0`) end-to-end before September 2026 with a test transaction. Bundle with Sprint β (F2/F3 dashboard revenue).
+
+- 🟢 **F-S9 `Amount Paid` a11y tree exposes misleading `valuemax="0"` to screen readers.** P3.
+  - HTML `<input type="number">` has no max attribute (correctly). The a11y tree mirrors current value into `valuemax`, producing the announcement "maximum value 0" — wrong for any positive entry.
+  - **Fix:** explicitly set `max` to a sensible upper bound (e.g., $100K = 10000000 cents) on the input element, or use `aria-valuemax` to override.
+
+- 🟢 **F-S13 Naming inconsistency: TIER (list column) vs Sponsorship level (form label).** P3.
+  - Same concept, two terms. Pick one. Recommend "Level" since the data source is `sponsorship_items` not a separate tiers table (see F-S16).
+
+- 🟢 **F-S14 List TIER cell shows level name only; form dropdown shows level + price.** P3.
+  - Admin scanning the list loses pricing context until they open edit. Show price in the list (e.g., "Eagle — $2,500" or as a separate AMOUNT-DUE-style column for sponsors at $0 paid).
+
+- 🟢 **F-S15 Year filter mismatch on create.** P3.
+  - `sponsors.year` defaults to `EXTRACT(year FROM now())` server-side. Admin filters list to year=2024, clicks New Sponsor, fills + saves → new sponsor lands in 2026 (current), not 2024. New sponsor disappears from the admin's current view with no feedback.
+  - **Fix candidates:** (a) inherit selected-year filter into create defaults, (b) show year in create form (defaulted but editable), (c) toast "Created in 2026 — switch to 2024 to view there."
+
+- 💡 **F-S17 Edit affordance is whole-row click; no visible cue.** P3 enhancement.
+  - Row has `cursor-pointer` + subtle hover background change, but no explicit "Edit" button or icon. Discoverability gap, though less severe than Teams F-T4/F-T5 hover-only buttons (which were invisible at rest).
+  - **Fix:** add a chevron or pencil icon to the rightmost cell, or move primary actions onto a hover-revealed button row.
+
+- 💡 **F-S22 "Remove logo" button uses restrained ghost-link styling.** P3.
+  - In edit mode, the remove-logo affordance is small red link text below the logo preview. Could be confused with a non-actionable label.
+  - **Fix:** use the destructive-button variant (red outline + small) used by "Delete sponsor" at the bottom, or add a trash icon.
+
+- 💡 **F-S24 No client-side size pre-check on logo upload.** P3.
+  - Server-side rejects >5MB but client uploads the bytes first. On slow connections this wastes bandwidth.
+  - **Fix:** validate `file.size` in the form's `handleLogoChange` before initiating upload; show inline error.
+
+- 💡 **F-S25 `deleteSponsorLogo` errors swallowed in drawer flow.** P3.
+  - `sponsor-drawer.tsx:76` calls `await deleteSponsorLogo(...)` without checking return value. If Storage delete errors, the drawer proceeds to clear the DB column anyway → orphaned Storage file (DB clean, Storage has dead file). Low impact (no user visibility) but worth surfacing.
+  - **Fix:** check return value, surface error toast on Storage failure, do not proceed to update DB.
+
+**Schema notes (data-model only, no UI impact):**
+- **F-S11 / F-S16** Column `sponsors.tier_id` actually FKs `sponsorship_items` — there is no `tiers` table. The naming is misleading at the schema level; "tier" and "sponsorship item" are conflated. Future cleanup candidate; not blocking.
+
+**Positive observations (worth reinforcing):**
+
+- ✅ **F-S19** Delete-sponsor button is properly separated from Update/Cancel — sits at the very bottom of the drawer, separated by the Logo section. This is the destructive-action separation pattern Contacts F13.a recommended; Sponsors got it right.
+- ✅ **W4.8** Drawer onOpenChange follows Sprint 35 #336 lesson correctly. Side effects on open transitions live in `useEffect([open, mode, sponsor?.id])`, not in the onOpenChange handler. Parent's onOpenChange is a pure state setter.
+- ✅ **Search scope is unified** across name + tier + website. This is the unified-search pattern Contacts F9.a wishes for. Verified via three probes: "chick" → 1 (name), "eagle" → 6 (tier), "thinkcode.ai" → 1 (website).
+- ✅ **Logo upload action is well-defended:** auth gate, size limit, SVG sanitization, random-suffix filename, prior-file cleanup on replace. Only gap is content-type validation (F-S23).
+- ✅ **`(deleted package)` em fallback** in `sponsor-list.tsx:373` for orphaned `tier_id` references — defensive coding.
+
+**Skipped numbers:** F-S4 (all 11 PENDING status) folded into F-S6 (same root cause cluster — no Stripe payments yet). F-S10 (apparent doubled file input) retracted during walk — confirmed only one `<input type="file">` exists; the second "Choose File" entry in the a11y tree was a screen-reader artifact of the styled button + native input pattern. F-S18 (Sports Connection has linked contact but UI shows none) was retracted-then-reopened: initial test on ThinkCode showed empty Contacts section, but DB confirmed ThinkCode genuinely has 0 contacts (real state). Re-testing on Sports Connection — which does have a linked contact — produced the actual P0 (filed as F-S21).
+
+---
+
+### Sponsors surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** All 8 W-numbered workflows walked or wiring-verified.
+
+**Findings on this surface:** F-S1, F-S2, F-S3/F-S7, F-S5, F-S6, F-S8, F-S9, F-S11, F-S12, F-S13, F-S14, F-S15, F-S16, F-S17, F-S19 (positive), F-S20, F-S21, F-S22, F-S23, F-S24, F-S25. **21 distinct findings** (5 positive notes counted separately).
+
+**Single highest-priority finding:** **F-S21 P0 data-corruption trap** — sponsor edit silently unlinks linked contacts on Update. Same anti-pattern as Sprint 35 #338 (`feedback_no_usestate_from_prop_for_rsc_data`). Ship fix before any further sponsor edits.
+
+**Single highest-leverage cross-cutting fix:** **F-S5 sidebar layout bug** affects every admin surface — single CSS fix cascades broadly.
 
 ---
 

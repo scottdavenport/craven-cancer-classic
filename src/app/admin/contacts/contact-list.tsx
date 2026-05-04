@@ -817,6 +817,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                 <Checkbox
                   aria-label="Select all visible contacts"
                   checked={allVisibleSelected}
+                  indeterminate={!allVisibleSelected && someVisibleSelected}
                   onCheckedChange={() => handleHeaderCheckbox()}
                 />
               </th>

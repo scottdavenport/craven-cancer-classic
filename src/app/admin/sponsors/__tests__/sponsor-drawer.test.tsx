@@ -210,6 +210,10 @@ function renderCreateDrawer() {
 }
 
 async function clickSubmit() {
+  // Wait for the form to be rendered (edit mode gates on contactsLoaded)
+  await waitFor(() => {
+    expect(screen.getByTestId("mock-submit")).toBeInTheDocument();
+  });
   await act(async () => {
     screen.getByTestId("mock-submit").click();
   });
@@ -619,6 +623,152 @@ describe("SponsorDrawer — Sprint 20 data-integrity tests (#215)", () => {
       expect(vi.mocked(actions.updateSponsor)).toHaveBeenCalledTimes(1);
       const [, updateFd] = vi.mocked(actions.updateSponsor).mock.calls[0] as [string, FormData];
       expect(updateFd.get("logo_url")).toBe(SPONSOR.logo_url);
+    });
+  });
+
+  // =========================================================================
+  // SECTION 5: contactsLoaded render gate — F-S21 (P0 silent-unlink fix)
+  //
+  // Target behaviour after fix:
+  //   Edit mode: form is NOT rendered until contactsLoaded=true.
+  //   "Loading contacts…" placeholder visible while fetching.
+  //   Create mode: form renders immediately (no loading state).
+  //   After contacts load, _capturedInitialContacts === fetched rows.
+  //   Fail-open: if getSponsorContacts rejects, form still renders (empty contacts).
+  // =========================================================================
+  describe("contactsLoaded render gate — F-S21", () => {
+    // -----------------------------------------------------------------------
+    // Test 1: Edit drawer shows loaded contacts at mock boundary
+    // Asserts _capturedInitialContacts === [Allan] after loading state clears.
+    // FAILS on current main because form mounts before contacts arrive and
+    // useState(seedContacts) freezes on []; prop update never propagates.
+    // -----------------------------------------------------------------------
+    it("passes fetched contacts to SponsorForm (Allan Haseley) after load", async () => {
+      vi.mocked(actions.getSponsorContacts).mockResolvedValue([
+        {
+          contact_id: "c-allan",
+          role: "primary",
+          contacts: {
+            id: "c-allan",
+            full_name: "Allan Haseley",
+            email: null,
+          },
+        },
+      ]);
+
+      renderEditDrawer(SPONSOR);
+
+      await waitFor(() => {
+        expect(_capturedInitialContacts).toHaveLength(1);
+        expect(_capturedInitialContacts[0].full_name).toBe("Allan Haseley");
+        expect(_capturedInitialContacts[0].id).toBe("c-allan");
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 2: Edit mode shows loading state before contacts arrive, then form
+    // FAILS on current main because form renders immediately (no loading gate).
+    // -----------------------------------------------------------------------
+    it("shows 'Loading contacts…' before promise resolves, then form after", async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let resolveContacts!: (rows: any[]) => void;
+      vi.mocked(actions.getSponsorContacts).mockReturnValue(
+        new Promise((res) => {
+          resolveContacts = res as typeof resolveContacts;
+        })
+      );
+
+      renderEditDrawer(SPONSOR);
+
+      // Loading state should be visible before promise resolves
+      expect(screen.getByText("Loading contacts…")).toBeInTheDocument();
+      expect(screen.queryByTestId("sponsor-form")).toBeNull();
+
+      // Resolve the promise and confirm loading state goes away
+      await act(async () => {
+        resolveContacts([]);
+      });
+
+      await waitFor(() => {
+        expect(screen.queryByText("Loading contacts…")).toBeNull();
+        expect(screen.getByTestId("sponsor-form")).toBeInTheDocument();
+      });
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 3: Create mode renders form immediately, no loading state
+    // FAILS on current main only if the gate is implemented incorrectly
+    // (short-circuit check). Verify create path is unblocked.
+    // -----------------------------------------------------------------------
+    it("renders form immediately in create mode (no loading state)", async () => {
+      renderCreateDrawer();
+
+      // Give effects time to run
+      await act(async () => {});
+
+      expect(screen.getByTestId("sponsor-form")).toBeInTheDocument();
+      expect(screen.queryByText("Loading contacts…")).toBeNull();
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 4: After contacts load, _capturedInitialContacts matches fetched data
+    // This is the P0 fix assertion — contact_ids must not be empty on submit.
+    // FAILS on current main because form freezes with [].
+    // -----------------------------------------------------------------------
+    it("captures correct contact_ids after load (P0 — no silent unlink)", async () => {
+      vi.mocked(actions.getSponsorContacts).mockResolvedValue([
+        {
+          contact_id: "c-allan",
+          role: "primary",
+          contacts: {
+            id: "c-allan",
+            full_name: "Allan Haseley",
+            email: null,
+          },
+        },
+      ]);
+
+      renderEditDrawer(SPONSOR);
+
+      await waitFor(() => {
+        expect(_capturedInitialContacts).toHaveLength(1);
+      });
+
+      // Submit with the contacts the drawer passed to the form
+      _submitFdForTest = makeFormDataNoFile({
+        contact_ids: _capturedInitialContacts.map((c) => c.id).join(","),
+      });
+
+      await clickSubmit();
+
+      expect(vi.mocked(actions.updateSponsor)).toHaveBeenCalledTimes(1);
+      const [, updateFd] = vi.mocked(actions.updateSponsor).mock.calls[0] as [string, FormData];
+      expect(updateFd.get("contact_ids")).toBe("c-allan");
+    });
+
+    // -----------------------------------------------------------------------
+    // Test 5: Fail-open — getSponsorContacts rejection clears loading state
+    // W2 guard: a rejected fetch must NOT leave the user stuck on loading.
+    // FAILS on current main because there is no .catch() and no render gate.
+    // -----------------------------------------------------------------------
+    it("renders form with empty contacts when getSponsorContacts rejects (fail-open)", async () => {
+      vi.mocked(actions.getSponsorContacts).mockRejectedValue(
+        new Error("Network error")
+      );
+
+      renderEditDrawer(SPONSOR);
+
+      // Loading state should be visible initially
+      expect(screen.getByText("Loading contacts…")).toBeInTheDocument();
+
+      // After rejection settles, form should render with empty contacts
+      await waitFor(() => {
+        expect(screen.queryByText("Loading contacts…")).toBeNull();
+        expect(screen.getByTestId("sponsor-form")).toBeInTheDocument();
+      });
+
+      // _capturedInitialContacts should be [] (fail-open, no data)
+      expect(_capturedInitialContacts).toHaveLength(0);
     });
   });
 });

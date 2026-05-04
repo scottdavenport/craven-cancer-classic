@@ -47,17 +47,22 @@ export function SponsorDrawer({
     }
     if (mode === "edit" && sponsor) {
       setContactsLoaded(false);
-      getSponsorContacts(sponsor.id).then((rows) => {
-        setInitialContacts(
-          rows.map((row) => ({
-            id: row.contacts.id,
-            full_name: row.contacts.full_name,
-            email: row.contacts.email,
-            company: null,
-          }))
-        );
-        setContactsLoaded(true);
-      });
+      getSponsorContacts(sponsor.id)
+        .then((rows) => {
+          setInitialContacts(
+            rows.map((row) => ({
+              id: row.contacts.id,
+              full_name: row.contacts.full_name,
+              email: row.contacts.email,
+              company: null,
+            }))
+          );
+          setContactsLoaded(true);
+        })
+        .catch((err) => {
+          console.error("Failed to load sponsor contacts:", err);
+          setContactsLoaded(true); // fail-open — show form with empty contacts rather than stuck on loading
+        });
     } else {
       setContactsLoaded(true);
     }
@@ -145,15 +150,20 @@ export function SponsorDrawer({
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
-            <SponsorForm
-              defaultValues={mode === "edit" ? sponsor : undefined}
-              initialContacts={initialContacts}
-              sponsorshipItems={sponsorshipItems}
-              onSubmit={handleSubmit}
-              onCancel={() => onOpenChange(false)}
-              loading={loading}
-              disabled={mode === "edit" && !contactsLoaded}
-            />
+            {(mode === "create" || contactsLoaded) ? (
+              <SponsorForm
+                defaultValues={mode === "edit" ? sponsor : undefined}
+                initialContacts={initialContacts}
+                sponsorshipItems={sponsorshipItems}
+                onSubmit={handleSubmit}
+                onCancel={() => onOpenChange(false)}
+                loading={loading}
+              />
+            ) : (
+              <div className="flex items-center justify-center p-8 text-muted-foreground">
+                Loading contacts…
+              </div>
+            )}
           </div>
 
           {mode === "edit" && sponsor && (

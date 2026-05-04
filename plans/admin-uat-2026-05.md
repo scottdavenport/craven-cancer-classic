@@ -301,7 +301,7 @@
   - **Bundle hint:** admin form-consistency sprint with F-T2/F-T8.
 
 - 🔴 **F-T8 Mark Paid lacks payment method capture.** P1.
-  - Today: only collects $ amount. Schema doesn't track HOW the team paid (`teams.payment_method` doesn't exist; `teams.payment_status` exists with CHECK constraint `('pending', 'paid', 'comped')` per `supabase/migrations/20260414000001_initial_schema.sql:125` — but no source attribution).
+  - Today: only collects $ amount. Schema doesn't track HOW the team paid (`teams.payment_method` doesn't exist; `teams.payment_status` exists with CHECK constraint `('pending', 'paid', 'comped')` per `supabase/migrations/20260414000001_initial_schema.sql:155` — but no source attribution).
   - **Bonus dead-code observation:** `team-list.tsx:33-48` `PaymentStatusBadge` has a CSS class for `failed` status, which the schema CHECK constraint forbids. Either widen the CHECK to add `failed` (intent: future Stripe failure path) or drop the badge styling. Out-of-scope for F-T8 itself, but worth a tiny cleanup PR or fold into S40.
   - **Foundational for F2 unified revenue source-of-truth.** If `teams.amount_paid_cents` is supposed to aggregate ALL channels per team (per F2 fix path), we need source attribution.
   - **Modal redesign (couples with F-T7):**
@@ -314,7 +314,7 @@
 
 - 🔴 **F-T9 Inline contact-create bypasses Sprint 31 multi-type rules — affects BOTH Teams and Sponsors via shared component.** P1.
   - **Trigger:** typing a non-matching name in Player 2/3/4 search (or Captain search) reveals an inline "New Contact" form. Today captures only First/Last/Email/Phone (+ Cancel/Create Contact buttons).
-  - **Source-of-truth file:** the inline create lives in the **shared component** `src/components/admin/contact-typeahead.tsx` (single-select `ContactTypeahead` exported at line 36; multi-select `ContactTypeaheadMulti` exported at line 369). Used by:
+  - **Source-of-truth file:** the inline create lives in the **shared component** `src/components/admin/contact-typeahead.tsx` (single-select `ContactTypeahead` exported at line 36; multi-select `ContactTypeaheadMulti` exported at line 379). Used by:
     - **Teams** — `team-form.tsx:131,140,149,158` (4 usages: Captain + Player 2/3/4) via `ContactTypeahead`
     - **Sponsors** — `sponsor-form.tsx:227` (sponsor-contacts list) via `ContactTypeaheadMulti`
   - **Bypass:** no type checkboxes, no type-gated fields. The form never sets `types[]` and never asks for type-specific fields like handicap/shirt-size.

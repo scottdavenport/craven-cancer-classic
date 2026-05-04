@@ -240,7 +240,7 @@
 - W3.2 Year filter
 - W3.3 Create team — captain selection from contact search, member additions
 - W3.4 Edit team members — add/remove via contact search
-- W3.5 Delete team — soft-delete-to-Trash. Type-to-confirm gated behind paid status (`requiresTypeConfirm = isPaid` at `team-list.tsx:155`). Pending teams get a simple Cancel/Delete confirm; paid teams get the type-the-team-name input (per S35 #336).
+- W3.5 Delete team — soft-delete-to-Trash. Type-to-confirm gated behind paid status (`requiresTypeConfirm = isPaid` at `team-list.tsx:154`). Pending teams get a simple Cancel/Delete confirm; paid teams get the type-the-team-name input (per S35 #336).
 - W3.6 Mark team paid (registration fee)
 - W3.7 Score count surfaces correctly per team
 - W3.8 Deleted member placeholder rendering (per S35 #338 — RSC display data via prop, not useState)
@@ -254,7 +254,7 @@
 
 - ✅ **W3.1 list loads cleanly.** Captain name renders as team identity (`feedback_craven_team_display_rule` invariant holds). Badges correct: MORNING session (gray uppercase), Pending payment (amber), 3 open slots (amber). Members count `1/4`.
 - ✅ **W3.4 edit modal verified.** Editable fields: Session dropdown, Captain (with X to clear), Player 2/3/4 search by name/email. Save Team + Cancel + Delete team all present.
-- ✅ **W3.5 partial — soft-delete confirm dialog correct on unpaid team.** Helper copy clean: "Members: 1/4 · Captain: Scott Davenport" + "The team will be moved to Trash. You can restore from Admin → Trash later." Type-to-confirm IS wired (`team-list.tsx:155` → `requiresTypeConfirm = isPaid`) but only triggers for paid teams; the only team in DB today is `Pending`, so the type-the-team-name input was correctly NOT shown. Trust e2e spec (`tests/e2e/team-delete-type-to-confirm.spec.ts`) for paid-team coverage.
+- ✅ **W3.5 partial — soft-delete confirm dialog correct on unpaid team.** Helper copy clean: "Members: 1/4 · Captain: Scott Davenport" + "The team will be moved to Trash. You can restore from Admin → Trash later." Type-to-confirm IS wired (`team-list.tsx:154` → `requiresTypeConfirm = isPaid`) but only triggers for paid teams; the only team in DB today is `Pending`, so the type-the-team-name input was correctly NOT shown. Trust e2e spec (`tests/e2e/team-delete-type-to-confirm.spec.ts`) for paid-team coverage.
 - ✅ **W3.7 wiring verified by code-inspection.** Score count fetched in delete-confirm dialog only (`team-list.tsx:163-174` via `getScoreCount`). Functional verification deferred (DB has 0 scores).
 - ⏸ **W3.8 deleted-member placeholder — untestable today.** Requires a soft-deleted team-member contact who appears in a team's member list. None exist. Re-verify when first deletion-with-team-membership occurs OR rely on e2e spec (`tests/e2e/team-deleted-member-placeholder.spec.ts`) for coverage.
 
@@ -301,7 +301,8 @@
   - **Bundle hint:** admin form-consistency sprint with F-T2/F-T8.
 
 - 🔴 **F-T8 Mark Paid lacks payment method capture.** P1.
-  - Today: only collects $ amount. Schema doesn't track HOW the team paid (`teams.payment_method` doesn't exist; `teams.payment_status` exists with `paid/pending/failed/comped` but no source attribution).
+  - Today: only collects $ amount. Schema doesn't track HOW the team paid (`teams.payment_method` doesn't exist; `teams.payment_status` exists with CHECK constraint `('pending', 'paid', 'comped')` per `supabase/migrations/20260414000001_initial_schema.sql:125` — but no source attribution).
+  - **Bonus dead-code observation:** `team-list.tsx:33-48` `PaymentStatusBadge` has a CSS class for `failed` status, which the schema CHECK constraint forbids. Either widen the CHECK to add `failed` (intent: future Stripe failure path) or drop the badge styling. Out-of-scope for F-T8 itself, but worth a tiny cleanup PR or fold into S40.
   - **Foundational for F2 unified revenue source-of-truth.** If `teams.amount_paid_cents` is supposed to aggregate ALL channels per team (per F2 fix path), we need source attribution.
   - **Modal redesign (couples with F-T7):**
     - Amount paid (required, dollars input)
@@ -311,19 +312,24 @@
   - **Schema work:** `ALTER TABLE teams ADD COLUMN payment_method text NULL`. Stripe webhook auto-sets `'stripe'`; manual Mark-Paid logger sets the chosen method. Symmetric work on `sponsors.payment_method` per F2 (sponsors webhook + manual log paths share the same gap).
   - **Sprint candidate: S40** — bundles cleanly with F2/F3 dashboard revenue work since both touch the revenue source-of-truth model.
 
-- 🔴 **F-T9 Inline contact-create from Team form is a stub — bypasses Sprint 31 multi-type rules.** P1.
+- 🔴 **F-T9 Inline contact-create bypasses Sprint 31 multi-type rules — affects BOTH Teams and Sponsors via shared component.** P1.
   - **Trigger:** typing a non-matching name in Player 2/3/4 search (or Captain search) reveals an inline "New Contact" form. Today captures only First/Last/Email/Phone (+ Cancel/Create Contact buttons).
-  - **Bypass:** no type checkboxes, no type-gated fields. Anyone created via the team flow IS implicitly a Player (literally being added as one) but the form never sets `types: ['player']` and never asks for handicap or shirt size.
+  - **Source-of-truth file:** the inline create lives in the **shared component** `src/components/admin/contact-typeahead.tsx` (single-select `ContactTypeahead` exported at line 36; multi-select `ContactTypeaheadMulti` exported at line 369). Used by:
+    - **Teams** — `team-form.tsx:131,140,149,158` (4 usages: Captain + Player 2/3/4) via `ContactTypeahead`
+    - **Sponsors** — `sponsor-form.tsx:227` (sponsor-contacts list) via `ContactTypeaheadMulti`
+  - **Bypass:** no type checkboxes, no type-gated fields. The form never sets `types[]` and never asks for type-specific fields like handicap/shirt-size.
   - **Data-quality cascade:**
     - F18 bulk-action gate (no-types-checked invariant) flips them malformed post-create
     - Handicap-driven leaderboard/scoring logic gets NULL handicaps for tournament players
-    - Sprint 31 invariant ("≥1 type required to save") silently bypassed via the team-creation backdoor
-  - **Fix path (Option B — smart partial, recommended):**
-    - Auto-apply `types: ['player']` since team-creation context implies it
-    - Show Player-gated fields inline: Handicap (number), Shirt Size (S/M/L/XL/XXL), Recognition Name (whatever S31 wired for Player)
-    - Title becomes "New Player" not "New Contact" — Aria gate (type is implicit, copy should reflect)
-  - **Audit symmetric flows:** Sponsor → linkSponsorContact backdoor likely exists too. Verify during Section 4 walk and add F-S? finding if confirmed.
-  - **Files touched:** wherever the inline NewContact form lives (likely embedded in `src/app/admin/teams/team-form.tsx`); audit `src/app/admin/sponsors/sponsor-drawer.tsx` for the same pattern.
+    - Sprint 31 invariant ("≥1 type required to save") silently bypassed via the typeahead backdoor in BOTH teams and sponsors flows
+  - **Fix path (Option B — caller-supplied default type, recommended):**
+    - Add `defaultTypes?: ContactType[]` prop to both `ContactTypeahead` and `ContactTypeaheadMulti` exports
+    - Inline create form auto-applies the caller's `defaultTypes` and renders the relevant type-gated fields
+    - Caller in `team-form.tsx` passes `defaultTypes={['player']}` → form shows Handicap + Shirt Size + Recognition Name
+    - Caller in `sponsor-form.tsx` passes `defaultTypes={['sponsor']}` → form shows Sponsor-gated fields (whatever S31 wired for Sponsor)
+    - Type checkboxes still appear for admin override; pre-checked per the implicit context
+    - Title in inline form derives from `defaultTypes` ("New Player" / "New Sponsor Contact" / "New Contact" if multi/none) — Aria gate
+  - **Single-component fix scope.** One PR to `contact-typeahead.tsx` cascades to both teams + sponsors callers automatically. Lower S40 scope estimate than originally written.
   - **Sprint candidate: S40** (data-integrity cluster — F2/F3/F-T8/F-T9 all share the "single source of truth + don't accept malformed records" theme).
 
 - 💡 **F-T10 (defer) — No year picker UI on Teams page.** P3.

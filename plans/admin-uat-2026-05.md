@@ -694,10 +694,96 @@
 
 **E2E coverage:** ❌ **NONE.**
 
-**UAT status:** Pending walk-through.
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). All 6 workflows W5.1–W5.6 walked or verified via inspection. W5.6 (fresh-year empty state) marked as inspection-only because no year filter is exposed in the UI today (see F-N26).
 
-**Findings:**
-- _(populated as we walk through)_
+**Findings on this surface:**
+
+- 🟡 **F-N9 Sidebar avatar overlap recurring on Sponsorships page.** P2.
+  - Cross-surface confirmation of Sponsors F-S5. Same "N" avatar overlapping `Sign Out` text in the lower-left sidebar footer.
+  - **Bundle with F-S5** — single CSS fix cascades across every admin surface.
+
+- 🟡 **F-N12 Row pencil-icon buttons have no `aria-label`.** P2 (a11y).
+  - The visible pencil edit buttons on every row (uid pattern `*_61`, `*_68`, `*_75`, …) render without an `aria-label`. Screen readers announce only "button" with no context. Should be `Edit Champion package`, `Edit Eagle package`, etc.
+  - **Fix:** add `aria-label={`Edit ${item.name} package`}` to the icon-only `<Button>` in `sponsorship-manager.tsx` (the pencil-button render path).
+
+- 🟡 **F-N17 / F-N18 `name` + `description` not trimmed server-side.** P2 (recurring with F-S20).
+  - `actions.ts:99-100` (createSponsorshipItem) and `actions.ts:127-128` (updateSponsorshipItem) pass `formData.get("name") as string` and `formData.get("description") as string` directly to insert/update. Trailing/leading whitespace persists.
+  - **Description is multiline** — also at risk of trailing newlines that survive.
+  - **Fix:** `name: ((formData.get("name") as string) ?? "").trim()` + `description: ((formData.get("description") as string) ?? "").trim() || null` on both insert and update paths. Bundle with the Sponsors F-S20 fix in a single trim-cleanup PR across all four sponsor/sponsorship action files.
+
+- 🟡 **F-N19 `parseInt("0") || null` makes max=0 mean unlimited (footgun).** P2.
+  - `actions.ts:102` and `:130` use `parseInt(formData.get("max_quantity") as string) || null`. The `|| null` falsy-check treats `0` as falsy → null. Result: admin who types `0` for max ("no longer for sale, sold out, archived") gets ∞ instead.
+  - Today the only "remove from sale" affordance is the Status dropdown (Active → Inactive). That works — but the max-quantity 0-foot-gun exists silently.
+  - **Fix:** distinguish empty (`""` → null = unlimited) from explicit-0 (`"0"` → 0 = no quantity available). Use `formData.get("max_quantity") === "" ? null : parseInt(...)`. OR document via UI that 0 is not a valid value.
+
+- 🟡 **F-N26 `sponsorship_items.year` is hardcoded server-side, no UI filter exposed.** P2 (decision needed).
+  - Schema has `year` column on `sponsorship_items`. The column IS used — `actions.ts:22` filters via `.eq("year", currentYear)` (auto-stamped to `new Date().getFullYear()`). But there's no admin UI to scope to a different year, so prior-year packages are inaccessible after rollover.
+  - Two interpretations:
+    - (a) Sponsorship packages are catalog-shaped, recurring annually — admin should be able to copy last year's catalog to this year (and view past years for reference). In that case, add the year filter (matching Sponsors UI pattern) AND a "copy from year" affordance.
+    - (b) Hardcoded current-year is intentional — packages reset each year, no need to look back. In that case, document the design intent.
+  - **Decision blocker.** Worth a Scott call before designing the fix.
+
+- 🟡 **F-N27 Empty-state copy filter-agnostic.** P2 (recurring with F-S8).
+  - `sponsorship-manager.tsx:289` renders `<AdminEmptyState title="No sponsorship packages yet" />` regardless of whether the cause is no-data-yet or filter-mismatch.
+  - Same pattern as Sponsors F-S8. Bundle the fix.
+
+- 🟢 **F-N4 Higher-tier packages have no description.** P3.
+  - Champion ($5K), Golf Gift ($2.5K), Eagle ($2.5K), Celebration Lunch ($2K), Bloody Mary Bar ($1K), Golf Carts ($1K), Thursday Night ($700), Wall Sponsor ($700), Shot of the Day ($500), Morning Biscuit Sponsor ($500) — none have descriptions.
+  - Lower-tier packages DO: Tee Sign ("A Tee Sign with your company logo along with any other signage you choose."), Yard Sign ("Signage at your home or business..."), Balloons ("Please provide the name of your cancer warrior during checkout.").
+  - Either intentional (high-tier sponsorships are negotiated case-by-case, no canned description needed) or data-quality gap.
+  - **Action:** Scott call — fill in if appropriate, otherwise close as wontfix.
+
+- 🟢 **F-N13 `valuemax="0"` a11y noise on Price + Max Quantity inputs.** P3 (recurring with F-S9).
+  - Same screen-reader misleading announcement ("maximum value 0") as Sponsors form. Bundle the a11y fix.
+
+- 🟢 **F-N14 Status `<Select>` (Sponsorships) vs Active `<Switch>` (Sponsors) for the same boolean.** P3 (cross-surface, terminology).
+  - Sponsorships: "Status" select with "Active" / "Inactive" options.
+  - Sponsors: "Active" switch (toggle).
+  - Same database concept (`active boolean` column). Two UI patterns.
+  - Recommend normalizing to one (the toggle is simpler; the select is more explicit). Bundle with the broader admin-form-consistency pass.
+
+- 🟢 **F-N24 Delete-guard truncates "and N more" too aggressively.** P3 (cosmetic).
+  - At only 4 linked sponsors (Champion's case), the dialog says "...and 1 more" instead of naming all 4 by name. Truncation logic kicks in too early.
+  - **Fix:** show all names if N ≤ 5; truncate beyond that. Trivial change to the dialog copy logic.
+
+- 🟢 **F-N25 No empty-state for Recent Purchases section.** P3 (copy).
+  - `sponsorship-manager.tsx:364` gates `{filteredPurchases.length > 0 && (<Card>...</Card>)}` (the `{/* Purchases */}` comment is on line 363) — when 0 purchases, no UI at all (not even a placeholder).
+  - With 0 Stripe purchases today, admin has no signal that purchases will appear here once the Stripe pipeline fires.
+  - **Fix:** render a small placeholder when 0 purchases: "Stripe purchases for these packages will appear here." Aria gate before ship.
+
+**Schema notes**
+- **F-N26 (data model)** — duplicate of UI finding above; same column. Decision needed: drop or wire as filter.
+
+**Positive observations (worth reinforcing — and applying cross-surface):**
+
+- ✅ **F-N2 SPONSORS column aggregation works correctly.** Champion 4 + Eagle 6 + Morning Biscuit 1 = 11, matches Sponsors-surface total. The aggregation query correctly counts active linked sponsors per package.
+- ✅ **F-N3 Sort order on Sponsorships list is price-DESC** (`actions.ts:29` orders `price_cents DESC` only). Sponsors's `getSponsorshipItems` (`src/app/admin/sponsors/actions.ts:66-67`) orders `sort_order ASC` first, then `price_cents DESC` — the divergence is the `sort_order` precedence, not arbitrary ordering. The Sponsors create-form's non-monotonic dropdown order (F-S2) is driven by `sort_order` data, not query bug. **Fix path**: either remove `sort_order` precedence in Sponsors's query (match Sponsorships) or align the `sort_order` values across rows so they're consistent with price. Scott call.
+- ✅ **F-N6 Visible pencil-icon edit affordance on every row.** This is exactly the discoverability pattern Sponsors F-S17 wished for. **Apply to Sponsors row affordance** in the same admin-consistency pass.
+- ✅ **F-N15 Price-cents math is correct** — `Math.round(parseFloat(price) * 100)` on insert + update. Display in dollars, store in cents per craven Invariants.
+- ✅ **F-N20 Active-state default is sane.** `formData.get("active") !== "false"` — missing field defaults to true (active). Reasonable default for a creation flow.
+- ✅ **F-N21 Server-side category whitelist (`"tribute" | "supporter" | default "sponsorship"`).** Defensive validation pattern that should be reused on every enum-shaped field server-side. Solid example of input hardening.
+- ✅ **F-N22 Destructive separation in edit modal.** Delete-package button at the bottom, separated from Update/Cancel — matches Sponsors F-S19 pattern. Cross-surface consistency confirmed.
+- ✅ **F-N23 Delete-guard with linked-record names + aftermath prediction.** "4 sponsors are linked to this package: Carolina East Health, Fuel Market, Lynne Davenport - Century 21 Zaytoun Raines, ... and 1 more. They'll show '(no package)' until you reassign them." Names the records, predicts the aftermath state. **Model for every other admin surface's delete confirmation.**
+
+---
+
+### Sponsorships surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** All 6 W-numbered workflows walked or wiring-verified.
+
+**Findings on this surface:** F-N2, F-N3, F-N4, F-N6, F-N9, F-N12, F-N13, F-N14, F-N15, F-N17, F-N18, F-N19, F-N20, F-N21, F-N22, F-N23, F-N24, F-N25, F-N26, F-N27. **20 distinct findings** (8 positive observations, 12 actionable).
+
+**Single highest-leverage cross-cutting opportunity:** F-N6 (visible pencil-icon edit) + F-N23 (delete-guard with linked-record names) — both are STRONG patterns Sponsorships got right. Cascade them to Sponsors (replacing F-S17's invisible row-click affordance and Sponsors's plain-text delete confirmation). Single design-system pass + Bolt implementation.
+
+**Single highest-priority unresolved decision:** F-N26 (`sponsorship_items.year` column unused). Drop from schema or wire as UI filter — Scott call before next sprint.
+
+**Cross-surface bundles ready for sprint planning:**
+- **Trim cleanup:** F-S20 + F-N17 + F-N18 (server-side trim across sponsor + sponsorship action files; one-line fix per call site).
+- **Empty-state copy:** F-S8 + F-N27 (filter-agnostic empty state across admin lists; pattern fix in `AdminEmptyState`).
+- **Sidebar overlap:** F-S5 + F-N9 (cross-surface CSS fix; sidebar layout once).
+- **a11y `valuemax`:** F-S9 + F-N13 (number-input a11y noise; per-field `max` attribute).
+
+**Skipped numbers:** F-N1 was retracted (the 13-vs-16 mismatch turned out to be deleted items hiding correctly — DB confirmed 13 active + 3 deleted = 16 total). F-N5, F-N7, F-N8, F-N10, F-N11, F-N16 were observations folded into other findings during walk-through (e.g., F-N8 "all $0 amounts" was subsumed by Sponsors F-S6; F-N10/F-N11 terminology observations are captured under cross-surface F-S13).
 
 ---
 

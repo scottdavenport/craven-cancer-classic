@@ -716,11 +716,11 @@
   - Today the only "remove from sale" affordance is the Status dropdown (Active → Inactive). That works — but the max-quantity 0-foot-gun exists silently.
   - **Fix:** distinguish empty (`""` → null = unlimited) from explicit-0 (`"0"` → 0 = no quantity available). Use `formData.get("max_quantity") === "" ? null : parseInt(...)`. OR document via UI that 0 is not a valid value.
 
-- 🟡 **F-N26 `sponsorship_items.year` column unused in UI.** P2 (decision needed).
-  - Schema has `year` column on `sponsorship_items`. UI exposes filter on Category only (Sponsorship/Tribute/Supporter), no Year filter. List shows all years' items.
+- 🟡 **F-N26 `sponsorship_items.year` is hardcoded server-side, no UI filter exposed.** P2 (decision needed).
+  - Schema has `year` column on `sponsorship_items`. The column IS used — `actions.ts:22` filters via `.eq("year", currentYear)` (auto-stamped to `new Date().getFullYear()`). But there's no admin UI to scope to a different year, so prior-year packages are inaccessible after rollover.
   - Two interpretations:
-    - (a) Sponsorship packages are catalog-shaped, recurring annually — `year` is intended to be year-stamped at creation but admin sees the catalog cross-year. In that case, drop the column or document its purpose.
-    - (b) Year was intended to scope packages per event year — UI just hasn't been wired with the filter. In that case, add the year filter (matching Sponsors UI pattern) and let admin scope to 2026 / 2025 / etc.
+    - (a) Sponsorship packages are catalog-shaped, recurring annually — admin should be able to copy last year's catalog to this year (and view past years for reference). In that case, add the year filter (matching Sponsors UI pattern) AND a "copy from year" affordance.
+    - (b) Hardcoded current-year is intentional — packages reset each year, no need to look back. In that case, document the design intent.
   - **Decision blocker.** Worth a Scott call before designing the fix.
 
 - 🟡 **F-N27 Empty-state copy filter-agnostic.** P2 (recurring with F-S8).
@@ -747,7 +747,7 @@
   - **Fix:** show all names if N ≤ 5; truncate beyond that. Trivial change to the dialog copy logic.
 
 - 🟢 **F-N25 No empty-state for Recent Purchases section.** P3 (copy).
-  - `sponsorship-manager.tsx:363` gates `{filteredPurchases.length > 0 && (<Card>...</Card>)}` — when 0 purchases, no UI at all (not even a placeholder).
+  - `sponsorship-manager.tsx:364` gates `{filteredPurchases.length > 0 && (<Card>...</Card>)}` (the `{/* Purchases */}` comment is on line 363) — when 0 purchases, no UI at all (not even a placeholder).
   - With 0 Stripe purchases today, admin has no signal that purchases will appear here once the Stripe pipeline fires.
   - **Fix:** render a small placeholder when 0 purchases: "Stripe purchases for these packages will appear here." Aria gate before ship.
 
@@ -757,7 +757,7 @@
 **Positive observations (worth reinforcing — and applying cross-surface):**
 
 - ✅ **F-N2 SPONSORS column aggregation works correctly.** Champion 4 + Eagle 6 + Morning Biscuit 1 = 11, matches Sponsors-surface total. The aggregation query correctly counts active linked sponsors per package.
-- ✅ **F-N3 Sort order on Sponsorships list IS price-DESC.** Champion $5K → Balloons $20. **This is the canonical ordering**; the Sponsors create-form dropdown (F-S2) should reuse this query result instead of returning items in arbitrary order.
+- ✅ **F-N3 Sort order on Sponsorships list is price-DESC** (`actions.ts:29` orders `price_cents DESC` only). Sponsors's `getSponsorshipItems` (`src/app/admin/sponsors/actions.ts:66-67`) orders `sort_order ASC` first, then `price_cents DESC` — the divergence is the `sort_order` precedence, not arbitrary ordering. The Sponsors create-form's non-monotonic dropdown order (F-S2) is driven by `sort_order` data, not query bug. **Fix path**: either remove `sort_order` precedence in Sponsors's query (match Sponsorships) or align the `sort_order` values across rows so they're consistent with price. Scott call.
 - ✅ **F-N6 Visible pencil-icon edit affordance on every row.** This is exactly the discoverability pattern Sponsors F-S17 wished for. **Apply to Sponsors row affordance** in the same admin-consistency pass.
 - ✅ **F-N15 Price-cents math is correct** — `Math.round(parseFloat(price) * 100)` on insert + update. Display in dollars, store in cents per craven Invariants.
 - ✅ **F-N20 Active-state default is sane.** `formData.get("active") !== "false"` — missing field defaults to true (active). Reasonable default for a creation flow.

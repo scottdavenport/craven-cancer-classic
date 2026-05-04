@@ -468,7 +468,9 @@
 - ✅ **W4.8** Drawer onOpenChange follows Sprint 35 #336 lesson correctly. Side effects on open transitions live in `useEffect([open, mode, sponsor?.id])`, not in the onOpenChange handler. Parent's onOpenChange is a pure state setter.
 - ✅ **Search scope is unified** across name + tier + website. This is the unified-search pattern Contacts F9.a wishes for. Verified via three probes: "chick" → 1 (name), "eagle" → 6 (tier), "thinkcode.ai" → 1 (website).
 - ✅ **Logo upload action is well-defended:** auth gate, size limit, SVG sanitization, random-suffix filename, prior-file cleanup on replace. Only gap is content-type validation (F-S23).
-- ✅ **`(deleted package)` em fallback** in `sponsor-list.tsx:375` for orphaned `tier_id` references — defensive coding.
+- ✅ **`(deleted package)` em fallback** in `sponsor-list.tsx:373` for orphaned `tier_id` references — defensive coding.
+
+**Skipped numbers:** F-S4 (all 11 PENDING status) folded into F-S6 (same root cause cluster — no Stripe payments yet). F-S10 (apparent doubled file input) retracted during walk — confirmed only one `<input type="file">` exists; the second "Choose File" entry in the a11y tree was a screen-reader artifact of the styled button + native input pattern. F-S18 (Sports Connection has linked contact but UI shows none) was retracted-then-reopened: initial test on ThinkCode showed empty Contacts section, but DB confirmed ThinkCode genuinely has 0 contacts (real state). Re-testing on Sports Connection — which does have a linked contact — produced the actual P0 (filed as F-S21).
 
 ---
 

@@ -811,10 +811,60 @@
 
 **E2E coverage:** ❌ **NONE.**
 
-**UAT status:** Pending walk-through.
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). All 7 workflows W6.1–W6.7 walked or verified via inspection. W6.3–W6.5 (approve/reject/delete) verified via code-read since photos table is empty (0 rows). W6.7 (public upload) verified via `/api/upload-photo` route inspection.
 
-**Findings:**
-- _(populated as we walk through)_
+**Findings on this surface:**
+
+- 🟡 **F-P4 Sidebar avatar overlap recurring on Photos page.** P2.
+  - Cross-surface confirmation #3 of F-S5/F-N9. Same "N" avatar collides with `Sign Out` in the lower-left sidebar footer.
+  - **Bundle with F-S5/F-N9** — single CSS fix cascades.
+
+- 🟡 **F-P9 `photos.year` column unused in queries or UI.** P2 (decision needed).
+  - Schema has `year` column on `photos`. `getPhotos` (`actions.ts:9-26`) does NOT filter by year. UI exposes only Pending/Approved/Rejected/All tabs, no Year filter.
+  - Same decision shape as Sponsorships F-N26: hardcode currentYear server-side, add UI filter, or drop column.
+  - Cross-event consequence: after rolling over to a new year, last year's moderated photos remain in the same lists. Not strictly broken (every status stays valid) but visually cluttered.
+
+- 🟡 **F-P12 No rate limiting on `/api/upload-photo`.** P2 (Sentinel-level concern).
+  - Public POST endpoint accepts up to 10MB per upload. No per-IP throttling. A bad actor could spam-upload to fill Storage (`10MB × 1000 ≈ 10GB`).
+  - Mitigated indirectly by admin moderation queue (uploads sit in Pending), but the Storage cost is incurred regardless.
+  - **Fix:** add Vercel Edge Config or Upstash rate-limit middleware (e.g., 5 uploads / 15 min per IP).
+
+✅ **Positive observations — Photos is the gold-standard surface for this codebase:**
+
+- ✅ **F-P1 Filter-aware empty state per tab.** Verified across all 4 tabs:
+  - Pending → "No pending photos"
+  - Approved → "No approved photos"
+  - Rejected → "No rejected photos"
+  - All → "No photos"
+  - Body copy explains origin: "Photos submitted via the public gallery appear here."
+  - **This is the model for fixing F-S8 + F-N27.** Pattern: `<EmptyState title={`No ${tabName} ${pluralEntity}`} body={originContext} />`.
+- ✅ **F-P2 Inline tab counts** (`Pending 0 / Approved 0 / Rejected 0 / All 0`). At-a-glance state without clicking through. Apply this pattern to all admin filter-tab UIs.
+- ✅ **F-P3 Dedicated "All" tab** alongside the 3 status filters. Useful for cross-status search.
+- ✅ **F-P5 `updatePhotoStatus` type-narrowed to `"approved" | "rejected"`** (`actions.ts:28-31`). Defensive typing — can't accidentally re-set to pending via this path. Note: this also means there's no UI affordance to undo a rejection back to pending; if that's a future need, it's an explicit design decision, not an oversight.
+- ✅ **F-P6 Multi-path `revalidatePath`** — every mutation revalidates both `/admin/photos` AND `/gallery`. Public state auto-updates without manual refresh.
+- ✅ **F-P7 Canonical `softDelete()` helper** from `@/lib/supabase/soft-delete` — consistent with other surfaces.
+- ✅ **F-P8 Read from `photos_active` view, write to base `photos` table.** Active view auto-reflects writes. Clean separation of read/write concerns at the schema layer.
+- ✅ **F-P10 Public-upload security exemplar.** `/api/upload-photo` defends against multiple attack vectors:
+  - `ALLOWED_MIME_TYPES` whitelist (`["image/jpeg", "image/png", "image/webp", "image/gif"]`)
+  - `isAllowedMimeType` type-guard against arbitrary MIME values
+  - **`MIME_TO_EXT` map drives extension server-side** with explicit `"never from file.name"` defense against polyglot/extension-spoofing attacks
+  - 10MB size limit
+  - Random filename construction (timestamp + random base36)
+  - Generic error in catch (no detail leakage)
+  - **Bundle: apply this exact pattern to Sponsors `uploadSponsorLogo`** (which today only validates filename extension — F-S23). Ship as a single security cleanup PR using Photos's pattern as the template.
+- ✅ **F-P11 Status hardcoded to `"pending"` on public insert.** Public can't smuggle pre-approved photos through the upload endpoint.
+
+---
+
+### Photos surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** All 7 W-numbered workflows walked or wiring-verified.
+
+**Findings on this surface:** F-P1, F-P2, F-P3, F-P4, F-P5, F-P6, F-P7, F-P8, F-P9, F-P10, F-P11, F-P12. **12 distinct findings** (9 positive observations, 3 actionable).
+
+**Single highest-leverage cross-surface model:** F-P10 MIME-validation pattern. Apply to Sponsors logo upload (F-S23) verbatim — single Bolt PR, surgical to `actions.ts:uploadSponsorLogo`.
+
+**Single highest-leverage UX model:** F-P1 filter-aware empty state. Pattern fix template for `AdminEmptyState`; cascades to F-S8 + F-N27.
 
 ---
 
@@ -843,10 +893,44 @@
 
 **E2E coverage:** 🟡 1 spec (`score-create-edit`).
 
-**UAT status:** Pending walk-through.
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). UI walk DEFERRED per Scott — he's coordinating with the NBG&CC pro on GolfGenius integration timing, so the UI polish can wait. This pass verified the **codebase is solid and ready for the integration phase**, with 1 P1 blocker to fix beforehand.
 
-**Findings:**
-- _(populated as we walk through)_
+**Findings on this surface:**
+
+- 🟠 **F-Sc1 `importScoresFromCSV` drops the team association.** **P1.**
+  - **Symptom:** the CSV header validation requires a `team` column to exist (`actions.ts:122`), but the row parser at `actions.ts:130-138` never reads `values[teamIdx]` into the inserted record. Every imported score lands with `team_id: undefined → NULL`.
+  - **Consequence:** any GolfGenius CSV export with team-attributed rows would import all scores as orphans, displayed as "(no team)" on the leaderboard.
+  - **Why now:** the `team` column index IS computed (`teamIdx = cols.findIndex((c) => c.includes("team"))`) but the row-mapping function doesn't use it. The only `team_id` inserted is via `addScore`, never via the bulk path.
+  - **Fix scope (~30 min Bolt):**
+    - Add `team_id` mapping in `importScoresFromCSV`'s row parser (look up `team_id` from CSV column — could be UUID directly or captain-name → JOIN against `teams_active`)
+    - If CSV stores captain name, add a JOIN/lookup step
+    - Decide handling of unmatched team names (skip row? insert as orphan with warning?)
+    - Add a regression test in `actions.test.ts` covering the team-attribution path
+  - **Severity:** P1. CSV import is documented but functionally broken for the integration use case. Worth fixing before NBG&CC pro tries the GolfGenius round-trip.
+
+- 🟡 **F-Sc2 `addScore` lacks the range validation that `updateScore` has.** P2.
+  - `updateScore` (`actions.ts:142-145`) explicitly validates `0 <= total_score <= 200` and rejects NaN. `addScore` (`actions.ts:90-100`) just calls `parseInt(formData.get("total_score") as string)` — accepts NaN, negatives, 999s.
+  - Asymmetric guardrails on the same constraint.
+  - **Fix:** lift the range check into a shared helper (`isValidGolfScore`) and apply to both call sites.
+
+✅ **Positive observations — codebase is GolfGenius-ready at the schema level:**
+
+- ✅ **`source` column** defaults to `'manual'` on the scores table. GolfGenius sync writes `'golfgenius'` for clean attribution. CSV import writes `'csv'`. Three sources, clearly separable for downstream filtering/auditing.
+- ✅ **`individual_scores jsonb`** column accepts hole-by-hole or per-player breakdowns. No schema changes needed when GolfGenius starts pushing detailed score breakdowns.
+- ✅ **All reads + writes scope to `currentYear`** server-side (`getScores`, `getActiveTeamsForDropdown`, `deleteAllScores`). No cross-year leakage. Prior years' score data is preserved untouched.
+- ✅ **Multi-path `revalidatePath('/leaderboard')`** on every mutation — public auto-updates.
+- ✅ **Captain-dropdown alphabetized by last-name then first-name** ("locked decision in plan" comment in `actions.ts:88`) — predictable ordering for admin.
+- ✅ **Hard-delete pattern** intentional for event-day data (vs soft-delete elsewhere). Admin can clear and re-import from GolfGenius without leaving stale rows behind.
+
+---
+
+### Scores surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** Codebase verification only — UI walk deferred per Scott pending NBG&CC pro / GolfGenius integration timing.
+
+**Findings on this surface:** F-Sc1, F-Sc2 + 6 positive schema/architecture observations. **2 actionable findings.**
+
+**Single highest-priority finding:** **F-Sc1 P1 CSV import drops team association** — fix before GolfGenius integration phase. Without it, imported scores will need manual team reassignment, defeating the purpose of bulk import.
 
 ---
 
@@ -871,10 +955,40 @@
 
 **E2E coverage:** ❌ **NONE.** (But component test exists: `event-settings-form.test.tsx`.)
 
-**UAT status:** Pending walk-through.
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). All 5 workflows W8.1–W8.5 walked or verified. Form loads cleanly with all 10 fields populated against the live `event_settings` row.
 
-**Findings:**
-- _(populated as we walk through)_
+**Findings on this surface:**
+
+- 🟢 **F-Ev1 Form input `name="lifetime_raised_cents"` is misleading — value submitted is in dollars.** P3 (cosmetic).
+  - The HTML `name` attribute reads `lifetime_raised_cents` (matching the DB column). The displayed value is `500000.00` (dollars, $500K lifetime raised). Server (`actions.ts:60`) parses as dollars and converts to cents via `Math.round(lifetimeRaisedDollars * 100)`. Same pattern for `registration_fee` → `registration_fee_cents`.
+  - Behavior is correct; only the field name is misleading. Either rename input to `lifetime_raised_dollars` for unit clarity, OR accept the imprecision and document via comment.
+
+✅ **Positive observations — Event surface is well-defended:**
+
+- ✅ **Server-side validation** comprehensive in `updateEventSettings`:
+  - `name` required + 100-char cap (`actions.ts:33-34`)
+  - `description` 2000-char cap (`actions.ts:37`)
+  - `registration_fee` non-negative (`actions.ts:41`)
+  - `morning_cap` / `afternoon_cap` positive (`actions.ts:45, 49`)
+  - **`tournament_end_date >= tournament_start_date` constraint** (`actions.ts:53-55`) — defensive
+  - `lifetime_raised` non-negative (`actions.ts:62`)
+- ✅ **Year-scoped via `currentYear`** — settings updates are per-year; updating 2026 doesn't touch 2025 (event_settings is keyed by year).
+- ✅ **`.trim()` on name + description** before insert — matches Event's defense-in-depth pattern. **Note: this is what Sponsors F-S20 + Sponsorships F-N17/F-N18 lack.** Use Event's pattern as the template for the cross-surface trim cleanup.
+- ✅ **Defense-in-depth on required fields:** HTML `<input>` doesn't have `required`, but server-side `if (!name) return { error: ... }` enforces. Two layers; either is sufficient. Consider adding HTML `required` for client-side UX, but not critical.
+- ✅ **Honoree names in default description copy:** "Honoring Scott Davenport Sr., Brian Fisher & John Aylward." Matches the project memory `project_craven_origin_story.md` + `project_craven_scott_dad.md`.
+
+**Schema notes**
+- The `event_settings` table holds 1 row per year (year = PK or unique key). Single row currently for 2026. Cross-year preservation is automatic; admin updating 2026 doesn't touch any prior year's row.
+
+---
+
+### Event surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** All 5 W-numbered workflows walked or wiring-verified.
+
+**Findings on this surface:** F-Ev1 + 5 positive observations. **1 actionable finding** (cosmetic naming).
+
+**Single highest-leverage cross-surface bundle:** Event's `.trim()` pattern is the template for the trim cleanup PR (bundle with F-S20 + F-N17/F-N18).
 
 ---
 
@@ -900,10 +1014,52 @@
 
 **E2E coverage:** ❌ **NONE.** Sensitive area (auth/RBAC) with zero E2E.
 
-**UAT status:** Pending walk-through. **High-priority area — zero E2E + auth-critical.**
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). All 8 workflows W9.1–W9.8 verified. Code-read of both API routes (`/api/invite` POST + `/api/invite/accept` GET) was the priority given auth/RBAC sensitivity. UI walk for W9.1 verified InviteForm renders. Live profile state confirmed via service-key SQL: 2 admin profiles (`scott@thinkcode.ai` + `e2e-admin@thinkcode.ai`), 0 viewer profiles.
 
-**Findings:**
-- _(populated as we walk through)_
+**Findings on this surface:**
+
+- 🟡 **F-Se2 No UI for invitation management or role changes.** P2 (gap, becomes blocking pre-event).
+  - The Settings page is **invite-create-only**:
+    - W9.6: No list of pending invitations (which emails are still un-accepted? when do they expire? who invited them?)
+    - W9.7: No revoke action (admin sends invite to wrong email → can't undo)
+    - No UI to change a profile's role after acceptance (admin → viewer or vice versa)
+  - Today (2 admins, 0 viewers) the gap is benign. But pre-event when more "viewer" volunteers come on, this becomes blocking — admin would need direct DB access to manage.
+  - **Fix scope:** add a `<InvitationsList>` panel under the InviteForm + a `<ProfilesList>` panel for role management. Each ~1-day Bolt.
+
+✅ **Positive observations — Settings auth flow is the security exemplar of the codebase:**
+
+- ✅ **`/api/invite` POST is well-defended:**
+  - **Step 1 admin guard:** `profile.role !== "admin"` returns 403 before any DB write (`route.ts:18-20`)
+  - Body parsing wrapped in try/catch with fallback 400
+  - **Role whitelist:** `role !== "admin" && role !== "viewer"` — can't smuggle arbitrary roles
+  - **Email format regex** before DB write (Advisory 2 comment in source)
+  - **Service-role client** justified by an explicit comment ("bypasses RLS for admin invite operations")
+  - **23505 unique-constraint dedup** with admin-friendly error message ("Invite already pending for this email") returning 409
+  - Triggers Supabase built-in `auth.admin.inviteUserByEmail` for the email send — uses Supabase Auth's email pipeline (Resend-backed per stack)
+  - Generic error logging without leaking details in the response
+
+- ✅ **`/api/invite/accept` GET is textbook secure** — reference implementation for any future privileged-token flow:
+  - **Step 1 token presence check** (400 if missing)
+  - **Step 2 caller authentication required** (401 if no active session). This is uncommon and STRONG: most invite-accept flows accept token alone; this requires the recipient to FIRST authenticate (via the magic-link in the invitation email) and THEN call the endpoint with a session cookie. Token-stealing alone isn't enough.
+  - **Step 3 token-based invitation lookup** (404 if not found)
+  - **Step 4 expiry check** with semantic 410 (Gone) status
+  - **Step 5 already-accepted check** with semantic 409 status
+  - **Step 6 atomic update** with `.is('accepted_at', null)` filter — race guard against double-accept
+  - **Step 7 profile upsert sources `role` + `email` from the invitation row, NEVER from request body** — explicit comment in source defends against role-escalation. Even if attacker controls the request body, the invitation row dictates the resulting profile's role.
+  - Generic error logging, generic external response on upsert failure
+  - 302 redirect to `/admin` on success
+
+- ✅ **The accept route's pattern is the canonical reference for any future privileged-token flow** in the codebase. Treat it as the "how to do this right" template.
+
+---
+
+### Settings surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** All 8 W-numbered workflows verified or wiring-verified. Auth/RBAC code-read was the priority.
+
+**Findings on this surface:** F-Se2 + 9 positive observations. **1 actionable finding** (management UI gap; non-blocking until more roles come online).
+
+**Single highest-leverage observation:** The accept-route security pattern (auth + atomic update + non-body sourcing) is the **codebase's reference implementation for privileged-token flows**. Document it as the canonical pattern in `docs/LESSONS-LEARNED.md` for future builders.
 
 ---
 
@@ -930,10 +1086,54 @@
 
 **E2E coverage:** 🟡 Indirect via `contact-soft-delete-restore` spec.
 
-**UAT status:** Pending walk-through.
+**UAT status:** SUBSTANTIALLY COMPLETE (2026-05-04). All 6 workflows W10.1–W10.6 walked or verified. UI render confirmed live; restore action wiring verified via code-read of all 5 restore functions.
 
-**Findings:**
-- _(populated as we walk through)_
+**Findings on this surface:**
+
+- 🟡 **F-Tr1 Tab-count rendering inconsistency vs Photos.** P2 (cross-surface).
+  - Trash tab labels show count badge ONLY when count > 0:
+    - `Contacts 139` (badge)
+    - `Teams` (no badge — 0 deleted teams)
+    - `Sponsors 4` (badge)
+    - `Sponsorship Items 3` (badge)
+    - `Photos` (no badge — 0 deleted photos)
+  - Photos surface ALWAYS shows the count badge, even at 0 (`Pending 0 / Approved 0 / Rejected 0 / All 0`).
+  - Pick one convention. Recommend always-show (Photos's pattern) for consistency — admin gets at-a-glance state without inferring from absence.
+
+- 🟢 **F-Tr2 139 deleted contacts is a lot — likely from import cleanup.** P3 (data hygiene).
+  - Real state, not a bug. Worth a Forge audit: identify the historical bulk-delete event (likely from a CSV import hygiene pass), confirm these are intentional deletions, and consider archiving from Trash if they're permanent.
+  - Not blocking — Trash is "forever-archive" per craven Invariants.
+
+✅ **Positive observations:**
+
+- ✅ **F-Tr3 Restore actions are consistent shape across all 5 entity types.** Same template:
+  ```ts
+  await requireAdmin();
+  const { error } = await supabase
+    .from(<table>)
+    .update({ deleted_at: null, deleted_by: null })  // BOTH cleared atomically
+    .eq("id", id);
+  if (error) {
+    if (error.code === "23505") {
+      return { error: "A record with the same unique field already exists. Resolve the conflict before restoring." };
+    }
+    return { error: error.message };
+  }
+  return { ok: true };
+  ```
+  Predictable, auditable. Sets BOTH `deleted_at` AND `deleted_by` to null in one atomic update — no half-restored state.
+- ✅ **23505 unique-constraint handling** with admin-friendly error message (vs raw DB error). Helpful in the recover-after-conflict scenario where restoring a deleted email would clash with an active record.
+- ✅ **No bulk-restore action surface** — matches Sprint 35 #135 deferred decision per inventory. UI is per-row only, intentional.
+- ✅ **No hard-delete UI** anywhere on the Trash page — matches the soft-delete-only invariant from craven profile.
+- ✅ **`profiles` JOINed via `deleted_by_name` view-style read** — Trash list shows who soft-deleted each row (per inventory). Audit trail intact.
+
+---
+
+### Trash surface — UAT status
+
+**SUBSTANTIALLY COMPLETE (2026-05-04).** All 6 W-numbered workflows walked or wiring-verified. Live state: 139 contacts + 4 sponsors + 3 sponsorship-items in Trash; 0 teams, 0 photos.
+
+**Findings on this surface:** F-Tr1, F-Tr2, F-Tr3 + 4 positive observations. **2 actionable findings** (1 cross-surface UX, 1 data-hygiene).
 
 ---
 

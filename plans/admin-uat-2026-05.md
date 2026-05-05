@@ -898,7 +898,7 @@
 **Findings on this surface:**
 
 - 🟠 **F-Sc1 `importScoresFromCSV` drops the team association.** **P1.**
-  - **Symptom:** the CSV header validation requires a `team` column to exist (`actions.ts:122`), but the row parser at `actions.ts:130-138` never reads `values[teamIdx]` into the inserted record. Every imported score lands with `team_id: undefined → NULL`.
+  - **Symptom:** the CSV header validation requires a `team` column to exist (`actions.ts:124`), but the row parser at `actions.ts:129-141` never reads `values[teamIdx]` into the inserted record. Every imported score lands with `team_id: undefined → NULL`.
   - **Consequence:** any GolfGenius CSV export with team-attributed rows would import all scores as orphans, displayed as "(no team)" on the leaderboard.
   - **Why now:** the `team` column index IS computed (`teamIdx = cols.findIndex((c) => c.includes("team"))`) but the row-mapping function doesn't use it. The only `team_id` inserted is via `addScore`, never via the bulk path.
   - **Fix scope (~30 min Bolt):**
@@ -909,17 +909,22 @@
   - **Severity:** P1. CSV import is documented but functionally broken for the integration use case. Worth fixing before NBG&CC pro tries the GolfGenius round-trip.
 
 - 🟡 **F-Sc2 `addScore` lacks the range validation that `updateScore` has.** P2.
-  - `updateScore` (`actions.ts:142-145`) explicitly validates `0 <= total_score <= 200` and rejects NaN. `addScore` (`actions.ts:90-100`) just calls `parseInt(formData.get("total_score") as string)` — accepts NaN, negatives, 999s.
+  - `updateScore` (`actions.ts:156` — the `if (!Number.isFinite(...) || ... < 0 || ... > 200)` line) explicitly validates `0 <= total_score <= 200` and rejects NaN. `addScore` (lines 90-105 — the body of the function) just calls `parseInt(formData.get("total_score") as string)` — accepts NaN, negatives, 999s.
   - Asymmetric guardrails on the same constraint.
   - **Fix:** lift the range check into a shared helper (`isValidGolfScore`) and apply to both call sites.
 
+- 🟡 **F-Sc3 Schema CHECK constraint blocks GolfGenius `source` value.** P2 (GolfGenius prep).
+  - The `scores.source` column has a CHECK constraint: `source = ANY (ARRAY['csv'::text, 'manual'::text])`. Writing `'golfgenius'` today would fail the constraint.
+  - **Fix scope:** before the GolfGenius integration phase, ALTER the constraint to admit `'golfgenius'` (or drop the CHECK and rely on application-layer validation). Bundle into the F-Sc1 fix sprint.
+  - **Note:** the original "GolfGenius sync writes 'golfgenius' for clean attribution" framing in this doc was aspirational — the schema needs to be relaxed before that workflow can land.
+
 ✅ **Positive observations — codebase is GolfGenius-ready at the schema level:**
 
-- ✅ **`source` column** defaults to `'manual'` on the scores table. GolfGenius sync writes `'golfgenius'` for clean attribution. CSV import writes `'csv'`. Three sources, clearly separable for downstream filtering/auditing.
+- ✅ **`source` column** defaults to `'manual'` on the scores table. CSV import writes `'csv'`. Two sources today are clearly separable for downstream filtering/auditing. **A third (`'golfgenius'`) is planned but blocked by the existing CHECK constraint** — see F-Sc3.
 - ✅ **`individual_scores jsonb`** column accepts hole-by-hole or per-player breakdowns. No schema changes needed when GolfGenius starts pushing detailed score breakdowns.
 - ✅ **All reads + writes scope to `currentYear`** server-side (`getScores`, `getActiveTeamsForDropdown`, `deleteAllScores`). No cross-year leakage. Prior years' score data is preserved untouched.
 - ✅ **Multi-path `revalidatePath('/leaderboard')`** on every mutation — public auto-updates.
-- ✅ **Captain-dropdown alphabetized by last-name then first-name** ("locked decision in plan" comment in `actions.ts:88`) — predictable ordering for admin.
+- ✅ **Captain-dropdown alphabetized by last-name then first-name** ("locked decision in plan" comment in `actions.ts:84`) — predictable ordering for admin.
 - ✅ **Hard-delete pattern** intentional for event-day data (vs soft-delete elsewhere). Admin can clear and re-import from GolfGenius without leaving stale rows behind.
 
 ---
@@ -928,9 +933,9 @@
 
 **SUBSTANTIALLY COMPLETE (2026-05-04).** Codebase verification only — UI walk deferred per Scott pending NBG&CC pro / GolfGenius integration timing.
 
-**Findings on this surface:** F-Sc1, F-Sc2 + 6 positive schema/architecture observations. **2 actionable findings.**
+**Findings on this surface:** F-Sc1, F-Sc2, F-Sc3 + 6 positive schema/architecture observations. **3 actionable findings.**
 
-**Single highest-priority finding:** **F-Sc1 P1 CSV import drops team association** — fix before GolfGenius integration phase. Without it, imported scores will need manual team reassignment, defeating the purpose of bulk import.
+**Single highest-priority finding:** **F-Sc1 P1 CSV import drops team association** — fix before GolfGenius integration phase. Without it, imported scores will need manual team reassignment, defeating the purpose of bulk import. Bundle with F-Sc3 (relax CHECK constraint to admit `'golfgenius'`) in the same fix sprint.
 
 ---
 
@@ -1058,6 +1063,8 @@
 **SUBSTANTIALLY COMPLETE (2026-05-04).** All 8 W-numbered workflows verified or wiring-verified. Auth/RBAC code-read was the priority.
 
 **Findings on this surface:** F-Se2 + 9 positive observations. **1 actionable finding** (management UI gap; non-blocking until more roles come online).
+
+**Note on numbering:** F-Se1 is reserved for the "exemplar security implementation" call-out in the positive-observations block above (the `/api/invite/accept` GET pattern). It's not absent — it's the unnumbered ✅ headline at the top of the positive list. Consolidating numbering in a future cleanup pass.
 
 **Single highest-leverage observation:** The accept-route security pattern (auth + atomic update + non-body sourcing) is the **codebase's reference implementation for privileged-token flows**. Document it as the canonical pattern in `docs/LESSONS-LEARNED.md` for future builders.
 

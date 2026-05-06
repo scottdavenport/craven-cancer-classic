@@ -1,3 +1,4 @@
+import * as React from "react";
 import { Inbox } from "lucide-react";
 
 interface AdminEmptyStateProps {
@@ -5,6 +6,17 @@ interface AdminEmptyStateProps {
   body?: string;
   action?: React.ReactNode;
   icon?: React.ElementType;
+  /**
+   * When true, renders the filter-active empty state:
+   *   title prop → shown as-is (consumer passes "No [entity] match your filters")
+   *   action prop → shown as-is (consumer passes a "Clear filters" button)
+   * When false or omitted, renders the no-data empty state:
+   *   title prop → shown as-is (consumer passes "No [entity] yet")
+   *   action prop → shown as-is (consumer passes an "Add [entity]" button)
+   *
+   * Surface-specific strings are wired by consumer in Phase 2/3 per Aria's strings.md.
+   */
+  filterActive?: boolean;
 }
 
 export function AdminEmptyState({
@@ -12,6 +24,7 @@ export function AdminEmptyState({
   body,
   action,
   icon: Icon,
+  filterActive,
 }: AdminEmptyStateProps) {
   return (
     <div className="py-12 flex flex-col items-center gap-3 text-center">

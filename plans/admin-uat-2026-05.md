@@ -1204,3 +1204,27 @@ Verified via direct `contacts_active` SQL queries on 2026-05-03.
 - **🟡 1 contact has non-canonical type order** (`{sponsor, player}` instead of canonical `{player, sponsor}` which 58 other rows have). Sprint 31 mandated Player → Sponsor → Donor → Volunteer → Other ordering. Single outlier — could be a UI bug (`toggleType` adds in click order rather than canonical order?) or imported pre-Sprint-31 data. **Verify during W2.4 / W2.5 — does new add of Player+Sponsor save in canonical order?**
 - **No 3+ type combos exist yet.** Verify during W2.4 that creating a Player+Sponsor+Donor contact works (per Sprint 31 design intent).
 - **Trash count expected to be 196.** Verify during W10.1.
+
+---
+
+## Cross-surface UX axes (rotated index — added 2026-05-06)
+
+> The findings above are organized **per-surface** ("what's wrong with Contacts?"). For the unification sprint, they're rotated **per-axis** ("where does the modal-vs-drawer story play out?"). Full design + locked decisions in [`2026-05-admin-table-unification-design.md`](2026-05-admin-table-unification-design.md).
+
+| # | Axis | Anti-pattern surfaces | Donor surface | Cross-refs (UAT findings) |
+|---|---|---|---|---|
+| 1 | Edit mode (modal vs drawer) | Sponsors (drawer) | Contacts, Teams, Sponsorships (modal) | F-S21 P0 |
+| 2 | Edit affordance | Contacts (whole-row click), Teams (always-visible buttons), Sponsors (whole-row click, no icon) | Sponsorships (pencil icon) | F-T5, F-S17, F-N6 |
+| 3 | Hover row controls | All 4 (Contacts/Teams/Sponsors/Sponsorships) need migration; Photos exempt | None today (locked target) | F-T4, F-T5 |
+| 4 | Filter bar shape | Contacts (8 sub-issues — F9 a-h) | Photos (status tabs + counts) | F9 a-h, F-P1, F-P2, F-P3 |
+| 5 | Empty state | Sponsors (filter-agnostic), Sponsorships (filter-agnostic) | Photos (filter-aware per tab) | F-S8, F-N27, F-P1 |
+| 6 | Status display | Contacts (subscription dropdown), Teams (badge only), Sponsors (Inactive toggle), Sponsorships (in-modal Active dropdown) | Photos (status tabs) | (cross-cutting; no single ID) |
+| 7 | Modal IA | Teams (flat field list) | Contacts (banded sections post-Sprint 31) | F-T2, F12 |
+| 8 | Modal footer | Contacts (right-clustered), Teams (split footer) | Sponsors F-S19, Sponsorships F-N22 (destructive separated) | F13, F-T3, F-T6 |
+| 9 | Delete confirm | Sponsors (plain-text), others (basic confirm) | Sponsorships (lists linked records + predicts aftermath) | F-N23 |
+| — | Adjacent P0/P1 bundled | F-S21 P0 (sponsor edit unlinks), F-T9 P1 (inline contact-create stub), F-T8 P1 (Mark Paid no payment method), F-S5/F-N9 P2 (sidebar overlap), F17/F18 P1 (invisible Checkbox primitive) | — | F-S21, F-T9, F-T8, F-S5, F-N9, F17, F18 |
+| — | Year columns | Contacts (vestigial — drop), Sponsorships (unused — wire), Photos (unused — wire) | — | F9.c, F10, F-N26, F-P9 |
+| — | Sort defaults | Sponsorships (`price_cents DESC` only) | Sponsors (`sort_order ASC, price_cents DESC` — both adopt) | F-N3 |
+| — | Out of scope | — | — | Pagination (D13), CSV import expansion (D14), Scores UI walk, Trash redesign |
+
+**Brainstorm provenance.** 21 decisions locked 2026-05-06 with Scott via `superpowers:brainstorming` (D1, D2, D3, D4a–d, D5–D14, D15a–d). Mockups archived in `.superpowers/brainstorm/` (gitignored — re-mockup on demand).

@@ -1,0 +1,394 @@
+/*
+ * Craven admin-table-unification — Phase 1 design preview shared tokens
+ *
+ * Mirrors src/app/globals.css (Tailwind v4 inline @theme) so previews render
+ * with production tokens. Update both files in lockstep when tokens change.
+ *
+ * Spec source: plans/2026-05-admin-table-unification-design.md
+ * Sprint plan: plans/2026-05-admin-table-unification-sprint.md §3 Phase 1
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap");
+
+:root {
+  /* Brand teal scale */
+  --brand: #5797a6;
+  --brand-light: #8BB5C9;
+  --brand-dark: #3A6B83;
+  --brand-darker: #244A5B;
+  --brand-muted: #E8F0F4;
+
+  /* Surfaces */
+  --background: #FAFBFC;
+  --foreground: #1A2E3A;
+  --card: #FFFFFF;
+  --popover: #FFFFFF;
+
+  /* Primary = brand teal */
+  --primary: #5797a6;
+  --primary-foreground: #FFFFFF;
+
+  /* Secondary */
+  --secondary: #3A6B83;
+  --secondary-foreground: #FFFFFF;
+
+  /* Neutrals */
+  --muted: #F1F4F6;
+  --muted-foreground: #5F7A87;
+  --accent: #E8F0F4;
+  --accent-foreground: #1A2E3A;
+
+  /* System */
+  --destructive: #C53030;
+  --border: #DAE3E8;
+  --input: #DAE3E8;
+  --ring: #6B5DB8;
+
+  /* Extended neutrals */
+  --neutral-50: #F7F8F9;
+  --neutral-100: #EEF0F2;
+  --neutral-400: #8BA0AB;
+  --slate-400: #94A3B8;
+
+  /* State colors */
+  --success: #2E7D5E;
+  --success-muted: #E8F5EF;
+  --warning: #B45309;
+  --warning-muted: #FEF3C7;
+  --surface-raised: #FFFFFF;
+
+  /* Cream + accent */
+  --cream: #F9F4EC;
+  --accent-gold: #C9A84C;
+
+  /* Elevation shadows — navy-based */
+  --shadow-xs: 0 1px 2px rgba(26, 46, 58, 0.06);
+  --shadow-sm: 0 2px 6px rgba(26, 46, 58, 0.08), 0 1px 2px rgba(26, 46, 58, 0.04);
+  --shadow-md: 0 4px 16px rgba(26, 46, 58, 0.10), 0 2px 4px rgba(26, 46, 58, 0.06);
+  --shadow-lg: 0 12px 32px rgba(26, 46, 58, 0.12), 0 4px 8px rgba(26, 46, 58, 0.06);
+
+  /* Radius scale */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.3125rem;
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+
+  /* Typography */
+  --font-display: "Fraunces", Georgia, serif;
+  --font-sans: "Manrope", system-ui, sans-serif;
+
+  /* Motion easings */
+  --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.0, 0.0, 0.2, 1);
+}
+
+/* Page chrome */
+* { box-sizing: border-box; }
+
+html { font-family: var(--font-sans); color: var(--foreground); }
+
+body {
+  margin: 0;
+  background: var(--background);
+  font-family: var(--font-sans);
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 1.5;
+  font-feature-settings: "ss01", "cv11";
+}
+
+.preview-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 32px 24px 96px;
+}
+
+.preview-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 16px;
+  margin-bottom: 32px;
+}
+
+.preview-eyebrow {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+  margin: 0 0 6px;
+}
+
+.preview-title {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 28px;
+  margin: 0 0 6px;
+  color: var(--foreground);
+  letter-spacing: -0.01em;
+}
+
+.preview-subtitle {
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin: 0;
+  max-width: 720px;
+}
+
+.preview-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand-dark);
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+
+.preview-back:hover { color: var(--brand-darker); text-decoration: underline; }
+
+/* Section blocks */
+.preview-section {
+  margin-bottom: 48px;
+}
+
+.preview-section-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 18px;
+  margin: 0 0 4px;
+  color: var(--foreground);
+}
+
+.preview-section-desc {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  margin: 0 0 16px;
+  max-width: 640px;
+}
+
+.preview-figure {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-xs);
+  margin-bottom: 12px;
+}
+
+.preview-figure--frame {
+  /* Sandbox to demo a row hover-state cleanly */
+  padding: 0;
+  overflow: hidden;
+}
+
+.preview-caption {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  font-style: italic;
+  margin: 0 0 24px;
+}
+
+/* Token spec table at the bottom of each preview */
+.token-spec {
+  margin-top: 48px;
+  padding: 20px 24px;
+  background: var(--neutral-50);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+}
+
+.token-spec h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 16px;
+  margin: 0 0 12px;
+  color: var(--foreground);
+}
+
+.token-spec table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.token-spec th,
+.token-spec td {
+  text-align: left;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.token-spec th {
+  font-weight: 600;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.token-spec td code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 11px;
+  background: var(--neutral-100);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--brand-dark);
+}
+
+/* ----- Reusable component primitives that map to shadcn output ----- */
+
+/* Buttons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 500;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background-color 100ms var(--ease-out), box-shadow 100ms var(--ease-out), transform 100ms var(--ease-out);
+  white-space: nowrap;
+  background: transparent;
+  color: var(--foreground);
+}
+
+.btn--default {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  box-shadow: var(--shadow-xs);
+}
+
+.btn--default:hover {
+  box-shadow: var(--shadow-sm);
+  transform: translateY(-1px);
+}
+
+.btn--outline {
+  background: var(--background);
+  border-color: var(--border);
+  border-width: 1.5px;
+  color: var(--foreground);
+}
+
+.btn--outline:hover { background: rgba(232, 240, 244, 0.6); }
+
+.btn--ghost {
+  background: transparent;
+  color: var(--foreground);
+}
+
+.btn--ghost:hover { background: var(--muted); }
+
+.btn--destructive {
+  background: rgba(197, 48, 48, 0.10);
+  color: var(--destructive);
+}
+
+.btn--destructive:hover { background: rgba(197, 48, 48, 0.18); }
+
+.btn--icon {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+.btn--sm {
+  height: 28px;
+  font-size: 12.8px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+}
+
+.btn--xs {
+  height: 24px;
+  font-size: 12px;
+  padding: 0 8px;
+  border-radius: var(--radius-md);
+}
+
+/* Inputs */
+.input {
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--background);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  color: var(--foreground);
+  outline: none;
+  transition: border-color 100ms var(--ease-out), box-shadow 100ms var(--ease-out);
+}
+
+.input:focus {
+  border-color: var(--brand);
+  box-shadow: 0 0 0 3px rgba(87, 151, 166, 0.18);
+}
+
+.input::placeholder { color: var(--muted-foreground); }
+
+/* Visual icon glyph helper — uses inline SVG via mask for crispness */
+.icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  vertical-align: middle;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+.icon--sm { width: 14px; height: 14px; }
+.icon--lg { width: 20px; height: 20px; }
+
+/* shared swatches for the index page */
+.swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.swatch {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  font-size: 11px;
+  background: var(--card);
+}
+
+.swatch-fill {
+  height: 56px;
+}
+
+.swatch-meta {
+  padding: 6px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.swatch-name {
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.swatch-hex {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  color: var(--muted-foreground);
+}

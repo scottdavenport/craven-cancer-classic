@@ -1,0 +1,242 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Table Unification — Phase 1 Design Preview</title>
+  <link rel="stylesheet" href="preview.css" />
+  <style>
+    .index-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .index-card {
+      display: flex;
+      flex-direction: column;
+      padding: 18px 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-xs);
+      text-decoration: none;
+      color: inherit;
+      transition: box-shadow 120ms var(--ease-out), transform 120ms var(--ease-out);
+    }
+    .index-card:hover {
+      box-shadow: var(--shadow-sm);
+      transform: translateY(-1px);
+    }
+    .index-card-id {
+      font-family: var(--font-sans);
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--brand-dark);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin: 0 0 6px;
+    }
+    .index-card-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 17px;
+      color: var(--foreground);
+      margin: 0 0 6px;
+    }
+    .index-card-desc {
+      font-size: 12.5px;
+      color: var(--muted-foreground);
+      margin: 0;
+      line-height: 1.45;
+    }
+    .meta-section {
+      margin: 32px 0 40px;
+      padding: 20px 24px;
+      background: var(--brand-muted);
+      border: 1px solid var(--brand-light);
+      border-radius: var(--radius-xl);
+    }
+    .meta-section h2 {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 16px;
+      margin: 0 0 8px;
+      color: var(--brand-darker);
+    }
+    .meta-section p {
+      margin: 0 0 8px;
+      font-size: 13px;
+      color: var(--brand-darker);
+    }
+    .meta-section ul {
+      margin: 4px 0 0;
+      padding-left: 18px;
+      font-size: 13px;
+      color: var(--brand-darker);
+    }
+    .meta-section li { margin-bottom: 4px; }
+    .meta-section a {
+      color: var(--brand-dark);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <header class="preview-header">
+      <p class="preview-eyebrow">Pixel · Phase 1 upfront-gate</p>
+      <h1 class="preview-title">Admin Table Unification — Phase 1 Design Preview</h1>
+      <p class="preview-subtitle">
+        Six shared primitives that every admin list surface (Contacts, Teams, Sponsors,
+        Sponsorships, Photos) will adopt. Token specs at the bottom of each preview translate
+        directly to Tailwind v4 utility classes wired against <code>src/app/globals.css</code>.
+      </p>
+    </header>
+
+    <section class="meta-section">
+      <h2>What's locked</h2>
+      <p>
+        21 decisions across 9 UX axes are frozen in the design doc. These previews are the
+        visual translation of those decisions — Pixel chooses dimensions, color application,
+        motion, and component anatomy. Bolt builds against these specs; Watchdog diffs the
+        live preview against this preview side-by-side per
+        <code>feedback_watchdog_design_adherence_diff.md</code>.
+      </p>
+      <ul>
+        <li><strong>Source of truth (decisions):</strong> <code>plans/2026-05-admin-table-unification-design.md</code> — PR #369</li>
+        <li><strong>Sprint plan:</strong> <code>plans/2026-05-admin-table-unification-sprint.md</code> §3 Phase 1 — PR #370</li>
+        <li><strong>Token reference:</strong> <code>src/app/globals.css</code> (Tailwind v4 inline <code>@theme</code> block)</li>
+        <li><strong>Existing primitives:</strong> <code>src/components/ui/</code> (button, dialog, checkbox, select)</li>
+        <li><strong>Strings:</strong> all copy in these previews is a placeholder. Aria countersigns the locked Phase 1 strings in parallel; Bolt swaps placeholders to Aria-locked strings during PR-1A wiring.</li>
+      </ul>
+    </section>
+
+    <section class="preview-section">
+      <h2 class="preview-section-title">Components</h2>
+      <p class="preview-section-desc">One preview per shared primitive plus a summary tokens reference.</p>
+      <div class="index-grid">
+        <a class="index-card" href="row-actions.html">
+          <p class="index-card-id">PR-1A · &lt;RowActions&gt;</p>
+          <h3 class="index-card-title">Row actions — hover reveal</h3>
+          <p class="index-card-desc">
+            At-rest data only. On row hover: checkbox, edit pencil, delete trash, plus an optional
+            surface-special slot (e.g. Teams "Mark paid"). Photos is exempt — D7.
+          </p>
+        </a>
+        <a class="index-card" href="status-tabs.html">
+          <p class="index-card-id">PR-1A · &lt;StatusTabs&gt;</p>
+          <h3 class="index-card-title">Status tabs with inline counts</h3>
+          <p class="index-card-desc">
+            Five surface variants. Active tab gets a brand-teal underline; inactive tabs use
+            <code>muted-foreground</code>. Counts render as a subtle badge inline with the label.
+          </p>
+        </a>
+        <a class="index-card" href="filter-bar.html">
+          <p class="index-card-id">PR-1A · &lt;FilterBar&gt;</p>
+          <h3 class="index-card-title">Filter bar — search + dropdowns + chips</h3>
+          <p class="index-card-desc">
+            Three-row vertical structure: full-width search; uppercase-labeled secondary
+            dropdowns; active-filter chips with a Clear-all link (hidden when 0 filters active).
+          </p>
+        </a>
+        <a class="index-card" href="modal-section.html">
+          <p class="index-card-id">PR-1A · &lt;ModalSection&gt;</p>
+          <h3 class="index-card-title">Modal section — banded header + body</h3>
+          <p class="index-card-desc">
+            Uppercase section label sitting above a hairline rule. Body padding is generous
+            enough to hold form-field grids without crowding.
+          </p>
+        </a>
+        <a class="index-card" href="role-cards-form.html">
+          <p class="index-card-id">PR-1A · D12 layout</p>
+          <h3 class="index-card-title">Role cards — Contacts multi-type form</h3>
+          <p class="index-card-desc">
+            Five always-visible role cards. Selected cards expand inline; unselected cards
+            stay collapsed at ~55% opacity. No layout shift on toggle. Sample contact: Lynne Davenport.
+          </p>
+        </a>
+        <a class="index-card" href="checkbox-primitive.html">
+          <p class="index-card-id">PR-1B · &lt;Checkbox&gt; override</p>
+          <h3 class="index-card-title">Checkbox primitive — F17 / F18 fix</h3>
+          <p class="index-card-desc">
+            Visible 2px slate-400 border at rest. Filled brand-teal background + white check
+            when selected. Both row-selection (16px) and form (20px) sizes verified.
+          </p>
+        </a>
+        <a class="index-card" href="tokens.md">
+          <p class="index-card-id">Reference · markdown</p>
+          <h3 class="index-card-title">Tokens summary (tokens.md)</h3>
+          <p class="index-card-desc">
+            Cross-component token decisions in one place: color, typography, spacing, radius,
+            elevation, motion, iconography, a11y. Renders directly on GitHub; viewable as raw
+            text locally.
+          </p>
+        </a>
+      </div>
+    </section>
+
+    <section class="preview-section">
+      <h2 class="preview-section-title">Brand token sample</h2>
+      <p class="preview-section-desc">The Phase 1 previews use these production tokens unchanged.</p>
+      <div class="swatch-grid">
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--brand);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">brand</span>
+            <span class="swatch-hex">#5797a6</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--brand-dark);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">brand-dark</span>
+            <span class="swatch-hex">#3A6B83</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--brand-muted);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">brand-muted</span>
+            <span class="swatch-hex">#E8F0F4</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--foreground);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">foreground</span>
+            <span class="swatch-hex">#1A2E3A</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--muted);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">muted</span>
+            <span class="swatch-hex">#F1F4F6</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--destructive);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">destructive</span>
+            <span class="swatch-hex">#C53030</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--success);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">success</span>
+            <span class="swatch-hex">#2E7D5E</span>
+          </div>
+        </div>
+        <div class="swatch">
+          <div class="swatch-fill" style="background: var(--warning);"></div>
+          <div class="swatch-meta">
+            <span class="swatch-name">warning</span>
+            <span class="swatch-hex">#B45309</span>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,535 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>&lt;RowActions&gt; — Phase 1 Design Preview</title>
+  <link rel="stylesheet" href="preview.css" />
+  <style>
+    /* ----- Table primitive ----- */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+      table-layout: fixed;
+    }
+
+    .data-table thead th {
+      text-align: left;
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--neutral-50);
+    }
+
+    .data-table tbody td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: middle;
+      color: var(--foreground);
+    }
+
+    .data-table tbody tr {
+      position: relative;
+      transition: background-color 100ms var(--ease-out);
+    }
+
+    /* Header row: always-visible select-all checkbox */
+    .data-table thead .col-select { width: 40px; padding-left: 16px; padding-right: 0; }
+    .data-table tbody .col-select { width: 40px; padding-left: 16px; padding-right: 0; }
+    .data-table .col-actions { width: 200px; text-align: right; }
+
+    /* ----- The RowActions primitive ----- */
+    .row-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 150ms var(--ease-out);
+      pointer-events: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    /* Reveal on row hover (or focus-within for keyboard nav) */
+    .data-table tbody tr:hover,
+    .data-table tbody tr:focus-within {
+      background: rgba(232, 240, 244, 0.45); /* brand-muted / 45% — subtle row tint */
+    }
+
+    .data-table tbody tr:hover .row-actions,
+    .data-table tbody tr:focus-within .row-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Per-row checkbox lives on the left in its own column; same hover reveal */
+    .row-select {
+      opacity: 0;
+      transition: opacity 150ms var(--ease-out);
+    }
+
+    .data-table tbody tr:hover .row-select,
+    .data-table tbody tr:focus-within .row-select,
+    .data-table tbody tr.is-selected .row-select {
+      opacity: 1;
+    }
+
+    /* Persist when row is selected */
+    .data-table tbody tr.is-selected {
+      background: rgba(232, 240, 244, 0.65);
+    }
+
+    .data-table tbody tr.is-selected .row-actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    /* Forced-on (demo / always-visible) variant for the hover-state strip */
+    .demo-force-hover { background: rgba(232, 240, 244, 0.45) !important; }
+    .demo-force-hover .row-actions { opacity: 1 !important; pointer-events: auto !important; }
+    .demo-force-hover .row-select { opacity: 1 !important; }
+
+    /* Checkbox primitive — minimum render of PR-1B fix */
+    .cb {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--slate-400);
+      border-radius: 3px;
+      background: var(--background);
+      cursor: pointer;
+      transition: background-color 100ms var(--ease-out), border-color 100ms var(--ease-out);
+      flex-shrink: 0;
+    }
+
+    .cb:hover { border-color: var(--brand); }
+
+    .cb.is-checked {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .cb svg { display: none; width: 10px; height: 10px; color: white; }
+    .cb.is-checked svg { display: block; }
+
+    /* Icon button variant for pencil + trash */
+    .row-actions .btn--icon {
+      width: 28px;
+      height: 28px;
+      color: var(--foreground);
+    }
+
+    .row-actions .btn--icon:hover { background: var(--muted); }
+    .row-actions .btn--icon.btn--destructive:hover {
+      background: rgba(197, 48, 48, 0.10);
+      color: var(--destructive);
+    }
+
+    /* Surface-special slot — labeled button, not icon */
+    .row-actions .surface-special {
+      margin-left: 4px;
+    }
+
+    .row-state-label {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .row-state-label--pending {
+      background: var(--warning-muted);
+      color: var(--warning);
+    }
+
+    .row-state-label--paid {
+      background: var(--success-muted);
+      color: var(--success);
+    }
+
+    .row-state-label--inactive {
+      background: var(--muted);
+      color: var(--muted-foreground);
+    }
+
+    .row-state-label--active {
+      background: var(--brand-muted);
+      color: var(--brand-darker);
+    }
+
+    .surface-frame {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: var(--card);
+    }
+
+    .surface-eyebrow {
+      padding: 10px 16px;
+      background: var(--neutral-50);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .surface-eyebrow strong { color: var(--brand-dark); font-weight: 700; }
+
+    .annot {
+      font-size: 11.5px;
+      color: var(--muted-foreground);
+      font-style: italic;
+      margin: 8px 16px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <a class="preview-back" href="index.html">← Back to index</a>
+    <header class="preview-header">
+      <p class="preview-eyebrow">PR-1A · src/components/admin/row-actions.tsx</p>
+      <h1 class="preview-title">&lt;RowActions&gt;</h1>
+      <p class="preview-subtitle">
+        At-rest, rows show only data. On hover the row tints, the per-row checkbox, edit pencil, and
+        delete trash fade in (150ms ease-out), and the surface-special slot renders a labeled button
+        when the surface needs one (e.g. Teams "Mark paid" only when payment status is pending).
+        Photos is exempt from this rule per D7 — its moderation buttons stay always-visible.
+      </p>
+    </header>
+
+    <!-- ───────────────────────── 1. AT-REST ───────────────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">1 · At rest</h2>
+      <p class="preview-section-desc">No controls visible. Data is the only ink in the row. Hover any row in the table below to reveal the controls.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow">
+          <span><strong>Contacts</strong> — at rest (hover to interact)</span>
+          <span style="font-size: 11px; color: var(--muted-foreground);">375 contacts</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-select"><span class="cb" aria-hidden="true"></span></th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Email</th>
+              <th class="col-actions">&nbsp;</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Lynne Davenport</td>
+              <td>Player · Donor</td>
+              <td>lynne@example.org</td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit Lynne Davenport"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete Lynne Davenport"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Mike Evans</td>
+              <td>Sponsor</td>
+              <td>mike@example.org</td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit Mike Evans"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete Mike Evans"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Carolina East Health</td>
+              <td>Sponsor · Donor</td>
+              <td>contact@carolinaeast.org</td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit Carolina East Health"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete Carolina East Health"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="annot">Hover a row above. Every interactive control fades in over 150ms ease-out — no shift, no reflow.</p>
+        <div style="height: 16px;"></div>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── 2. HOVER STATE ───────────────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">2 · Hover state — explicit (forced on)</h2>
+      <p class="preview-section-desc">Same row pattern with the hover state pinned, so reviewers can audit dimensions and spacing without holding a mouse. Background tint is <code>brand-muted / 45%</code>.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow">
+          <span><strong>Contacts</strong> — hover state (Contacts has no surface-special)</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-select"><span class="cb" aria-hidden="true"></span></th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Email</th>
+              <th class="col-actions">&nbsp;</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="demo-force-hover">
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Lynne Davenport</td>
+              <td>Player · Donor</td>
+              <td>lynne@example.org</td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit Lynne Davenport"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete Lynne Davenport"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ───────────────────────── 3. SURFACE VARIANTS ───────────────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">3 · Surface variants</h2>
+      <p class="preview-section-desc">Three tables. Hover any row to see the per-surface treatment.</p>
+
+      <!-- 3a · Contacts -->
+      <div class="surface-frame">
+        <div class="surface-eyebrow">
+          <span><strong>Contacts</strong> — no surface-special slot</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-select"><span class="cb" aria-hidden="true"></span></th>
+              <th>Name</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th class="col-actions">&nbsp;</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Lynne Davenport</td>
+              <td>Player · Donor</td>
+              <td><span class="row-state-label row-state-label--active">Subscribed</span></td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit Lynne Davenport"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete Lynne Davenport"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="height: 12px;"></div>
+      </div>
+      <p class="preview-caption">Contacts hover-row reveals: select / pencil / trash. No surface-special.</p>
+
+      <!-- 3b · Teams (with surface-special when pending) -->
+      <div class="surface-frame">
+        <div class="surface-eyebrow">
+          <span><strong>Teams</strong> — surface-special: "Mark paid" labeled button (only when pending)</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-select"><span class="cb" aria-hidden="true"></span></th>
+              <th>Captain</th>
+              <th>Session</th>
+              <th>Payment</th>
+              <th class="col-actions">&nbsp;</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="demo-force-hover">
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Scott Davenport</td>
+              <td>Morning</td>
+              <td><span class="row-state-label row-state-label--pending">Pending</span></td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit team"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete team"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                  <span class="surface-special"><button class="btn btn--outline btn--sm">Mark paid</button></span>
+                </span>
+              </td>
+            </tr>
+            <tr>
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Mike Evans</td>
+              <td>Afternoon</td>
+              <td><span class="row-state-label row-state-label--paid">Paid</span></td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit team"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete team"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                  <!-- No surface-special when paid -->
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="annot">Top row: pending → "Mark paid" button rendered. Second row (paid): omitted entirely. The slot is absent, not disabled.</p>
+        <div style="height: 16px;"></div>
+      </div>
+      <p class="preview-caption">Teams hover-row reveals: select / pencil / trash / surface-special <code>Mark paid</code>. The surface-special button is omitted entirely when payment status is anything other than <code>pending</code>.</p>
+
+      <!-- 3c · Sponsors -->
+      <div class="surface-frame">
+        <div class="surface-eyebrow">
+          <span><strong>Sponsors</strong> — no surface-special slot</span>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th class="col-select"><span class="cb" aria-hidden="true"></span></th>
+              <th>Sponsor</th>
+              <th>Tier</th>
+              <th>Status</th>
+              <th class="col-actions">&nbsp;</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td class="col-select"><span class="cb row-select" aria-hidden="true"></span></td>
+              <td>Carolina East Health</td>
+              <td>Champion</td>
+              <td><span class="row-state-label row-state-label--active">Active</span></td>
+              <td class="col-actions">
+                <span class="row-actions">
+                  <button class="btn btn--ghost btn--icon" aria-label="Edit Carolina East Health"><svg class="icon" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+                  <button class="btn btn--ghost btn--icon btn--destructive" aria-label="Delete Carolina East Health"><svg class="icon" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>
+                </span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <div style="height: 12px;"></div>
+      </div>
+      <p class="preview-caption">Sponsors hover-row reveals: select / pencil / trash. No surface-special. (Sponsorships looks identical — also no surface-special.)</p>
+    </section>
+
+    <!-- ───────────────────────── TOKEN SPEC ───────────────────────── -->
+    <div class="token-spec">
+      <h3>Token spec — <code>&lt;RowActions&gt;</code></h3>
+      <table>
+        <thead>
+          <tr><th>Token</th><th>Value</th><th>Tailwind v4 class</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Icon button size</td>
+            <td>28 × 28px</td>
+            <td><code>size-7 rounded-[var(--radius-md)]</code></td>
+            <td>Matches existing <code>icon-sm</code> Button variant. ≥44pt minimum is met by the row hit-target as a whole, not the icon alone.</td>
+          </tr>
+          <tr>
+            <td>Icon glyph size</td>
+            <td>16 × 16px (lucide stroke 2)</td>
+            <td><code>[&_svg]:size-4</code></td>
+            <td>Pencil + trash from <code>lucide-react</code>: <code>Pencil</code>, <code>Trash2</code>.</td>
+          </tr>
+          <tr>
+            <td>Per-row checkbox</td>
+            <td>16 × 16px</td>
+            <td><code>h-4 w-4</code> (PR-1B fix)</td>
+            <td>See <a href="checkbox-primitive.html">checkbox preview</a> for border + fill spec.</td>
+          </tr>
+          <tr>
+            <td>Inter-control spacing</td>
+            <td>4px</td>
+            <td><code>gap-1</code></td>
+            <td>Tight cluster — controls read as a single group, not three buttons.</td>
+          </tr>
+          <tr>
+            <td>Surface-special left margin</td>
+            <td>4px (additional)</td>
+            <td><code>ml-1</code></td>
+            <td>Visual separation from the icon cluster; signals it's a different action class.</td>
+          </tr>
+          <tr>
+            <td>Opacity transition</td>
+            <td>0 → 1 over 150ms ease-out</td>
+            <td><code>opacity-0 group-hover:opacity-100 transition-opacity duration-150 ease-out</code></td>
+            <td>Use a <code>group</code> on <code>&lt;tr&gt;</code> + <code>group-hover</code> on the actions container. Also reveal on <code>focus-within</code> for keyboard nav.</td>
+          </tr>
+          <tr>
+            <td>Row hover tint</td>
+            <td><code>brand-muted / 45%</code></td>
+            <td><code>hover:bg-brand-muted/45</code></td>
+            <td>Subtle — the row tint signals interactivity; the controls signal what's possible.</td>
+          </tr>
+          <tr>
+            <td>Selected row tint</td>
+            <td><code>brand-muted / 65%</code></td>
+            <td><code>data-[state=selected]:bg-brand-muted/65</code></td>
+            <td>When the per-row checkbox is checked, row tint persists + actions stay revealed.</td>
+          </tr>
+          <tr>
+            <td>z-index</td>
+            <td>1 (above row content)</td>
+            <td><code>relative z-10</code> on the actions container</td>
+            <td>Ensures icon hit targets sit above any cell-content overflow.</td>
+          </tr>
+          <tr>
+            <td>Trash hover treatment</td>
+            <td>destructive / 10% bg</td>
+            <td><code>hover:bg-destructive/10 hover:text-destructive</code></td>
+            <td>Color paired with icon shape — destructive intent is never color-only.</td>
+          </tr>
+          <tr>
+            <td>Surface-special button</td>
+            <td>Outline variant, sm size</td>
+            <td><code>variant="outline" size="sm"</code></td>
+            <td>Labeled button. Per surface, the slot may be empty (Contacts/Sponsors/Sponsorships) or present (Teams "Mark paid").</td>
+          </tr>
+          <tr>
+            <td>Hidden checkbox column behavior</td>
+            <td>Reserved 40px column even at rest</td>
+            <td><code>w-10 px-4</code> on <code>&lt;th&gt;</code> + first <code>&lt;td&gt;</code></td>
+            <td>Checkbox column is part of the table grid even when invisible — prevents column shift on hover.</td>
+          </tr>
+          <tr>
+            <td>D7 exemption (Photos)</td>
+            <td>Approve / Reject / Delete always-visible</td>
+            <td>n/a — Photos uses its own moderation component</td>
+            <td><code>RowActions</code> is NOT used on Photos. Moderation = primary task; hover-only would hide the work.</td>
+          </tr>
+          <tr>
+            <td>aria-label format</td>
+            <td>"Edit {item}", "Delete {item}", "Select {item}"</td>
+            <td>n/a — passed via props</td>
+            <td>Aria-locked strings; F-N12 pattern. Header select-all uses <code>aria-label="Select all"</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

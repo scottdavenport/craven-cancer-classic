@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Role cards — Contacts multi-type form (D12)</title>
+  <link rel="stylesheet" href="preview.css" />
+  <style>
+    /* Modal frame */
+    .dialog-stage {
+      background: linear-gradient(180deg, rgba(26, 46, 58, 0.06), rgba(26, 46, 58, 0.10));
+      padding: 48px 24px;
+      border-radius: var(--radius-xl);
+      display: flex;
+      justify-content: center;
+    }
+
+    .dialog-popup {
+      width: 100%;
+      max-width: 580px;
+      background: var(--popover);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 86vh;
+    }
+
+    .dialog-header {
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .dialog-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 17px;
+      margin: 0;
+      color: var(--foreground);
+      letter-spacing: -0.005em;
+    }
+
+    .dialog-close {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: transparent;
+      border: 0;
+      color: var(--muted-foreground);
+      cursor: pointer;
+    }
+
+    .dialog-close:hover { background: var(--muted); color: var(--foreground); }
+
+    .dialog-body { padding: 4px 20px 16px; overflow-y: auto; }
+
+    .dialog-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(241, 244, 246, 0.6);
+      border-top: 1px solid var(--border);
+    }
+
+    .dialog-footer .right { display: flex; gap: 8px; }
+
+    /* Modal section */
+    .modal-section { padding: 16px 0 0; }
+    .modal-section + .modal-section { margin-top: 8px; }
+    .modal-section-header {
+      padding: 0 0 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+    .modal-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--brand-darker);
+    }
+
+    /* Field grid */
+    .field-grid { display: grid; gap: 10px; }
+    .field-grid--3col { grid-template-columns: 1fr 2fr 2fr; }
+    .field-grid--2col { grid-template-columns: 1fr 1fr; }
+    .field { display: flex; flex-direction: column; gap: 4px; }
+    .field-label { font-size: 11px; font-weight: 600; color: var(--muted-foreground); }
+    .field-input {
+      height: 36px;
+      padding: 0 12px;
+      background: var(--background);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-size: 13.5px;
+      color: var(--foreground);
+      display: flex;
+      align-items: center;
+    }
+
+    /* ─── Role card primitive ─── */
+    .role-card {
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 12px 14px;
+      background: var(--card);
+      transition:
+        border-color 150ms var(--ease-out),
+        background-color 150ms var(--ease-out),
+        opacity 150ms var(--ease-out);
+    }
+
+    .role-card + .role-card { margin-top: 8px; }
+
+    .role-card-head {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* Role toggle switch */
+    .role-toggle {
+      position: relative;
+      width: 32px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--neutral-100);
+      border: 0;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: background-color 150ms var(--ease-out);
+    }
+
+    .role-toggle::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: var(--shadow-xs);
+      transition: left 150ms var(--ease-spring);
+    }
+
+    .role-card.is-on .role-toggle { background: var(--primary); }
+    .role-card.is-on .role-toggle::after { left: 16px; }
+
+    .role-card-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: var(--brand-muted);
+      color: var(--brand-darker);
+      flex-shrink: 0;
+    }
+
+    .role-card-icon .icon { width: 16px; height: 16px; }
+
+    .role-card-name {
+      font-family: var(--font-sans);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--foreground);
+      flex: 1;
+    }
+
+    .role-card-summary {
+      font-size: 12px;
+      color: var(--muted-foreground);
+      font-weight: 500;
+    }
+
+    /* Selected state */
+    .role-card.is-on {
+      border-color: var(--brand);
+      background: rgba(232, 240, 244, 0.30);
+    }
+
+    /* Unselected state */
+    .role-card.is-off {
+      opacity: 0.55;
+    }
+
+    .role-card.is-off:hover { opacity: 0.85; }
+
+    /* Expanded fields region — only visible on selected cards */
+    .role-card-fields {
+      margin-top: 12px;
+      padding-left: 38px; /* aligns under role-card-name, past toggle + icon */
+      border-top: 1px dashed var(--border);
+      padding-top: 12px;
+    }
+
+    .role-card.is-off .role-card-fields { display: none; }
+
+    .annot-banner {
+      padding: 10px 14px;
+      background: var(--brand-muted);
+      border-radius: var(--radius-md);
+      color: var(--brand-darker);
+      font-size: 12px;
+      margin: 12px 0 0;
+    }
+
+    /* Validation message under Roles header (F19) */
+    .roles-empty-msg {
+      padding: 10px 14px;
+      background: rgba(180, 83, 9, 0.08);
+      border-left: 3px solid var(--warning);
+      border-radius: var(--radius-md);
+      color: var(--warning);
+      font-size: 12.5px;
+      font-weight: 500;
+      margin: 0 0 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <a class="preview-back" href="index.html">← Back to index</a>
+    <header class="preview-header">
+      <p class="preview-eyebrow">PR-1A · Phase 3 wiring · D12 locked layout</p>
+      <h1 class="preview-title">Role cards — Contacts multi-type form</h1>
+      <p class="preview-subtitle">
+        D12 locked: every role (Player / Sponsor / Donor / Volunteer / Other) becomes an always-visible
+        card with a toggle. Selected cards expand inline to show role-specific fields. Unselected cards
+        stay collapsed (~55% opacity). No layout shift on toggle. Replaces the 5 invisible checkboxes.
+        Sample contact: Lynne Davenport — Player + Donor selected.
+      </p>
+    </header>
+
+    <!-- ─────────────── PRIMARY: full edit modal ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">Edit contact — Identity + Roles sections</h2>
+      <p class="preview-section-desc">Identity uses a 1fr/2fr/2fr grid (F12). Roles section renders 5 cards stacked vertically; 2 selected, 3 unselected.</p>
+
+      <div class="dialog-stage">
+        <div class="dialog-popup" role="dialog" aria-labelledby="dialog-title-edit">
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="dialog-title-edit">Edit contact</h2>
+            <button class="dialog-close" aria-label="Close">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="dialog-body">
+
+            <!-- Identity -->
+            <div class="modal-section">
+              <div class="modal-section-header">
+                <span class="modal-section-label">Identity</span>
+              </div>
+              <div class="modal-section-body">
+                <div class="field-grid field-grid--3col">
+                  <div class="field">
+                    <span class="field-label">Salutation</span>
+                    <div class="field-input">Mrs.</div>
+                  </div>
+                  <div class="field">
+                    <span class="field-label">First name</span>
+                    <div class="field-input">Lynne</div>
+                  </div>
+                  <div class="field">
+                    <span class="field-label">Last name</span>
+                    <div class="field-input">Davenport</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Roles -->
+            <div class="modal-section">
+              <div class="modal-section-header">
+                <span class="modal-section-label">Roles</span>
+              </div>
+              <div class="modal-section-body">
+
+                <!-- Player — selected, expanded -->
+                <div class="role-card is-on">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="true" aria-label="Toggle Player role"></button>
+                    <span class="role-card-icon">
+                      <svg class="icon" viewBox="0 0 24 24"><path d="M12 2v4"/><path d="M12 22v-4"/><circle cx="12" cy="12" r="4"/><path d="m4.93 4.93 2.83 2.83"/><path d="m16.24 16.24 2.83 2.83"/></svg>
+                    </span>
+                    <span class="role-card-name">Player</span>
+                    <span class="role-card-summary">Handicap · Shirt size</span>
+                  </div>
+                  <div class="role-card-fields">
+                    <div class="field-grid field-grid--2col">
+                      <div class="field">
+                        <span class="field-label">Handicap</span>
+                        <div class="field-input">12</div>
+                      </div>
+                      <div class="field">
+                        <span class="field-label">Shirt size</span>
+                        <div class="field-input">M</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Sponsor — collapsed -->
+                <div class="role-card is-off">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="false" aria-label="Toggle Sponsor role"></button>
+                    <span class="role-card-icon">
+                      <svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+                    </span>
+                    <span class="role-card-name">Sponsor</span>
+                    <span class="role-card-summary">Tier · Recognition</span>
+                  </div>
+                </div>
+
+                <!-- Donor — selected, expanded -->
+                <div class="role-card is-on">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="true" aria-label="Toggle Donor role"></button>
+                    <span class="role-card-icon">
+                      <svg class="icon" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></svg>
+                    </span>
+                    <span class="role-card-name">Donor</span>
+                    <span class="role-card-summary">Tribute · Recognition</span>
+                  </div>
+                  <div class="role-card-fields">
+                    <div class="field-grid field-grid--2col">
+                      <div class="field">
+                        <span class="field-label">Tribute</span>
+                        <div class="field-input">In honor of Scott Davenport Sr.</div>
+                      </div>
+                      <div class="field">
+                        <span class="field-label">Recognition name</span>
+                        <div class="field-input">Davenport Family</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Volunteer — collapsed -->
+                <div class="role-card is-off">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="false" aria-label="Toggle Volunteer role"></button>
+                    <span class="role-card-icon">
+                      <svg class="icon" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    </span>
+                    <span class="role-card-name">Volunteer</span>
+                    <span class="role-card-summary">Notes</span>
+                  </div>
+                </div>
+
+                <!-- Other — collapsed -->
+                <div class="role-card is-off">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="false" aria-label="Toggle Other role"></button>
+                    <span class="role-card-icon">
+                      <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                    </span>
+                    <span class="role-card-name">Other</span>
+                    <span class="role-card-summary">Notes</span>
+                  </div>
+                </div>
+
+                <p class="annot-banner">
+                  Behavior: clicking the toggle on a card flips <code>is-off ↔ is-on</code>; expansion
+                  uses height transition (200ms ease-out). Card height changes — outer container does
+                  not. Total Roles section height remains stable per D12 ("no layout shift").
+                </p>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="dialog-footer">
+            <button class="btn btn--destructive btn--sm">Delete contact</button>
+            <div class="right">
+              <button class="btn btn--outline btn--sm">Cancel</button>
+              <button class="btn btn--default btn--sm">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────── EDGE CASE: zero roles selected (F19) ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">Edge case · zero roles selected</h2>
+      <p class="preview-section-desc">When all 5 cards are in <code>is-off</code> state, an inline validation message renders under the Roles header (F19). Save remains enabled — server validates — but the message anchors the user's attention.</p>
+
+      <div class="dialog-stage">
+        <div class="dialog-popup" role="dialog" aria-labelledby="dialog-title-empty">
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="dialog-title-empty">New contact</h2>
+            <button class="dialog-close" aria-label="Close">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="dialog-body">
+            <div class="modal-section">
+              <div class="modal-section-header">
+                <span class="modal-section-label">Roles</span>
+              </div>
+              <div class="modal-section-body">
+                <p class="roles-empty-msg">At least one role is required to save.</p>
+                <div class="role-card is-off">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="false"></button>
+                    <span class="role-card-icon"><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/></svg></span>
+                    <span class="role-card-name">Player</span>
+                    <span class="role-card-summary">Handicap · Shirt size</span>
+                  </div>
+                </div>
+                <div class="role-card is-off">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="false"></button>
+                    <span class="role-card-icon"><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/></svg></span>
+                    <span class="role-card-name">Sponsor</span>
+                    <span class="role-card-summary">Tier · Recognition</span>
+                  </div>
+                </div>
+                <div class="role-card is-off">
+                  <div class="role-card-head">
+                    <button class="role-toggle" role="switch" aria-checked="false"></button>
+                    <span class="role-card-icon"><svg class="icon" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2"/></svg></span>
+                    <span class="role-card-name">Donor</span>
+                    <span class="role-card-summary">Tribute · Recognition</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="dialog-footer">
+            <button class="btn btn--destructive btn--sm" disabled style="opacity: 0.4;">Delete contact</button>
+            <div class="right">
+              <button class="btn btn--outline btn--sm">Cancel</button>
+              <button class="btn btn--default btn--sm">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────── TOKEN SPEC ─────────────── -->
+    <div class="token-spec">
+      <h3>Token spec — role cards (D12 layout)</h3>
+      <table>
+        <thead>
+          <tr><th>Token</th><th>Value</th><th>Tailwind v4 class</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Card border</td>
+            <td>1.5px solid · border (off) → brand (on)</td>
+            <td><code>border-[1.5px] border-border data-[state=on]:border-brand</code></td>
+            <td>Border thickness matches Input + Filter dropdown — same family.</td>
+          </tr>
+          <tr>
+            <td>Card radius</td>
+            <td>10px</td>
+            <td><code>rounded-lg</code></td>
+            <td>Matches button radius for visual consistency.</td>
+          </tr>
+          <tr>
+            <td>Card padding</td>
+            <td>12px (vertical) · 14px (horizontal)</td>
+            <td><code>py-3 px-3.5</code></td>
+            <td>Roomy enough that the toggle + icon + name + summary read as one row.</td>
+          </tr>
+          <tr>
+            <td>Card background — selected</td>
+            <td>brand-muted / 30%</td>
+            <td><code>data-[state=on]:bg-brand-muted/30</code></td>
+            <td>Subtle wash so the card reads as "on" without overpowering the modal.</td>
+          </tr>
+          <tr>
+            <td>Card background — unselected</td>
+            <td>card (white)</td>
+            <td><code>bg-card</code></td>
+            <td>Plain card surface. Opacity carries the dimmed read.</td>
+          </tr>
+          <tr>
+            <td>Unselected opacity</td>
+            <td>0.55 (rises to 0.85 on hover)</td>
+            <td><code>data-[state=off]:opacity-55 hover:opacity-85</code></td>
+            <td>Dim but legible. Hover-rise hints at clickability.</td>
+          </tr>
+          <tr>
+            <td>Inter-card gap</td>
+            <td>8px</td>
+            <td><code>[&_.role-card+.role-card]:mt-2</code></td>
+            <td>Tight stack — 5 cards in roughly the same vertical real estate as the old 5-checkbox row.</td>
+          </tr>
+          <tr>
+            <td>Card head gap</td>
+            <td>10px (toggle ↔ icon ↔ name ↔ summary)</td>
+            <td><code>flex items-center gap-2.5</code></td>
+            <td>Predictable rhythm across all 5 cards.</td>
+          </tr>
+          <tr>
+            <td>Toggle switch dimensions</td>
+            <td>32 × 18px · 14px thumb · 2px inset</td>
+            <td>n/a — wrap shadcn Switch primitive</td>
+            <td>Same primitive as the FilterBar boolean toggle (Captains-only). One Switch component, two surfaces.</td>
+          </tr>
+          <tr>
+            <td>Toggle on/off colors</td>
+            <td>On = primary · Off = neutral-100</td>
+            <td><code>data-[checked]:bg-primary bg-neutral-100</code></td>
+            <td>Color paired with thumb position — never color-only.</td>
+          </tr>
+          <tr>
+            <td>Toggle thumb easing</td>
+            <td>150ms cubic-bezier spring</td>
+            <td><code>transition-[left] duration-150 ease-spring</code></td>
+            <td>Slight overshoot keeps it tactile.</td>
+          </tr>
+          <tr>
+            <td>Role icon container</td>
+            <td>28 × 28px · radius-md · brand-muted bg · brand-darker fg</td>
+            <td><code>size-7 rounded-[var(--radius-md)] bg-brand-muted text-brand-darker</code></td>
+            <td>Lucide icons inside (Goal, Briefcase, Heart, Users, HelpCircle). Icon size 16px stroke-2.</td>
+          </tr>
+          <tr>
+            <td>Role name typography</td>
+            <td>14px · weight 600 · foreground</td>
+            <td><code>text-sm font-semibold text-foreground</code></td>
+            <td>Manrope. Reads as a clear card title.</td>
+          </tr>
+          <tr>
+            <td>Role summary typography</td>
+            <td>12px · weight 500 · muted-foreground</td>
+            <td><code>text-xs font-medium text-muted-foreground</code></td>
+            <td>Sub-label hinting at fields the card will reveal when toggled on.</td>
+          </tr>
+          <tr>
+            <td>Expanded fields padding-left</td>
+            <td>38px (aligns under name, past toggle + icon)</td>
+            <td><code>pl-[38px]</code></td>
+            <td>Visual indent ties expanded fields to their parent card.</td>
+          </tr>
+          <tr>
+            <td>Expanded fields top-rule</td>
+            <td>1px dashed · border · padding-top 12px</td>
+            <td><code>border-t border-dashed border-border pt-3</code></td>
+            <td>Soft separation between toggle row and field group.</td>
+          </tr>
+          <tr>
+            <td>Expand transition</td>
+            <td>height + opacity · 200ms ease-out</td>
+            <td><code>transition-all duration-200 ease-out</code></td>
+            <td>Card height grows; outer container does not (D12 "no layout shift" — outer Roles section stays stable because all 5 cards always render).</td>
+          </tr>
+          <tr>
+            <td>F19 empty-roles message</td>
+            <td>warning-muted bg · 3px warning border-left · 12.5px · weight 500</td>
+            <td><code>bg-warning/10 border-l-[3px] border-warning rounded-[var(--radius-md)] px-3.5 py-2.5 text-[12.5px] font-medium text-warning</code></td>
+            <td>Renders above the cards when zero are selected. String "At least one role is required to save." is Aria-locked.</td>
+          </tr>
+          <tr>
+            <td>Identity grid</td>
+            <td>1fr / 2fr / 2fr · gap 10px</td>
+            <td><code>grid grid-cols-[1fr_2fr_2fr] gap-2.5</code></td>
+            <td>Salutation gets a narrow column; First + Last get equal wider columns. From F12 spec.</td>
+          </tr>
+          <tr>
+            <td>Role card aria</td>
+            <td>Toggle uses <code>role="switch" aria-checked</code></td>
+            <td>n/a — primitive default</td>
+            <td>Screen-reader announces "Player switch, on" / "Sponsor switch, off".</td>
+          </tr>
+          <tr>
+            <td>Role-name strings</td>
+            <td>Aria-locked: Player / Sponsor / Donor / Volunteer / Other</td>
+            <td>n/a</td>
+            <td>Confirmed in Phase 3 Aria gate (sprint plan §3 Phase 3).</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

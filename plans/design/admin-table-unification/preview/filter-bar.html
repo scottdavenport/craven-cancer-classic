@@ -1,0 +1,519 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>&lt;FilterBar&gt; — Phase 1 Design Preview</title>
+  <link rel="stylesheet" href="preview.css" />
+  <style>
+    .filter-bar {
+      padding: 16px;
+      background: var(--card);
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    /* Row 1 — search */
+    .filter-search {
+      position: relative;
+    }
+
+    .filter-search .icon {
+      position: absolute;
+      top: 50%;
+      left: 12px;
+      transform: translateY(-50%);
+      color: var(--muted-foreground);
+      pointer-events: none;
+    }
+
+    .filter-search .input {
+      padding-left: 36px;
+    }
+
+    /* Row 2 — labeled secondary filters */
+    .filter-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .filter-group { display: flex; flex-direction: column; gap: 4px; }
+
+    .filter-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+    }
+
+    .filter-select {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+      height: 36px;
+      background: var(--background);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-size: 14px;
+      color: var(--foreground);
+      cursor: pointer;
+      transition: border-color 100ms var(--ease-out), background-color 100ms var(--ease-out);
+    }
+
+    .filter-select:hover { background: rgba(232, 240, 244, 0.5); }
+
+    .filter-select .icon {
+      width: 14px;
+      height: 14px;
+      color: var(--muted-foreground);
+    }
+
+    /* Boolean toggle */
+    .filter-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      height: 36px;
+      padding: 0 12px;
+      background: var(--background);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+    }
+
+    .filter-toggle .switch {
+      width: 32px;
+      height: 18px;
+      border-radius: 999px;
+      background: var(--neutral-100);
+      position: relative;
+      flex-shrink: 0;
+      transition: background-color 150ms var(--ease-out);
+    }
+
+    .filter-toggle .switch::after {
+      content: "";
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 14px;
+      height: 14px;
+      background: white;
+      border-radius: 50%;
+      box-shadow: var(--shadow-xs);
+      transition: left 150ms var(--ease-spring);
+    }
+
+    .filter-toggle.is-on .switch {
+      background: var(--primary);
+    }
+
+    .filter-toggle.is-on .switch::after {
+      left: 16px;
+    }
+
+    .filter-toggle .label {
+      font-size: 14px;
+      color: var(--foreground);
+      font-weight: 500;
+    }
+
+    /* Row 3 — active chips */
+    .filter-chips-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 4px;
+      border-top: 1px dashed var(--border);
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      height: 26px;
+      padding: 0 4px 0 10px;
+      background: var(--brand-muted);
+      color: var(--brand-darker);
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 500;
+    }
+
+    .chip-key {
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .chip-value { font-weight: 500; }
+
+    .chip-close {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 0;
+      background: transparent;
+      color: var(--brand-darker);
+      cursor: pointer;
+      transition: background-color 100ms var(--ease-out);
+    }
+
+    .chip-close:hover { background: rgba(36, 74, 91, 0.12); }
+
+    .chip-close .icon { width: 10px; height: 10px; stroke-width: 2.5; }
+
+    .clear-all {
+      margin-left: auto;
+      background: transparent;
+      border: 0;
+      color: var(--brand-dark);
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      padding: 4px 0;
+      text-decoration: none;
+    }
+
+    .clear-all:hover { color: var(--brand-darker); text-decoration: underline; }
+
+    /* Surface frame helpers */
+    .surface-frame {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: var(--card);
+      margin-bottom: 16px;
+    }
+
+    .surface-eyebrow {
+      padding: 10px 16px;
+      background: var(--neutral-50);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .surface-eyebrow strong { color: var(--brand-dark); font-weight: 700; }
+
+    .annot-row {
+      padding: 8px 16px;
+      background: rgba(232, 240, 244, 0.3);
+      border-top: 1px solid var(--border);
+      font-size: 11.5px;
+      color: var(--muted-foreground);
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <a class="preview-back" href="index.html">← Back to index</a>
+    <header class="preview-header">
+      <p class="preview-eyebrow">PR-1A · src/components/admin/filter-bar.tsx + active-filter-chips.tsx</p>
+      <h1 class="preview-title">&lt;FilterBar&gt;</h1>
+      <p class="preview-subtitle">
+        Three vertical sections inside one container. Search at the top (full-width). Labeled
+        dropdowns below (uppercase labels always visible — never disappearing on selection per UAT
+        F9.b). Active-filter chips with a Clear-all link at the bottom — visible only when ≥1 filter
+        is active. Resolves all 8 sub-findings of UAT F9.
+      </p>
+    </header>
+
+    <!-- ─────────────── 1. WITH CHIPS ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">1 · With active filters (chips visible)</h2>
+      <p class="preview-section-desc">Contacts surface with Type=Player and Team=Davenport active. Captains-only toggle on.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow">
+          <span><strong>Contacts</strong> · /admin/contacts</span>
+          <span style="font-size: 11px;">3 filters active</span>
+        </div>
+        <div class="filter-bar">
+
+          <!-- Row 1: search -->
+          <div class="filter-search">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="input" type="search" placeholder="Search by name, email, phone, or company" value="" aria-label="Search contacts" />
+          </div>
+
+          <!-- Row 2: labeled dropdowns + boolean toggle -->
+          <div class="filter-row">
+            <div class="filter-group">
+              <span class="filter-label">Type</span>
+              <button class="filter-select" aria-haspopup="listbox" aria-expanded="false">
+                <span>Player</span>
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Team</span>
+              <button class="filter-select" aria-haspopup="listbox" aria-expanded="false">
+                <span>Davenport</span>
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Captains</span>
+              <button class="filter-toggle is-on" aria-pressed="true">
+                <span class="switch" aria-hidden="true"></span>
+                <span class="label">Captains only</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Row 3: chips + clear-all -->
+          <div class="filter-chips-row">
+            <span class="chip">
+              <span class="chip-key">Type:</span><span class="chip-value">Player</span>
+              <button class="chip-close" aria-label="Remove Type filter">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </span>
+            <span class="chip">
+              <span class="chip-key">Team:</span><span class="chip-value">Davenport</span>
+              <button class="chip-close" aria-label="Remove Team filter">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </span>
+            <span class="chip">
+              <span class="chip-key">Captains only</span>
+              <button class="chip-close" aria-label="Remove Captains filter">
+                <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </span>
+            <button class="clear-all">Clear all filters</button>
+          </div>
+
+        </div>
+        <div class="annot-row">Section 1 → Section 2 vertical gap: 14px. Chip row anchors to a dashed top rule to read as a summary, not another input row.</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 2. WITHOUT CHIPS ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">2 · No active filters (chips row + Clear-all hidden)</h2>
+      <p class="preview-section-desc">Same surface, no filter applied. The chips row collapses entirely — it's not just empty, it's absent. Maintains predictable vertical rhythm.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow">
+          <span><strong>Contacts</strong> · /admin/contacts</span>
+          <span style="font-size: 11px;">No filters</span>
+        </div>
+        <div class="filter-bar">
+          <div class="filter-search">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="input" type="search" placeholder="Search by name, email, phone, or company" value="" aria-label="Search contacts" />
+          </div>
+
+          <div class="filter-row">
+            <div class="filter-group">
+              <span class="filter-label">Type</span>
+              <button class="filter-select" aria-haspopup="listbox" aria-expanded="false">
+                <span style="color: var(--muted-foreground);">All types</span>
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Team</span>
+              <button class="filter-select" aria-haspopup="listbox" aria-expanded="false">
+                <span style="color: var(--muted-foreground);">All teams</span>
+                <svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
+              </button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Captains</span>
+              <button class="filter-toggle" aria-pressed="false">
+                <span class="switch" aria-hidden="true"></span>
+                <span class="label">Captains only</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- chip row absent (not rendered) -->
+        </div>
+        <div class="annot-row">Chip-row + Clear-all link are removed from the DOM (not just <code>visibility: hidden</code>) — no orphaned vertical space.</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 3. SECONDARY EXAMPLES ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">3 · Secondary surface examples</h2>
+      <p class="preview-section-desc">Same primitive, different filter inventory per surface (D6).</p>
+
+      <!-- 3a · Sponsors: Year + Tier filters -->
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Sponsors</strong> · /admin/sponsors · 1 filter active</div>
+        <div class="filter-bar">
+          <div class="filter-search">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input class="input" type="search" placeholder="Search sponsors" />
+          </div>
+          <div class="filter-row">
+            <div class="filter-group">
+              <span class="filter-label">Year</span>
+              <button class="filter-select" aria-haspopup="listbox"><span>2026</span><svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+            </div>
+            <div class="filter-group">
+              <span class="filter-label">Tier</span>
+              <button class="filter-select" aria-haspopup="listbox"><span style="color: var(--muted-foreground);">All tiers</span><svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+            </div>
+          </div>
+          <div class="filter-chips-row">
+            <span class="chip"><span class="chip-key">Year:</span><span class="chip-value">2026</span><button class="chip-close" aria-label="Remove Year filter"><svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></span>
+            <button class="clear-all">Clear all filters</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3b · Photos: Year only -->
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Photos</strong> · /admin/photos · No filters</div>
+        <div class="filter-bar">
+          <div class="filter-row" style="grid-template-columns: minmax(200px, 320px);">
+            <div class="filter-group">
+              <span class="filter-label">Year</span>
+              <button class="filter-select" aria-haspopup="listbox"><span style="color: var(--muted-foreground);">All years</span><svg class="icon" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>
+            </div>
+          </div>
+        </div>
+        <div class="annot-row">Photos has no search input — the surface is image-thumbnail-driven, not text-searchable today. Year filter only.</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── TOKEN SPEC ─────────────── -->
+    <div class="token-spec">
+      <h3>Token spec — <code>&lt;FilterBar&gt;</code></h3>
+      <table>
+        <thead>
+          <tr><th>Token</th><th>Value</th><th>Tailwind v4 class</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Container padding</td>
+            <td>16px all sides</td>
+            <td><code>p-4</code></td>
+            <td>Container background = <code>card</code> (white).</td>
+          </tr>
+          <tr>
+            <td>Vertical gap between sections</td>
+            <td>14px</td>
+            <td><code>gap-3.5</code></td>
+            <td>Search ↔ secondary row ↔ chip row.</td>
+          </tr>
+          <tr>
+            <td>Search input height</td>
+            <td>36px</td>
+            <td><code>h-9</code></td>
+            <td>Matches default Input. Border 1.5px <code>border</code>; radius <code>rounded-lg</code> (10px).</td>
+          </tr>
+          <tr>
+            <td>Search icon</td>
+            <td>16px lucide <code>Search</code> · muted-foreground</td>
+            <td><code>absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground</code></td>
+            <td>Padding-left on the input becomes 36px to clear the icon.</td>
+          </tr>
+          <tr>
+            <td>Secondary filter row</td>
+            <td>auto-fit grid · min 200px · 12px gap</td>
+            <td><code>grid grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-3</code></td>
+            <td>Wraps gracefully on smaller widths (mobile/tablet). At desktop, evenly distributed.</td>
+          </tr>
+          <tr>
+            <td>Filter label typography</td>
+            <td>11px · weight 600 · uppercase · tracking 0.08em · muted-foreground</td>
+            <td><code>text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground</code></td>
+            <td>Always visible above the trigger — never disappearing on selection (resolves UAT F9.b).</td>
+          </tr>
+          <tr>
+            <td>Filter dropdown trigger</td>
+            <td>36px · border 1.5px · rounded-lg</td>
+            <td><code>h-9 border-[1.5px] border-border rounded-lg</code></td>
+            <td>Matches Input styling. Hover background brand-muted/50.</td>
+          </tr>
+          <tr>
+            <td>Filter dropdown chevron</td>
+            <td>14px lucide <code>ChevronDown</code></td>
+            <td><code>size-3.5 text-muted-foreground</code></td>
+            <td>Inside the trigger, right-aligned.</td>
+          </tr>
+          <tr>
+            <td>Toggle switch</td>
+            <td>32 × 18px pill · 14px thumb · 2px inset</td>
+            <td>n/a — wrap shadcn Switch primitive</td>
+            <td>On = <code>primary</code>; Off = <code>neutral-100</code>. Thumb sliding via <code>ease-spring</code> 150ms.</td>
+          </tr>
+          <tr>
+            <td>Chip shape</td>
+            <td>26px height · radius full · padding 0 4px 0 10px</td>
+            <td><code>h-[26px] rounded-full pl-2.5 pr-1</code></td>
+            <td>Asymmetric padding leaves room for the X close button without crowding the label.</td>
+          </tr>
+          <tr>
+            <td>Chip color</td>
+            <td>bg brand-muted · text brand-darker</td>
+            <td><code>bg-brand-muted text-brand-darker</code></td>
+            <td>Reads as a small applied-state badge. Distinct from primary buttons.</td>
+          </tr>
+          <tr>
+            <td>Chip typography</td>
+            <td>12.5px · weight 500 · key=600</td>
+            <td><code>text-[12.5px] font-medium [&_.chip-key]:font-semibold</code></td>
+            <td>"Type:" reads heavier than "Player" for fast scanning.</td>
+          </tr>
+          <tr>
+            <td>Chip close button</td>
+            <td>18 × 18px · radius full · X icon 10px</td>
+            <td><code>size-[18px] rounded-full</code> + lucide <code>X</code> at <code>size-2.5</code></td>
+            <td>Hover bg = <code>brand-darker / 12%</code>.</td>
+          </tr>
+          <tr>
+            <td>Clear-all link position</td>
+            <td>Right-aligned in chip row · margin-left auto</td>
+            <td><code>ml-auto</code></td>
+            <td>Anchors to the right so it's always at a predictable corner.</td>
+          </tr>
+          <tr>
+            <td>Clear-all typography</td>
+            <td>12.5px · weight 600 · brand-dark</td>
+            <td><code>text-[12.5px] font-semibold text-brand-dark hover:underline</code></td>
+            <td>Hover → brand-darker + underline. Not a button visually — link affordance.</td>
+          </tr>
+          <tr>
+            <td>Chip-row separator</td>
+            <td>1px dashed border-top · 4px padding-top</td>
+            <td><code>border-t border-dashed border-border pt-1</code></td>
+            <td>Visual demarcation: chips summarize, dropdowns configure.</td>
+          </tr>
+          <tr>
+            <td>Hidden state</td>
+            <td>Chip row removed from DOM when 0 filters</td>
+            <td>n/a — render logic</td>
+            <td><code>filters.length &gt; 0 && &lt;ChipRow /&gt;</code> — never just <code>display: none</code> (would leave gap).</td>
+          </tr>
+          <tr>
+            <td>Search placeholder per surface</td>
+            <td>String-locked by Aria</td>
+            <td>n/a — passed via prop</td>
+            <td>e.g. Contacts: "Search by name, email, phone, or company" (F9.a). Teams: "Search by captain name". Aria countersigns.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

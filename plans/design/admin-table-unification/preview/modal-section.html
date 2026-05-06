@@ -1,0 +1,367 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>&lt;ModalSection&gt; — Phase 1 Design Preview</title>
+  <link rel="stylesheet" href="preview.css" />
+  <style>
+    /* Modal frame mock — mirrors src/components/ui/dialog.tsx */
+    .dialog-stage {
+      background: linear-gradient(180deg, rgba(26, 46, 58, 0.06), rgba(26, 46, 58, 0.10));
+      padding: 48px 24px;
+      border-radius: var(--radius-xl);
+      display: flex;
+      justify-content: center;
+    }
+
+    .dialog-popup {
+      width: 100%;
+      max-width: 520px;
+      background: var(--popover);
+      border-radius: var(--radius-xl);
+      box-shadow: var(--shadow-lg);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 80vh;
+    }
+
+    .dialog-header {
+      padding: 16px 20px 12px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .dialog-title {
+      font-family: var(--font-display);
+      font-weight: 500;
+      font-size: 17px;
+      margin: 0;
+      color: var(--foreground);
+      letter-spacing: -0.005em;
+    }
+
+    .dialog-close {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-md);
+      background: transparent;
+      border: 0;
+      color: var(--muted-foreground);
+      cursor: pointer;
+    }
+
+    .dialog-close:hover { background: var(--muted); color: var(--foreground); }
+
+    .dialog-body {
+      padding: 4px 20px 16px;
+      overflow-y: auto;
+    }
+
+    .dialog-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 20px;
+      background: rgba(241, 244, 246, 0.6);
+      border-top: 1px solid var(--border);
+    }
+
+    .dialog-footer .right {
+      display: flex;
+      gap: 8px;
+    }
+
+    /* The ModalSection primitive */
+    .modal-section {
+      padding: 16px 0 0;
+    }
+
+    .modal-section + .modal-section {
+      margin-top: 8px;
+    }
+
+    .modal-section-header {
+      padding: 0 0 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .modal-section-label {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--brand-darker);
+    }
+
+    .modal-section-body {
+      padding: 0 0 12px;
+    }
+
+    /* Field grid mock for a populated section */
+    .field-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .field-grid--2col { grid-template-columns: 1fr 1fr; }
+    .field-grid--3col { grid-template-columns: 1fr 2fr 2fr; }
+
+    .field { display: flex; flex-direction: column; gap: 4px; }
+
+    .field-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--muted-foreground);
+    }
+
+    .field-input {
+      height: 36px;
+      padding: 0 12px;
+      background: var(--background);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-lg);
+      font-size: 13.5px;
+      color: var(--foreground);
+      display: flex;
+      align-items: center;
+    }
+
+    .annot {
+      font-size: 11.5px;
+      color: var(--muted-foreground);
+      font-style: italic;
+      margin: 24px 0 0;
+    }
+
+    .callout {
+      padding: 12px 16px;
+      background: var(--brand-muted);
+      border-left: 3px solid var(--brand);
+      border-radius: var(--radius-md);
+      font-size: 12.5px;
+      color: var(--brand-darker);
+      margin: 0 0 16px;
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <a class="preview-back" href="index.html">← Back to index</a>
+    <header class="preview-header">
+      <p class="preview-eyebrow">PR-1A · src/components/admin/modal-section.tsx</p>
+      <h1 class="preview-title">&lt;ModalSection&gt;</h1>
+      <p class="preview-subtitle">
+        Banded section header (uppercase label + horizontal hairline rule) followed by a body region
+        that holds form fields. Stacks inside any shadcn <code>&lt;Dialog&gt;</code>. Used everywhere
+        — even short forms (Teams: Roster + Payment) get banding for IA consistency. Photos has no
+        edit modal so it's exempt from this primitive.
+      </p>
+    </header>
+
+    <!-- ─────────────── PREVIEW: stacked sections ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">Three stacked sections inside a Dialog</h2>
+      <p class="preview-section-desc">Identity → Roles → Address. Each one renders the same primitive — only the label and body content vary.</p>
+
+      <div class="dialog-stage">
+        <div class="dialog-popup" role="dialog" aria-labelledby="dialog-title-1">
+          <div class="dialog-header">
+            <h2 class="dialog-title" id="dialog-title-1">Edit contact</h2>
+            <button class="dialog-close" aria-label="Close">
+              <svg class="icon" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+          </div>
+
+          <div class="dialog-body">
+
+            <!-- Section 1: Identity -->
+            <div class="modal-section">
+              <div class="modal-section-header">
+                <span class="modal-section-label">Identity</span>
+              </div>
+              <div class="modal-section-body">
+                <div class="field-grid field-grid--3col">
+                  <div class="field">
+                    <span class="field-label">Salutation</span>
+                    <div class="field-input">Mrs.</div>
+                  </div>
+                  <div class="field">
+                    <span class="field-label">First name</span>
+                    <div class="field-input">Lynne</div>
+                  </div>
+                  <div class="field">
+                    <span class="field-label">Last name</span>
+                    <div class="field-input">Davenport</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 2: Roles -->
+            <div class="modal-section">
+              <div class="modal-section-header">
+                <span class="modal-section-label">Roles</span>
+              </div>
+              <div class="modal-section-body">
+                <div class="callout">
+                  Roles section content rendered by the role-cards primitive — see
+                  <a href="role-cards-form.html" style="color: var(--brand-dark); font-weight: 600;">role-cards-form.html</a>.
+                </div>
+              </div>
+            </div>
+
+            <!-- Section 3: Address -->
+            <div class="modal-section">
+              <div class="modal-section-header">
+                <span class="modal-section-label">Address</span>
+              </div>
+              <div class="modal-section-body">
+                <div class="field-grid">
+                  <div class="field">
+                    <span class="field-label">Street</span>
+                    <div class="field-input">123 Magnolia Lane</div>
+                  </div>
+                  <div class="field-grid field-grid--2col">
+                    <div class="field">
+                      <span class="field-label">City</span>
+                      <div class="field-input">New Bern</div>
+                    </div>
+                    <div class="field">
+                      <span class="field-label">State</span>
+                      <div class="field-input">NC</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="dialog-footer">
+            <button class="btn btn--destructive btn--sm">Delete contact</button>
+            <div class="right">
+              <button class="btn btn--outline btn--sm">Cancel</button>
+              <button class="btn btn--default btn--sm">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <p class="annot">Footer pattern: <code>justify-between</code>, destructive action bottom-left, action group bottom-right. Footer has solid <code>muted/60</code> background to occlude scroll content per F13.b.</p>
+    </section>
+
+    <!-- ─────────────── TOKEN SPEC ─────────────── -->
+    <div class="token-spec">
+      <h3>Token spec — <code>&lt;ModalSection&gt;</code></h3>
+      <table>
+        <thead>
+          <tr><th>Token</th><th>Value</th><th>Tailwind v4 class</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Section top padding</td>
+            <td>16px</td>
+            <td><code>pt-4</code></td>
+            <td>Space above the label band; first section starts immediately under DialogHeader.</td>
+          </tr>
+          <tr>
+            <td>Inter-section gap</td>
+            <td>8px</td>
+            <td><code>[&_.modal-section+.modal-section]:mt-2</code></td>
+            <td>Tight enough that the dialog reads as one form, not three.</td>
+          </tr>
+          <tr>
+            <td>Header label typography</td>
+            <td>11px · weight 700 · uppercase · tracking 0.10em · brand-darker</td>
+            <td><code>text-[11px] font-bold uppercase tracking-[0.10em] text-brand-darker</code></td>
+            <td>Brand-darker (not brand teal) for legible contrast on white. Color reads "section header," not "tag."</td>
+          </tr>
+          <tr>
+            <td>Header bottom padding</td>
+            <td>8px</td>
+            <td><code>pb-2</code></td>
+            <td>Space between the label and the separator line.</td>
+          </tr>
+          <tr>
+            <td>Separator</td>
+            <td>1px solid · border</td>
+            <td><code>border-b border-border</code></td>
+            <td>Hairline rule. Not <code>border-2</code> or anything heavier — the band is light-touch.</td>
+          </tr>
+          <tr>
+            <td>Body top padding</td>
+            <td>12px</td>
+            <td><code>pt-3</code></td>
+            <td>Space between the separator line and the first field.</td>
+          </tr>
+          <tr>
+            <td>Body bottom padding</td>
+            <td>12px</td>
+            <td><code>pb-3</code></td>
+            <td>Bottom padding on each section before the next section's top padding.</td>
+          </tr>
+          <tr>
+            <td>Body horizontal padding</td>
+            <td>0 (inherits from DialogContent)</td>
+            <td><code>px-0</code></td>
+            <td>The Dialog body itself has horizontal padding; ModalSection doesn't add more.</td>
+          </tr>
+          <tr>
+            <td>DialogContent padding</td>
+            <td>16px (top/bottom) · 20px (sides)</td>
+            <td><code>py-4 px-5</code></td>
+            <td>From <code>src/components/ui/dialog.tsx</code> — <code>p-4</code> default; we tighten body to <code>pt-1 pb-4 px-5</code> so first section's <code>pt-4</code> doesn't double.</td>
+          </tr>
+          <tr>
+            <td>DialogTitle typography</td>
+            <td>17px · Fraunces · weight 500 · letter-spacing -0.005em</td>
+            <td><code>font-display text-[17px] font-medium tracking-[-0.005em]</code></td>
+            <td>Inherits from existing DialogTitle slot. Slightly larger than current 16px to anchor the modal.</td>
+          </tr>
+          <tr>
+            <td>Dialog corner radius</td>
+            <td>12px (xl)</td>
+            <td><code>rounded-xl</code></td>
+            <td>Existing DialogContent default.</td>
+          </tr>
+          <tr>
+            <td>Dialog elevation</td>
+            <td><code>shadow-lg</code></td>
+            <td><code>shadow-lg</code></td>
+            <td>Existing DialogContent shadow scale.</td>
+          </tr>
+          <tr>
+            <td>Footer pattern</td>
+            <td><code>flex justify-between</code> · padding 12px 20px</td>
+            <td><code>flex justify-between items-center px-5 py-3</code></td>
+            <td>Replaces shadcn's <code>sm:justify-end</code> default. Destructive bottom-left, action group bottom-right.</td>
+          </tr>
+          <tr>
+            <td>Footer background</td>
+            <td>muted / 60% opacity (solid for scroll occlusion)</td>
+            <td><code>bg-muted/60</code></td>
+            <td>F13.b: footer must occlude scrolling content beneath it. Translucent reads as material continuity.</td>
+          </tr>
+          <tr>
+            <td>Footer border-top</td>
+            <td>1px solid · border</td>
+            <td><code>border-t border-border</code></td>
+            <td>Visual separation from the scrolling body region.</td>
+          </tr>
+          <tr>
+            <td>Per-surface section labels</td>
+            <td>String-locked by Aria</td>
+            <td>n/a</td>
+            <td>Phase 2 (Sponsors): Identity / Linked contacts / Logo / Notes. Phase 3 (Contacts): Identity / Contact / Roles / Address / Notes. Phase 3 (Teams): Roster / Payment. Phase 3 (Sponsorships): Item / Inventory.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

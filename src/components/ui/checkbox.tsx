@@ -64,10 +64,12 @@ export function Checkbox({
       onClick={handleClick}
       className={cn(
         "relative inline-flex items-center justify-center h-4 w-4 shrink-0",
-        "rounded border cursor-pointer p-0.5 -m-0.5",
-        "transition-colors duration-100",
+        "rounded-[3px] border-2 cursor-pointer p-0.5 -m-0.5",
+        "transition-colors duration-100 ease-out",
         "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2",
-        isActive ? "bg-brand border-brand" : "bg-background border-border",
+        isActive
+          ? "bg-brand bg-primary border-brand hover:bg-brand-dark hover:border-brand-dark"
+          : "bg-background border-slate-400 hover:border-brand",
         disabled && "cursor-not-allowed opacity-50",
         className
       )}

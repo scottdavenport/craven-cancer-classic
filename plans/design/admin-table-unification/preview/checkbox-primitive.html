@@ -1,0 +1,489 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Checkbox primitive — F17/F18 fix</title>
+  <link rel="stylesheet" href="preview.css" />
+  <style>
+    .state-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 16px 0 24px;
+    }
+
+    .state-card {
+      padding: 24px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .state-card-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+    }
+
+    .state-card-spec {
+      font-size: 11px;
+      color: var(--muted-foreground);
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    /* ─── Checkbox primitive (PR-1B fix spec) ─── */
+
+    /* Size variants */
+    .cb {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      cursor: pointer;
+      transition:
+        background-color 100ms var(--ease-out),
+        border-color 100ms var(--ease-out),
+        box-shadow 100ms var(--ease-out);
+    }
+
+    .cb--sm {
+      width: 16px;
+      height: 16px;
+      border-radius: 3px;
+      border: 2px solid var(--slate-400);
+      background: var(--background);
+    }
+
+    .cb--md {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 2px solid var(--slate-400);
+      background: var(--background);
+    }
+
+    /* Hover: brand border (no fill change) */
+    .cb:hover { border-color: var(--brand); }
+
+    /* Focus ring */
+    .cb:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(87, 151, 166, 0.25);
+    }
+
+    /* Checked state — filled brand */
+    .cb.is-checked {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .cb.is-checked:hover {
+      background: var(--brand-dark);
+      border-color: var(--brand-dark);
+    }
+
+    /* Indeterminate state — same fill, dash icon */
+    .cb.is-indeterminate {
+      background: var(--primary);
+      border-color: var(--primary);
+    }
+
+    .cb svg { display: none; color: white; }
+    .cb.is-checked svg.icon-check { display: block; }
+    .cb.is-indeterminate svg.icon-dash { display: block; }
+
+    .cb--sm svg { width: 10px; height: 10px; stroke-width: 3; }
+    .cb--md svg { width: 12px; height: 12px; stroke-width: 3; }
+
+    /* Disabled */
+    .cb.is-disabled {
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+
+    /* ─── Compare strip ─── */
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .compare-card {
+      padding: 20px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+    }
+
+    .compare-card.before {
+      border-color: rgba(197, 48, 48, 0.4);
+      background: rgba(197, 48, 48, 0.025);
+    }
+
+    .compare-card.after {
+      border-color: var(--brand-light);
+      background: rgba(232, 240, 244, 0.30);
+    }
+
+    .compare-eyebrow {
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.10em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+      margin: 0 0 4px;
+    }
+
+    .compare-card.before .compare-eyebrow { color: var(--destructive); }
+    .compare-card.after .compare-eyebrow { color: var(--brand-darker); }
+
+    .compare-title {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--foreground);
+      margin: 0 0 16px;
+    }
+
+    .compare-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 8px 0;
+      border-bottom: 1px dashed var(--border);
+    }
+
+    .compare-row:last-child { border-bottom: 0; }
+
+    .compare-row .label {
+      font-size: 12.5px;
+      color: var(--foreground);
+      flex: 1;
+    }
+
+    .compare-row .meta {
+      font-size: 11px;
+      color: var(--muted-foreground);
+      font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    }
+
+    /* Pre-fix invisible checkbox for the "before" demo */
+    .cb-before {
+      width: 16px;
+      height: 16px;
+      border: 1px solid rgba(218, 227, 232, 0.5);
+      border-radius: 3px;
+      background: var(--background);
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .cb-before.is-checked {
+      background: var(--background);
+      /* No fill — illustrates the invisible-when-checked bug */
+    }
+
+    /* Inline list demo */
+    .list-demo {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+    }
+
+    .list-demo-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .list-demo-row:last-child { border-bottom: 0; }
+
+    .list-demo-row .name { flex: 1; font-size: 13.5px; color: var(--foreground); }
+
+    .list-demo-row .meta { font-size: 12px; color: var(--muted-foreground); }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <a class="preview-back" href="index.html">← Back to index</a>
+    <header class="preview-header">
+      <p class="preview-eyebrow">PR-1B · src/components/ui/checkbox.tsx · Findings F17 + F18</p>
+      <h1 class="preview-title">Checkbox primitive — visibility fix</h1>
+      <p class="preview-subtitle">
+        Single-file shadcn override that cascades to every checkbox in the admin: row-selection
+        checkboxes, type checkboxes (until D12 replaces them), and form-field checkboxes. Adds an
+        explicit 2px slate-400 border at rest, fills with brand teal when checked, and renders a
+        white check glyph at both 16px (row) and 20px (form) render sizes.
+      </p>
+    </header>
+
+    <!-- ─────────────── 1. ALL FOUR STATES ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">1 · Four states · 16px row-selection size</h2>
+      <p class="preview-section-desc">Used in the per-row and select-all checkboxes inside <code>&lt;RowActions&gt;</code> + table headers.</p>
+
+      <div class="state-grid">
+        <div class="state-card">
+          <span class="cb cb--sm" role="checkbox" aria-checked="false" tabindex="0">
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <div class="state-card-label">Unchecked</div>
+          <div class="state-card-spec">2px slate-400 border</div>
+        </div>
+        <div class="state-card">
+          <span class="cb cb--sm" role="checkbox" aria-checked="false" tabindex="0" style="border-color: var(--brand);">
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <div class="state-card-label">Hover</div>
+          <div class="state-card-spec">border → brand teal</div>
+        </div>
+        <div class="state-card">
+          <span class="cb cb--sm is-checked" role="checkbox" aria-checked="true" tabindex="0">
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <div class="state-card-label">Checked</div>
+          <div class="state-card-spec">brand fill · white ✓</div>
+        </div>
+        <div class="state-card">
+          <span class="cb cb--sm is-indeterminate" role="checkbox" aria-checked="mixed" tabindex="0">
+            <svg class="icon-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+          <div class="state-card-label">Indeterminate</div>
+          <div class="state-card-spec">brand fill · white −</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 2. FORM SIZE ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">2 · Four states · 20px form size</h2>
+      <p class="preview-section-desc">Used inside form fields (e.g. consent checkboxes, future filter modals).</p>
+
+      <div class="state-grid">
+        <div class="state-card">
+          <span class="cb cb--md" role="checkbox" aria-checked="false" tabindex="0">
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <div class="state-card-label">Unchecked</div>
+          <div class="state-card-spec">2px slate-400 border</div>
+        </div>
+        <div class="state-card">
+          <span class="cb cb--md" role="checkbox" aria-checked="false" tabindex="0" style="border-color: var(--brand);">
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <div class="state-card-label">Hover</div>
+          <div class="state-card-spec">border → brand teal</div>
+        </div>
+        <div class="state-card">
+          <span class="cb cb--md is-checked" role="checkbox" aria-checked="true" tabindex="0">
+            <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </span>
+          <div class="state-card-label">Checked</div>
+          <div class="state-card-spec">brand fill · white ✓</div>
+        </div>
+        <div class="state-card">
+          <span class="cb cb--md is-indeterminate" role="checkbox" aria-checked="mixed" tabindex="0">
+            <svg class="icon-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          </span>
+          <div class="state-card-label">Indeterminate</div>
+          <div class="state-card-spec">brand fill · white −</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 3. BEFORE vs AFTER ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">3 · Before vs after · row-selection</h2>
+      <p class="preview-section-desc">F17/F18: today's checkbox renders with a 1px hairline border at <code>border / 50%</code> opacity and no fill on selected — invisible against white rows in practice. The fix sets a 2px slate-400 border and fills with brand teal when selected.</p>
+
+      <div class="compare-grid">
+
+        <div class="compare-card before">
+          <p class="compare-eyebrow">Before · F17 + F18</p>
+          <h3 class="compare-title">Today: invisible checkbox</h3>
+          <div class="list-demo">
+            <div class="list-demo-row">
+              <span class="cb-before is-checked"></span>
+              <span class="name">Lynne Davenport</span>
+              <span class="meta">Player · Donor</span>
+            </div>
+            <div class="list-demo-row">
+              <span class="cb-before"></span>
+              <span class="name">Mike Evans</span>
+              <span class="meta">Sponsor</span>
+            </div>
+            <div class="list-demo-row">
+              <span class="cb-before is-checked"></span>
+              <span class="name">Carolina East Health</span>
+              <span class="meta">Sponsor · Donor</span>
+            </div>
+          </div>
+          <div style="margin-top: 12px; font-size: 11.5px; color: var(--destructive); font-style: italic;">
+            Three rows. Two are checked. Hard to tell which.
+          </div>
+        </div>
+
+        <div class="compare-card after">
+          <p class="compare-eyebrow">After · PR-1B fix</p>
+          <h3 class="compare-title">Visible at rest, filled when selected</h3>
+          <div class="list-demo">
+            <div class="list-demo-row">
+              <span class="cb cb--sm is-checked" role="checkbox" aria-checked="true">
+                <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="name">Lynne Davenport</span>
+              <span class="meta">Player · Donor</span>
+            </div>
+            <div class="list-demo-row">
+              <span class="cb cb--sm" role="checkbox" aria-checked="false">
+                <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="name">Mike Evans</span>
+              <span class="meta">Sponsor</span>
+            </div>
+            <div class="list-demo-row">
+              <span class="cb cb--sm is-checked" role="checkbox" aria-checked="true">
+                <svg class="icon-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </span>
+              <span class="name">Carolina East Health</span>
+              <span class="meta">Sponsor · Donor</span>
+            </div>
+          </div>
+          <div style="margin-top: 12px; font-size: 11.5px; color: var(--brand-darker); font-style: italic;">
+            Same three rows. Selection state is now unambiguous at a glance.
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ─────────────── TOKEN SPEC ─────────────── -->
+    <div class="token-spec">
+      <h3>Token spec — Checkbox primitive override</h3>
+      <table>
+        <thead>
+          <tr><th>Token</th><th>Value</th><th>Tailwind v4 class</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Border (unchecked)</td>
+            <td>2px solid · slate-400</td>
+            <td><code>border-2 border-slate-400</code></td>
+            <td>Replaces today's <code>border border-border</code>. Slate-400 reads on both white card and brand-muted row hover.</td>
+          </tr>
+          <tr>
+            <td>Border (checked + indeterminate)</td>
+            <td>2px solid · primary</td>
+            <td><code>data-[state=checked]:border-primary data-[state=mixed]:border-primary</code></td>
+            <td>Border color matches fill — the checkbox reads as one solid token.</td>
+          </tr>
+          <tr>
+            <td>Background (unchecked)</td>
+            <td>background (white)</td>
+            <td><code>bg-background</code></td>
+            <td>Same surface as the row — the border carries the affordance.</td>
+          </tr>
+          <tr>
+            <td>Background (checked + indeterminate)</td>
+            <td>primary (brand teal)</td>
+            <td><code>data-[state=checked]:bg-primary data-[state=mixed]:bg-primary</code></td>
+            <td>Filled selected state — F17/F18 fix.</td>
+          </tr>
+          <tr>
+            <td>Background (checked + hover)</td>
+            <td>brand-dark</td>
+            <td><code>data-[state=checked]:hover:bg-brand-dark</code></td>
+            <td>Slight darken on hover signals interactivity.</td>
+          </tr>
+          <tr>
+            <td>Radius — sm</td>
+            <td>3px</td>
+            <td><code>rounded-[3px]</code></td>
+            <td>Subtle rounding — reads as a checkbox, not a square button.</td>
+          </tr>
+          <tr>
+            <td>Radius — md</td>
+            <td>4px</td>
+            <td><code>rounded-[4px]</code></td>
+            <td>Slightly more curve at form size to balance the larger surface.</td>
+          </tr>
+          <tr>
+            <td>Size — sm (row)</td>
+            <td>16 × 16px</td>
+            <td><code>size-4</code></td>
+            <td>Used inside <code>&lt;RowActions&gt;</code> and table-header select-all.</td>
+          </tr>
+          <tr>
+            <td>Size — md (form)</td>
+            <td>20 × 20px</td>
+            <td><code>size-5</code></td>
+            <td>Used inside form fields where it sits next to label text.</td>
+          </tr>
+          <tr>
+            <td>Check glyph — sm</td>
+            <td>10px lucide <code>Check</code> · stroke 3 · white</td>
+            <td><code>size-2.5 stroke-[3] text-white</code></td>
+            <td>Sized to clear the 2px border with even padding all around.</td>
+          </tr>
+          <tr>
+            <td>Check glyph — md</td>
+            <td>12px lucide <code>Check</code> · stroke 3 · white</td>
+            <td><code>size-3 stroke-[3] text-white</code></td>
+            <td>Scales with the box.</td>
+          </tr>
+          <tr>
+            <td>Indeterminate glyph</td>
+            <td>lucide <code>Minus</code> · same dimensions as Check</td>
+            <td><code>size-2.5 stroke-[3] text-white</code> (sm) / <code>size-3</code> (md)</td>
+            <td>Used for select-all when 1+ but not all rows are checked.</td>
+          </tr>
+          <tr>
+            <td>Focus ring</td>
+            <td>3px brand / 25% opacity</td>
+            <td><code>focus-visible:ring-3 focus-visible:ring-brand/25</code></td>
+            <td>Outside the box — visible on every focus state for keyboard nav.</td>
+          </tr>
+          <tr>
+            <td>Hover (unchecked)</td>
+            <td>Border → brand</td>
+            <td><code>hover:border-brand</code></td>
+            <td>Color shift on hover — no background change at the unchecked stage.</td>
+          </tr>
+          <tr>
+            <td>Disabled</td>
+            <td>opacity 50% · cursor not-allowed</td>
+            <td><code>disabled:opacity-50 disabled:cursor-not-allowed</code></td>
+            <td>Standard shadcn disabled treatment.</td>
+          </tr>
+          <tr>
+            <td>Transition</td>
+            <td>background-color + border-color · 100ms ease-out</td>
+            <td><code>transition-colors duration-100 ease-out</code></td>
+            <td>Snappy state changes; no animation on the glyph itself.</td>
+          </tr>
+          <tr>
+            <td>aria semantics</td>
+            <td><code>role="checkbox" aria-checked={true|false|"mixed"}</code></td>
+            <td>n/a — already in src/components/ui/checkbox.tsx</td>
+            <td>Existing implementation correct (lines 39–40); this fix is visual only.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

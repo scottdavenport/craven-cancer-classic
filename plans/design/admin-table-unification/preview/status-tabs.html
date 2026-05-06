@@ -1,0 +1,361 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>&lt;StatusTabs&gt; — Phase 1 Design Preview</title>
+  <link rel="stylesheet" href="preview.css" />
+  <style>
+    .status-tabs {
+      display: flex;
+      align-items: stretch;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--card);
+    }
+
+    .status-tab {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      background: transparent;
+      border: 0;
+      border-bottom: 2px solid transparent;
+      font-family: var(--font-sans);
+      font-size: 13.5px;
+      font-weight: 500;
+      color: var(--muted-foreground);
+      cursor: pointer;
+      margin-bottom: -1px; /* overlap parent border so active underline replaces it */
+      transition: color 100ms var(--ease-out), border-color 100ms var(--ease-out);
+    }
+
+    .status-tab:hover { color: var(--foreground); }
+
+    .status-tab[data-state="active"] {
+      color: var(--brand-darker);
+      border-bottom-color: var(--brand);
+      font-weight: 600;
+    }
+
+    .status-tab:focus-visible {
+      outline: 2px solid var(--brand);
+      outline-offset: -2px;
+      border-radius: 2px;
+    }
+
+    .status-tab .count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 22px;
+      height: 18px;
+      padding: 0 6px;
+      border-radius: 999px;
+      background: var(--neutral-100);
+      color: var(--muted-foreground);
+      font-size: 11px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+      transition: background-color 100ms var(--ease-out), color 100ms var(--ease-out);
+    }
+
+    .status-tab[data-state="active"] .count {
+      background: var(--brand-muted);
+      color: var(--brand-darker);
+    }
+
+    .surface-frame {
+      border: 1px solid var(--border);
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: var(--card);
+      margin-bottom: 8px;
+    }
+
+    .surface-eyebrow {
+      padding: 10px 16px;
+      background: var(--neutral-50);
+      border-bottom: 1px solid var(--border);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted-foreground);
+    }
+
+    .surface-eyebrow strong { color: var(--brand-dark); font-weight: 700; }
+
+    .surface-body {
+      padding: 24px;
+      color: var(--muted-foreground);
+      font-size: 12.5px;
+      font-style: italic;
+      background: linear-gradient(180deg, rgba(232, 240, 244, 0.18), transparent);
+    }
+  </style>
+</head>
+<body>
+  <div class="preview-shell">
+    <a class="preview-back" href="index.html">← Back to index</a>
+    <header class="preview-header">
+      <p class="preview-eyebrow">PR-1A · src/components/admin/status-tabs.tsx</p>
+      <h1 class="preview-title">&lt;StatusTabs&gt;</h1>
+      <p class="preview-subtitle">
+        Primary status axis as tabs above the search input on every list surface. Each tab includes
+        an inline count badge. Active tab gets a brand-teal underline + foreground text + brand-muted
+        count badge; inactive tabs render in <code>muted-foreground</code> with a neutral count badge.
+        Replaces today's mix of toggle (Sponsors), dropdown (Contacts, Sponsorships), and badge-only (Teams).
+      </p>
+    </header>
+
+    <!-- ─────────────── 1. CONTACTS ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">1 · Contacts</h2>
+      <p class="preview-section-desc">Subscribed / Unsubscribed / All. Active = Subscribed.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Contacts</strong> · /admin/contacts</div>
+        <div class="status-tabs" role="tablist" aria-label="Contact status">
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            All <span class="count">375</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="active" aria-selected="true">
+            Subscribed <span class="count">312</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Unsubscribed <span class="count">63</span>
+          </button>
+        </div>
+        <div class="surface-body">[ filter bar + table render here in production ]</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 2. TEAMS ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">2 · Teams</h2>
+      <p class="preview-section-desc">Pending / Paid / All. Active = Pending. Dead <code>failed</code> badge class is dropped per UAT line 305.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Teams</strong> · /admin/teams</div>
+        <div class="status-tabs" role="tablist" aria-label="Team payment status">
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            All <span class="count">42</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="active" aria-selected="true">
+            Pending <span class="count">11</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Paid <span class="count">31</span>
+          </button>
+        </div>
+        <div class="surface-body">[ filter bar + table render here in production ]</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 3. SPONSORS ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">3 · Sponsors</h2>
+      <p class="preview-section-desc">Active / Inactive / All. Active = Active. Replaces today's Inactive toggle.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Sponsors</strong> · /admin/sponsors</div>
+        <div class="status-tabs" role="tablist" aria-label="Sponsor status">
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            All <span class="count">28</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="active" aria-selected="true">
+            Active <span class="count">22</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Inactive <span class="count">6</span>
+          </button>
+        </div>
+        <div class="surface-body">[ filter bar + table render here in production ]</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 4. SPONSORSHIPS ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">4 · Sponsorships</h2>
+      <p class="preview-section-desc">Active / Inactive / All. Active = Active. Replaces in-modal Active dropdown.</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Sponsorships</strong> · /admin/sponsorships</div>
+        <div class="status-tabs" role="tablist" aria-label="Sponsorship status">
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            All <span class="count">14</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="active" aria-selected="true">
+            Active <span class="count">12</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Inactive <span class="count">2</span>
+          </button>
+        </div>
+        <div class="surface-body">[ filter bar + table render here in production ]</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── 5. PHOTOS ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">5 · Photos</h2>
+      <p class="preview-section-desc">Pending / Approved / Rejected / All. Active = Pending. Counts must show on every tab including 0 (verify F-P2).</p>
+
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Photos</strong> · /admin/photos</div>
+        <div class="status-tabs" role="tablist" aria-label="Photo moderation status">
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            All <span class="count">238</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="active" aria-selected="true">
+            Pending <span class="count">7</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Approved <span class="count">228</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Rejected <span class="count">3</span>
+          </button>
+        </div>
+        <div class="surface-body">[ moderation grid renders here in production ]</div>
+      </div>
+
+      <p class="preview-caption">Edge case to verify in PR-1A: when a count = 0, the badge must still render (not collapsed). E.g. "Rejected 0".</p>
+    </section>
+
+    <!-- ─────────────── ZERO STATE ─────────────── -->
+    <section class="preview-section">
+      <h2 class="preview-section-title">6 · Zero-count edge case</h2>
+      <p class="preview-section-desc">All tabs render their badges even when count is 0 — predictable layout, no surprise jumps.</p>
+      <div class="surface-frame">
+        <div class="surface-eyebrow"><strong>Photos</strong> · all photos approved</div>
+        <div class="status-tabs" role="tablist" aria-label="Photo moderation status">
+          <button class="status-tab" role="tab" data-state="active" aria-selected="true">
+            All <span class="count">228</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Pending <span class="count">0</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Approved <span class="count">228</span>
+          </button>
+          <button class="status-tab" role="tab" data-state="inactive" aria-selected="false">
+            Rejected <span class="count">0</span>
+          </button>
+        </div>
+        <div class="surface-body">[ moderation grid empty / "all caught up" message ]</div>
+      </div>
+    </section>
+
+    <!-- ─────────────── TOKEN SPEC ─────────────── -->
+    <div class="token-spec">
+      <h3>Token spec — <code>&lt;StatusTabs&gt;</code></h3>
+      <table>
+        <thead>
+          <tr><th>Token</th><th>Value</th><th>Tailwind v4 class</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Tab padding</td>
+            <td>10px vertical · 14px horizontal</td>
+            <td><code>px-3.5 py-2.5</code></td>
+            <td>Roomy enough to feel tappable on touch (≥44pt vertical hit-area when combined with badge height).</td>
+          </tr>
+          <tr>
+            <td>Tab gap</td>
+            <td>0 (tabs sit flush)</td>
+            <td><code>gap-0</code></td>
+            <td>Visual continuity along the bottom border. Active underline is the only separation needed.</td>
+          </tr>
+          <tr>
+            <td>Tab label typography (inactive)</td>
+            <td>13.5px · weight 500</td>
+            <td><code>text-[13.5px] font-medium text-muted-foreground</code></td>
+            <td>Manrope; matches existing admin nav-link weight.</td>
+          </tr>
+          <tr>
+            <td>Tab label typography (active)</td>
+            <td>13.5px · weight 600 · brand-darker</td>
+            <td><code>data-[state=active]:font-semibold data-[state=active]:text-brand-darker</code></td>
+            <td>Color shift + weight shift signals selection redundantly (never color-alone).</td>
+          </tr>
+          <tr>
+            <td>Active underline</td>
+            <td>2px solid · brand teal</td>
+            <td><code>data-[state=active]:border-b-2 data-[state=active]:border-brand</code></td>
+            <td>Sits flush with parent border via <code>-mb-px</code> negative margin trick.</td>
+          </tr>
+          <tr>
+            <td>Parent border</td>
+            <td>1px solid · border</td>
+            <td><code>border-b border-border</code></td>
+            <td>The tab strip is anchored to the rest of the surface via this rule.</td>
+          </tr>
+          <tr>
+            <td>Count badge dimensions</td>
+            <td>min-width 22px · height 18px · padding 0 6px</td>
+            <td><code>min-w-[22px] h-[18px] px-1.5</code></td>
+            <td>Pill shape regardless of digit count (1, 2, or 3 digits).</td>
+          </tr>
+          <tr>
+            <td>Count badge — inactive</td>
+            <td>bg neutral-100 · color muted-foreground</td>
+            <td><code>bg-neutral-100 text-muted-foreground</code></td>
+            <td>Recedes; the active count is what reads.</td>
+          </tr>
+          <tr>
+            <td>Count badge — active</td>
+            <td>bg brand-muted · color brand-darker</td>
+            <td><code>data-[state=active]:bg-brand-muted data-[state=active]:text-brand-darker</code></td>
+            <td>Brand reinforcement on the focused state.</td>
+          </tr>
+          <tr>
+            <td>Count badge typography</td>
+            <td>11px · weight 600 · tabular-nums</td>
+            <td><code>text-[11px] font-semibold tabular-nums</code></td>
+            <td>Tabular nums keep counts visually aligned across tabs.</td>
+          </tr>
+          <tr>
+            <td>Tab gap (label ↔ count)</td>
+            <td>8px</td>
+            <td><code>gap-2</code></td>
+            <td>Consistent spacing inside every tab.</td>
+          </tr>
+          <tr>
+            <td>Hover</td>
+            <td>color → foreground</td>
+            <td><code>hover:text-foreground</code></td>
+            <td>No background change — keeps the strip clean.</td>
+          </tr>
+          <tr>
+            <td>Focus-visible</td>
+            <td>2px brand outline · -2 offset</td>
+            <td><code>focus-visible:outline-2 focus-visible:outline-brand focus-visible:outline-offset-[-2px]</code></td>
+            <td>Inset outline so focus ring stays inside the tab strip.</td>
+          </tr>
+          <tr>
+            <td>Transition</td>
+            <td>color + border-color · 100ms ease-out</td>
+            <td><code>transition-colors duration-100 ease-out</code></td>
+            <td>Snappy. Not a sweeping animation.</td>
+          </tr>
+          <tr>
+            <td>Tab order</td>
+            <td>"All" first, then surface-specific axis</td>
+            <td>n/a — markup order</td>
+            <td>Convention: All / Subscribed / Unsubscribed; All / Pending / Paid; All / Active / Inactive; All / Pending / Approved / Rejected.</td>
+          </tr>
+          <tr>
+            <td>Zero-count behavior</td>
+            <td>Badge always renders (never collapsed)</td>
+            <td>n/a — render logic</td>
+            <td>Predictable layout. Verify on Photos when no rejected items exist.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

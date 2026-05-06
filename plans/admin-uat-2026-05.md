@@ -1223,8 +1223,8 @@ Verified via direct `contacts_active` SQL queries on 2026-05-03.
 | 8 | Modal footer | Contacts (right-clustered), Teams (split footer) | Sponsors F-S19, Sponsorships F-N22 (destructive separated) | F13, F-T3, F-T6 |
 | 9 | Delete confirm | Sponsors (plain-text), others (basic confirm) | Sponsorships (lists linked records + predicts aftermath) | F-N23 |
 | — | Adjacent P0/P1 bundled | F-S21 P0 (sponsor edit unlinks), F-T9 P1 (inline contact-create stub), F-T8 P1 (Mark Paid no payment method), F-S5/F-N9 P2 (sidebar overlap), F17/F18 P1 (invisible Checkbox primitive) | — | F-S21, F-T9, F-T8, F-S5, F-N9, F17, F18 |
-| — | Year columns | Contacts (vestigial — drop), Sponsorships (unused — wire), Photos (unused — wire) | — | F9.c, F-S25, F-N26, F-P9 |
+| — | Year columns | Contacts (vestigial — drop), Sponsorships (unused — wire), Photos (unused — wire) | — | F9.c, F10, F-N26, F-P9 |
 | — | Sort defaults | Sponsorships (`price_cents DESC` only) | Sponsors (`sort_order ASC, price_cents DESC` — both adopt) | F-N3 |
 | — | Out of scope | — | — | Pagination (D13), CSV import expansion (D14), Scores UI walk, Trash redesign |
 
-**Brainstorm provenance.** 22 decisions locked 2026-05-06 with Scott via `superpowers:brainstorming`. Mockups archived in `.superpowers/brainstorm/` (gitignored — re-mockup on demand).
+**Brainstorm provenance.** 21 decisions locked 2026-05-06 with Scott via `superpowers:brainstorming` (D1, D2, D3, D4a–d, D5–D14, D15a–d). Mockups archived in `.superpowers/brainstorm/` (gitignored — re-mockup on demand).

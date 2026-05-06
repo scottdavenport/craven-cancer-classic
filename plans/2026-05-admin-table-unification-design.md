@@ -44,7 +44,7 @@ The unification is also a vehicle for shipping 4 adjacent P0/P1 fixes that touch
 | D6 | **Unified filter-bar pattern**: status tabs above → full-width search → labeled secondary filter dropdowns → active-filter chips → Clear-all link. Resolves all 8 sub-findings of UAT F9. | This brainstorm. |
 | D7 | **Photos exempt** from hover-only rule. Moderation buttons (Approve / Reject / Delete) always visible. | This brainstorm. |
 | D8 | **Row pattern composition**: hover reveals `[✓ checkbox] [pencil] [trash] [+ surface-special labeled button]`. Surface-specials are inline labeled buttons next to the icons (Teams "Mark paid" only when payment status = Pending). | This brainstorm. |
-| D9 | **Year columns**: wire year filter on Sponsorships items + Photos. Drop year column from Contacts list (per F-S25 already locked). Schema columns stay on Sponsorships items + Photos. | This brainstorm. |
+| D9 | **Year columns**: wire year filter on Sponsorships items + Photos. Drop year column + year filter from Contacts list (per F10 + F9.c already locked). Schema columns stay on Sponsorships items + Photos. | This brainstorm. |
 | D10 | **Sort defaults**: `sort_order ASC, price_cents DESC` on both Sponsors and Sponsorships (Sponsors keeps current; Sponsorships adopts). | This brainstorm. |
 | D11 | **Modal IA = banded sections everywhere.** Even short forms get section headers (Teams: Roster / Payment). Contacts banding cascades to Teams, Sponsors, Sponsorships, Scores. | This brainstorm. |
 | D12 | **Contacts multi-type form** = role cards always visible (Option B). Each role is a card with a toggle; selected cards expand inline to show role-specific fields; unselected cards stay collapsed but visible. No layout shift. | This brainstorm. |
@@ -208,7 +208,7 @@ What changes per surface, in summary.
 ### Contacts (`/admin/contacts`)
 1. Replace status filter dropdown with status tabs (Subscribed / Unsubscribed / All).
 2. Filter bar redesign (Axis 4): search-first, labeled dropdowns, active-filter chips, Clear-all.
-3. Drop Year column + Year filter (per F-S25 already locked).
+3. Drop Year column + Year filter (per F10 + F9.c already locked).
 4. Hover-only row controls (Axis 3): pencil + trash + checkbox.
 5. Drop whole-row click affordance.
 6. Modal footer separates Delete to bottom-left.

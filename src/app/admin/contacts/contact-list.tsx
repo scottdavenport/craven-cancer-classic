@@ -439,7 +439,11 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
       } else {
         toast.success(`Deleted ${result.deleted} contact${result.deleted !== 1 ? "s" : ""}`);
         setSelected(new Set());
-        refetch();
+        // Optimistically remove deleted contacts from local state synchronously so
+        // the rows disappear before the next RSC re-render. This eliminates the
+        // webkit race where startTransition's async refetch() didn't resolve before
+        // the test asserted .not.toBeVisible (Spec diagnostic — ci-unblock task).
+        setContacts((prev) => prev.filter((c) => !ids.includes(c.id)));
       }
     } finally {
       setIsBulkPending(false);

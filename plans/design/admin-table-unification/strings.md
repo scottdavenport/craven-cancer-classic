@@ -222,3 +222,148 @@ The following strings are NOT covered by this spec. They require their own Aria 
 All strings in sections 2, 3, 4, and 5 above are approved. States enumerated: happy path (populated list), filter-active empty, no-data empty. Loading and offline states are not introduced by Phase 1 shared primitives — those are inherited from the surrounding page shell and are not new strings.
 
 **Aria-approved. Phase 1 PRs (PR-1A, PR-1B, PR-1C) may proceed to Bolt.**
+
+---
+
+## Phase 2 — Sponsors-specific strings
+
+**Owner:** Aria
+**Status:** Aria-approved — ready-to-ship
+**Pairs with:** `plans/2026-05-admin-table-unification-design.md` (PR #369) § Axis 7, Axis 6, Axis 9
+**Scope:** PR-2 (Sponsors drawer → modal). Does not modify Phase 1 sections above.
+
+---
+
+### A. Modal section headers
+
+Per design doc D11 + Axis 7 — banded sections everywhere, even short forms. Sponsors modal has four sections.
+
+| Location | String | Intent |
+|---|---|---|
+| `<ModalSection>` header — Name + Tier fields | "Identity" | Groups the two record-identification fields; matches Contacts modal convention (donor pattern) |
+| `<ModalSection>` header — sponsor-contacts typeahead | "Linked contacts" | Names what the section contains: contacts linked to this sponsor organization. "Linked" is load-bearing — it distinguishes these from the contacts index, which holds all contacts. "Contacts" alone would be ambiguous. |
+| `<ModalSection>` header — logo upload + preview | "Logo" | Single word, sufficient. No need for "Logo upload" — the section contains only the logo field; the label adds nothing. Consistent register with "Identity" and "Notes." |
+| `<ModalSection>` header — notes textarea | "Notes" | Single word. Consistent with Phase 3 planning for all modal notes sections. |
+
+**Voice note — why "Linked contacts" not "Contacts":** The Sponsors form contains a `ContactTypeaheadMulti` with `defaultTypes={['sponsor']}`. The section names what the admin is managing: a linking relationship between this sponsor org and its representative contacts. "Contacts" alone would collide mentally with the Contacts list surface. "Linked contacts" is two words and earns both of them.
+
+---
+
+### B. Status tabs
+
+Per design doc D5 + Axis 6 — status tabs replace the current `is_active` toggle on the Sponsors list. The "All" tab label is pre-approved in Phase 1 (§7 Out of Scope note) and ships without re-gate.
+
+| Location | State | String | Intent |
+|---|---|---|---|
+| `<StatusTabs>` — Sponsors list | Active sponsors visible | "Active" | Filters to `is_active = true` rows. Sentence case. Single word. |
+| `<StatusTabs>` — Sponsors list | Inactive sponsors visible | "Inactive" | Filters to `is_active = false` rows. Sentence case. Single word. |
+| `<StatusTabs>` — Sponsors list | All sponsors visible | "All" | Pre-approved Phase 1. Cited here for completeness. |
+
+**Tab count format:** Each tab label renders with an inline count: "Active 12", "Inactive 3", "All 15". The count format is a Phase 1 primitive (design doc Axis 6 example: "All 375 / Subscribed 312 / Unsubscribed 63"). The count rendering is Bolt's wiring concern; the tab label strings are the Aria gate concern. Both are now locked.
+
+---
+
+### C. Delete-confirm dialog
+
+Per design doc D4c + Axis 9 — delete dialogs name linked records and predict the aftermath. The Sponsors delete-confirm replaces the current plain-text `"This sponsor will be moved to Trash. You can restore from Admin → Trash."` in `sponsor-drawer.tsx`.
+
+The soft-delete invariant applies: the action moves the record to Trash, it does not destroy it. Copy never says "deleted" for the action — it says "moves to Trash."
+
+#### C1. Sponsor has N linked sponsorship_purchases (N ≥ 2)
+
+**Dialog title:** `"Delete [Sponsor Name]?"`
+(Interpolate `sponsor.name`. This is the existing pattern from `sponsor-drawer.tsx` line 188 — locked as-is.)
+
+**Dialog body (plural — N ≥ 2):**
+```
+[N] sponsorship purchases reference this sponsor. Moving [Sponsor Name] to Trash keeps those records intact — they'll display "Deleted sponsor" where the name appeared.
+```
+
+Example rendered: "3 sponsorship purchases reference this sponsor. Moving Carolina East Health to Trash keeps those records intact — they'll display 'Deleted sponsor' where the name appeared."
+
+**Dialog body (singular — N = 1):**
+```
+1 sponsorship purchase references this sponsor. Moving [Sponsor Name] to Trash keeps that record intact — it'll display "Deleted sponsor" where the name appeared.
+```
+
+Note: "references" (not "reference") for singular. "that record" / "it'll" for singular. The grammar changes are not optional — Bolt must use the correct plural/singular form based on the fetched count.
+
+**Destructive button label:** "Move to Trash"
+(Sentence case. Matches the soft-delete invariant. The existing drawer used "Delete" — that is superseded by this gate. The new modal ships "Move to Trash.")
+
+**Cancel button label:** "Cancel"
+
+#### C2. Sponsor has 0 linked sponsorship_purchases
+
+When the fetch returns 0 linked records, the dialog body simplifies — no cascade to name, no aftermath to predict.
+
+**Dialog body (zero linked records):**
+```
+Moving [Sponsor Name] to Trash removes it from the active list. You can restore it from Admin → Trash.
+```
+
+Example rendered: "Moving Carolina East Health to Trash removes it from the active list. You can restore it from Admin → Trash."
+
+**Destructive button label:** "Move to Trash"
+**Cancel button label:** "Cancel"
+
+#### C3. Names-or-count decision (addressed explicitly)
+
+The sprint plan cited the F-N23 "names + count" pattern (Sponsorships delete-confirm lists names up to N, then "+1 more"). For Sponsors, the linked entity is `sponsorship_purchases` — these are purchase transactions, not named entities with meaningful display names. Listing purchase IDs or line items is noise to the admin; the count is what matters. Phase 2 uses count-only for the Sponsors delete-confirm.
+
+Phase 3 Sponsorships delete-confirm (where the linked entities ARE named sponsors) uses the names + count pattern. That gate is Phase 3's scope.
+
+#### C4. Implementation note for Bolt
+
+The delete-confirm requires a prefetch of `sponsorship_purchases` count by `sponsor_id` before the dialog renders. The server action at `actions.ts` currently calls `softDelete` without fetching linked records. Bolt must add a count-fetch step (SELECT COUNT(*) WHERE sponsor_id = $id) either in a new server action or as a prop passed from `sponsor-list.tsx` when the trash icon is clicked.
+
+---
+
+### D. Fallback display string
+
+When a `sponsorship_purchases` row has a `sponsor_id` that references a soft-deleted sponsor, the UI must display a fallback in place of the sponsor name.
+
+| Location | String | Intent |
+|---|---|---|
+| Any UI cell / field displaying a deleted sponsor's name | "Deleted sponsor" | Names the condition plainly — the record existed, was moved to Trash, and is no longer active. Italic rendering is Bolt's choice (styling is not copy). |
+
+**Tone note:** "Deleted sponsor" uses "deleted" as an adjective describing the record's state from the user's perspective (it was deleted from the active list), not the soft-delete action itself. The action says "moves to Trash." The fallback label describes what the admin sees: a sponsor that has been deleted. These are consistent under the soft-delete invariant — they describe different moments.
+
+**No alternatives:** "Unknown sponsor," "Removed sponsor," "(sponsor not found)" — all rejected. "Unknown" implies a data error, not a deliberate deletion. "Removed" is vaguer than "deleted." "(sponsor not found)" suggests a bug, which is alarming and incorrect.
+
+---
+
+### E. Out of scope — explicit
+
+The following strings are NOT covered by this Phase 2 gate. They require their own Aria gate before the corresponding phase's PRs open.
+
+- **Phase 3 — Contacts:** Role-card titles, modal section headers (Identity / Contact / Roles / Address / Notes), inline validation message, salutation options, filter placeholders, status tab labels (Subscribed / Unsubscribed), delete-confirm linked-record template.
+- **Phase 3 — Teams:** Modal section headers (Roster / Payment), mark-paid button label, payment method options, delete-confirm body template, filter placeholders, status tab labels (Pending / Paid).
+- **Phase 3 — Sponsorships:** Modal section headers (Item / Inventory), delete-confirm body template (names + count pattern — Phase 3 scope), filter placeholder.
+- **Phase 3 — Photos:** No new strings beyond Phase 1 coverage.
+- **Phase 4 — CSV export:** "Download CSV" button label already countersigned in the sprint plan; ships verbatim from that source.
+
+---
+
+### Phase 2 — State enumeration
+
+States enumerated per HARD-GATE requirement:
+
+- **Happy path (list populated, sponsor edited):** Modal section headers A1–A4, status tabs B1–B2, form save flow. All strings locked above.
+- **Empty state (no data / filter active):** Covered in Phase 1 (§2c + §3). Not re-gated here — citation: Phase 1 Aria-approved PR #372.
+- **Loading:** The existing "Loading contacts…" string in `sponsor-drawer.tsx` (line 163) moves to `sponsor-modal.tsx` verbatim. No new string. Not re-gated.
+- **Error / degraded:** Toast messages "Sponsor created" / "Sponsor updated" / "Sponsor moved to Trash" are existing strings in `sponsor-drawer.tsx` lines 115–116, 133. These carry over verbatim to the new modal. Not re-gated. File-upload error "File too large (max 5MB)" is an existing string in `sponsor-form.tsx` line 88 — carries over verbatim. Inline validation "Sponsor name is required" (`sponsor-form.tsx` line 103) — carries over verbatim.
+- **Delete-confirm (0 linked records):** C2 above.
+- **Delete-confirm (1 linked record):** C1 singular above.
+- **Delete-confirm (N ≥ 2 linked records):** C1 plural above.
+- **Offline:** No offline-specific copy introduced by Phase 2. Network errors surface via existing toast infrastructure — not new strings.
+- **Partial (contacts load fails):** The fail-open comment at `sponsor-drawer.tsx` line 65 describes the pattern ("fail-open — show form with empty contacts rather than stuck on loading"). No user-visible string needed for this path — the form renders with empty contacts silently. No new string.
+- **Fallback (orphaned reference):** D above.
+
+---
+
+### Phase 2 — Countersignature
+
+All strings in sections A, B, C, and D above are approved. Every state enumerated. Every string has an explicit intent.
+
+**Aria-approved. PR-2 (Sponsors drawer → modal) may proceed to Bolt.**

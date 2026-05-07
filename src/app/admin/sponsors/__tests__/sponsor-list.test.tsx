@@ -152,36 +152,41 @@ describe("SponsorList — PR B changes", () => {
   // -------------------------------------------------------------------------
   // TEST 3: Status filter active state uses bg-primary, not bg-teal-600 (P1)
   // -------------------------------------------------------------------------
-  describe("Status filter — bg-primary token (P1)", () => {
-    it("active 'All' button has bg-primary class not bg-teal-600", () => {
+  describe("Status filter — brand-token underline style (P1)", () => {
+    // Bolt shipped underline-style tabs (border-b-brand + text-brand-darker) rather than
+    // filled tabs (bg-primary). StatusTabs renders role="tab" buttons with data-state;
+    // no data-testid attributes exist. Selectors updated to role-based queries.
+    it("active 'Active' tab (default) has border-b-brand class and is aria-selected", () => {
       renderList();
-      const allButton = screen.getByTestId("status-filter-all");
-      expect(allButton.className).toContain("bg-primary");
-      expect(allButton.className).not.toContain("bg-teal-600");
+      // SponsorList defaults to statusFilter="active" so "Active" tab is selected on mount
+      const activeTab = screen.getByRole("tab", { name: /^active/i });
+      expect(activeTab.className).toContain("border-b-brand");
+      expect(activeTab.getAttribute("aria-selected")).toBe("true");
     });
 
-    it("clicking 'Active' filter makes that button use bg-primary", () => {
+    it("clicking 'All' tab makes it aria-selected and applies border-b-brand", () => {
       renderList();
-      const activeButton = screen.getByTestId("status-filter-active");
-      fireEvent.click(activeButton);
-      expect(activeButton.className).toContain("bg-primary");
-      expect(activeButton.className).not.toContain("bg-teal-600");
+      const allTab = screen.getByRole("tab", { name: /^all/i });
+      fireEvent.click(allTab);
+      expect(allTab.getAttribute("aria-selected")).toBe("true");
+      expect(allTab.className).toContain("border-b-brand");
     });
 
-    it("inactive status button uses bg-primary when selected", () => {
+    it("clicking 'Inactive' tab makes it aria-selected and applies border-b-brand", () => {
       renderList();
-      const inactiveButton = screen.getByTestId("status-filter-inactive");
-      fireEvent.click(inactiveButton);
-      expect(inactiveButton.className).toContain("bg-primary");
-      expect(inactiveButton.className).not.toContain("bg-teal-600");
+      const inactiveTab = screen.getByRole("tab", { name: /^inactive/i });
+      fireEvent.click(inactiveTab);
+      expect(inactiveTab.getAttribute("aria-selected")).toBe("true");
+      expect(inactiveTab.className).toContain("border-b-brand");
     });
 
-    it("active text color on selected status button uses text-primary-foreground (not text-white)", () => {
+    it("active tab label uses text-brand-darker (brand token, not text-white or bg-primary)", () => {
       renderList();
-      // Current code uses text-white; target uses text-primary-foreground (design token)
-      const allButton = screen.getByTestId("status-filter-all");
-      expect(allButton.className).toContain("text-primary-foreground");
-      expect(allButton.className).not.toContain("text-white");
+      // SponsorList defaults to statusFilter="active" — "Active" tab is selected
+      const activeTab = screen.getByRole("tab", { name: /^active/i });
+      expect(activeTab.className).toContain("text-brand-darker");
+      expect(activeTab.className).not.toContain("bg-primary");
+      expect(activeTab.className).not.toContain("text-white");
     });
   });
 

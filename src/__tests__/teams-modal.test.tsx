@@ -73,14 +73,16 @@ import type { TeamWithMembers } from "@/app/admin/teams/actions";
  * Display identity = captain's full_name from the members array.
  */
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
-  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-abc",
-    // team_name deliberately omitted — Sprint 32 contract drop
+    captain_display_name: "Captain Jane",
     year: 2026,
     captain_contact_id: "contact-captain",
     payment_status: "pending",
     amount_paid_cents: 0,
+    payment_method: null,
+    payment_reference: null,
+    paid_at: null,
     session: "morning",
     members: [
       { contact_id: "contact-captain", full_name: "Captain Jane", role: "captain", slot: 1 },

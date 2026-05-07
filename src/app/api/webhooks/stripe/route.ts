@@ -127,13 +127,16 @@ async function processDownstream(
   metadata: Record<string, string>
 ): Promise<NextResponse> {
   if (metadata.type === "registration" && metadata.team_id) {
-    // Update team payment status
+    // Update team payment status + F-T8: auto-set payment capture fields for Stripe payments
     const { error: teamUpdateError } = await supabase
       .from("teams")
       .update({
         payment_status: "paid" as const,
         stripe_payment_id: session.id,
         amount_paid_cents: session.amount_total ?? 0,
+        payment_method: "stripe",
+        payment_reference: session.payment_intent ? String(session.payment_intent) : null,
+        paid_at: new Date().toISOString(),
       })
       .eq("id", metadata.team_id);
 

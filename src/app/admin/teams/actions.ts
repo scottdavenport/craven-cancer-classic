@@ -22,6 +22,9 @@ export type TeamWithMembers = {
   captain_contact_id: string | null;
   payment_status: string;
   amount_paid_cents: number;
+  payment_method: string | null;
+  payment_reference: string | null;
+  paid_at: string | null;
   session: string;
   members: TeamMemberRow[];
   member_count: number;
@@ -63,7 +66,7 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
   const { data, error } = await supabase
     .from("teams_active")
     .select(
-      "*, captain:contacts!teams_captain_contact_id_fkey(full_name), team_members(contact_id, role, slot, contacts(id, full_name))"
+      "*, payment_method, payment_reference, paid_at, captain:contacts!teams_captain_contact_id_fkey(full_name), team_members(contact_id, role, slot, contacts(id, full_name))"
     )
     .eq("year", targetYear)
     .order("created_at", { ascending: false });
@@ -98,6 +101,9 @@ export async function getTeams(year?: number): Promise<TeamWithMembers[]> {
       captain_contact_id: team.captain_contact_id ?? null,
       payment_status: team.payment_status!,
       amount_paid_cents: team.amount_paid_cents!,
+      payment_method: team.payment_method ?? null,
+      payment_reference: team.payment_reference ?? null,
+      paid_at: team.paid_at ?? null,
       session: team.session!,
       members,
       member_count,
@@ -260,16 +266,29 @@ export async function getScoreCount(team_id: string): Promise<number> {
 // markTeamPaid
 // ---------------------------------------------------------------------------
 
+export type MarkTeamPaidParams = {
+  amount_cents: number;
+  payment_method: string;
+  payment_reference?: string | null;
+  paid_at?: string | null;
+};
+
 export async function markTeamPaid(
   team_id: string,
-  amount_cents: number
+  params: MarkTeamPaidParams
 ): Promise<{ ok: true } | { error: string }> {
   await requireAdmin();
   const supabase = await createClient();
 
   const { error } = await supabase
     .from("teams")
-    .update({ payment_status: "paid", amount_paid_cents: amount_cents })
+    .update({
+      payment_status: "paid",
+      amount_paid_cents: params.amount_cents,
+      payment_method: params.payment_method,
+      payment_reference: params.payment_reference ?? null,
+      paid_at: params.paid_at ?? new Date().toISOString(),
+    })
     .eq("id", team_id);
 
   if (error) return { error: error.message };

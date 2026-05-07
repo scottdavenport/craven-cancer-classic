@@ -647,6 +647,9 @@ export type Database = {
           deleted_by: string | null
           id: string
           notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
           payment_status: string
           session: string
           stripe_payment_id: string | null
@@ -660,6 +663,9 @@ export type Database = {
           deleted_by?: string | null
           id?: string
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string
           session: string
           stripe_payment_id?: string | null
@@ -673,6 +679,9 @@ export type Database = {
           deleted_by?: string | null
           id?: string
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string
           session?: string
           stripe_payment_id?: string | null
@@ -946,6 +955,9 @@ export type Database = {
           deleted_by: string | null
           id: string | null
           notes: string | null
+          paid_at: string | null
+          payment_method: string | null
+          payment_reference: string | null
           payment_status: string | null
           session: string | null
           stripe_payment_id: string | null
@@ -959,6 +971,9 @@ export type Database = {
           deleted_by?: string | null
           id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string | null
           session?: string | null
           stripe_payment_id?: string | null
@@ -972,6 +987,9 @@ export type Database = {
           deleted_by?: string | null
           id?: string | null
           notes?: string | null
+          paid_at?: string | null
+          payment_method?: string | null
+          payment_reference?: string | null
           payment_status?: string | null
           session?: string | null
           stripe_payment_id?: string | null

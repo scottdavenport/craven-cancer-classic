@@ -71,14 +71,16 @@ import type { TeamWithMembers } from "../actions";
 // ---------------------------------------------------------------------------
 
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
-  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-1",
-    // team_name omitted — Sprint 32 contract drop; display = captain full name
+    captain_display_name: "Alice Captain",
     year: 2026,
     captain_contact_id: "c-1",
     payment_status: "pending",
     amount_paid_cents: 0,
+    payment_method: null,
+    payment_reference: null,
+    paid_at: null,
     session: "morning",
     member_count: 1,
     open_slots: 3,

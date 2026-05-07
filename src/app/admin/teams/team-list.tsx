@@ -1,11 +1,18 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -21,10 +28,29 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus } from "lucide-react";
-import { markTeamPaid, deleteTeam, getScoreCount } from "./actions";
+import { Plus, Download } from "lucide-react";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import { FilterBar } from "@/components/admin/filter-bar";
+import { StatusTabs } from "@/components/admin/status-tabs";
+import { RowActions } from "@/components/admin/row-actions";
+import { markTeamPaid } from "./actions";
 import { TeamModal } from "./team-modal";
 import type { TeamWithMembers } from "./actions";
+
+// ---------------------------------------------------------------------------
+// Payment method options — Aria Phase 3 §B6 (locked)
+// ---------------------------------------------------------------------------
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "check", label: "Check" },
+  { value: "cash", label: "Cash" },
+  { value: "venmo", label: "Venmo" },
+  { value: "zelle", label: "Zelle" },
+  { value: "wire", label: "Wire" },
+  { value: "comped", label: "Comped" },
+  { value: "stripe", label: "Stripe" },
+  { value: "other", label: "Other" },
+] as const;
 
 // ---------------------------------------------------------------------------
 // Badge helpers
@@ -34,7 +60,6 @@ function PaymentStatusBadge({ status }: { status: string }) {
   const classes: Record<string, string> = {
     paid: "bg-success-muted text-success",
     pending: "bg-warning-muted text-warning",
-    failed: "bg-destructive/10 text-destructive",
     comped: "bg-neutral-100 text-neutral-600",
   };
   const cls = classes[status] ?? "bg-neutral-100 text-neutral-600";
@@ -65,20 +90,35 @@ function SessionBadge({ session }: { session: string }) {
 }
 
 // ---------------------------------------------------------------------------
-// Mark Paid inline form
+// Mark Paid modal — F-T8 (P1)
 // ---------------------------------------------------------------------------
 
-interface MarkPaidFormProps {
+interface MarkPaidModalProps {
   team: TeamWithMembers;
   defaultFeeDollars: number;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   onDone: () => void;
-  onCancel: () => void;
 }
 
-function MarkPaidForm({ team, defaultFeeDollars, onDone, onCancel }: MarkPaidFormProps) {
+function MarkPaidModal({ team, defaultFeeDollars, open, onOpenChange, onDone }: MarkPaidModalProps) {
   const [amount, setAmount] = useState(String(defaultFeeDollars || ""));
+  const [paymentMethod, setPaymentMethod] = useState("");
+  const [paymentReference, setPaymentReference] = useState("");
+  const [datePaid, setDatePaid] = useState("");
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+
+  function handleOpenChange(next: boolean) {
+    onOpenChange(next);
+    if (!next) {
+      setAmount(String(defaultFeeDollars || ""));
+      setPaymentMethod("");
+      setPaymentReference("");
+      setDatePaid("");
+      setError(null);
+    }
+  }
 
   function handleConfirm() {
     const dollars = parseFloat(amount);
@@ -86,175 +126,123 @@ function MarkPaidForm({ team, defaultFeeDollars, onDone, onCancel }: MarkPaidFor
       setError("Enter a valid dollar amount.");
       return;
     }
+    if (!paymentMethod) {
+      setError("Payment method is required.");
+      return;
+    }
     setError(null);
+
     startTransition(async () => {
       try {
-        const result = await markTeamPaid(team.id, Math.round(dollars * 100));
+        // Guard invalid date input
+        let paidAtIso: string | null = null;
+        if (datePaid) {
+          const d = new Date(datePaid);
+          if (isNaN(d.getTime())) {
+            setError("Enter a valid date paid.");
+            return;
+          }
+          paidAtIso = d.toISOString();
+        }
+
+        const result = await markTeamPaid(team.id, {
+          amount_cents: Math.round(dollars * 100),
+          payment_method: paymentMethod,
+          payment_reference: paymentReference.trim() || null,
+          paid_at: paidAtIso,
+        });
         if ("error" in result) {
           setError(result.error);
           return;
         }
+        handleOpenChange(false);
         onDone();
       } catch (err) {
-        console.error("[MarkPaidForm] markTeamPaid failed:", err);
+        console.error("[MarkPaidModal] markTeamPaid failed:", err);
         setError("Failed to mark team paid. Please try again.");
       }
     });
   }
 
-  return (
-    <div className="flex flex-col gap-3 py-2">
-      <div className="space-y-1.5">
-        <Label htmlFor={`paid-amount-${team.id}`}>Amount paid ($)</Label>
-        <Input
-          id={`paid-amount-${team.id}`}
-          type="number"
-          min="0"
-          step="0.01"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          className="w-36"
-          placeholder="0.00"
-        />
-      </div>
-      {error && (
-        <p className="text-xs text-destructive">{error}</p>
-      )}
-      <div className="flex gap-2">
-        <Button size="sm" onClick={handleConfirm} disabled={pending}>
-          {pending ? "Saving..." : "Confirm"}
-        </Button>
-        <Button size="sm" variant="outline" onClick={onCancel} disabled={pending}>
-          Cancel
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Delete Team Dialog
-// ---------------------------------------------------------------------------
-
-interface DeleteTeamDialogProps {
-  team: TeamWithMembers;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onDeleted: () => void;
-}
-
-export function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: DeleteTeamDialogProps) {
-  const [confirmText, setConfirmText] = useState("");
-  const [scoreCount, setScoreCount] = useState<number | null>(null);
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-
-  const isPaid = team.payment_status === "paid" && team.amount_paid_cents > 0;
-  const hasScores = scoreCount !== null && scoreCount > 0;
-  const requiresTypeConfirm = isPaid;
-  const deleteEnabled = !requiresTypeConfirm || confirmText === team.captain_display_name;
-
-  const captainMember = team.members.find((m) => m.role === "captain");
-  const captainName = captainMember
-    ? captainMember.full_name?.trim() ? captainMember.full_name : "(deleted contact)"
-    : "—";
-  const amountDollars = (team.amount_paid_cents / 100).toFixed(2);
-
-  // Fetch score count when dialog opens (useEffect handles parent-controlled open prop;
-  // base-ui Dialog.Root only fires onOpenChange for internal transitions, not parent prop changes)
-  useEffect(() => {
-    if (open && scoreCount === null) {
-      getScoreCount(team.id).then(setScoreCount);
-    }
-    if (!open) {
-      setConfirmText("");
-      setError(null);
-      setScoreCount(null);
-    }
-  }, [open, team.id, scoreCount]);
-
-  function handleOpenChange(nextOpen: boolean) {
-    onOpenChange(nextOpen);
-  }
-
-  function handleDelete() {
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await deleteTeam(team.id);
-        if ("error" in result) {
-          setError(result.error);
-          return;
-        }
-        onOpenChange(false);
-        onDeleted();
-      } catch (err) {
-        console.error("[DeleteTeamDialog] deleteTeam failed:", err);
-        setError("Failed to delete team. Please try again.");
-      }
-    });
-  }
+  const captainName = team.members.find((m) => m.role === "captain")?.full_name?.trim();
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" showCloseButton={false}>
         <DialogHeader>
-          <DialogTitle className="text-destructive">
-            Delete team &ldquo;{team.captain_display_name}&rdquo;?
+          <DialogTitle>
+            Mark paid{captainName ? ` — ${captainName}'s team` : ""}
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
-          {/* Paid warning */}
-          {isPaid && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-sm space-y-1">
-              <p className="font-semibold text-destructive">
-                Warning: This team paid ${amountDollars}.
-              </p>
-              <p className="text-muted-foreground">
-                Deleting will NOT refund — handle the refund in Stripe manually if needed.
-              </p>
-            </div>
-          )}
+          {/* Amount paid */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`paid-amount-${team.id}`}>Amount paid ($)</Label>
+            <Input
+              id={`paid-amount-${team.id}`}
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+              className="w-36"
+              placeholder="0.00"
+            />
+          </div>
 
-          {/* Score count notice */}
-          {scoreCount === null ? (
-            <p className="text-sm text-muted-foreground">Loading score data&hellip;</p>
-          ) : hasScores ? (
-            <p className="text-sm text-muted-foreground">
-              This team has <span className="font-semibold">{scoreCount} score(s)</span>.
-              They&apos;ll remain on the scores page but disconnected from the team record.
-            </p>
-          ) : null}
+          {/* Payment method — Aria Phase 3 §B6 (required) */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`paid-method-${team.id}`}>Payment method</Label>
+            <input type="hidden" name="payment_method" value={paymentMethod} />
+            <Select
+              value={paymentMethod}
+              onValueChange={(v) => setPaymentMethod(v ?? "")}
+              items={Object.fromEntries(PAYMENT_METHOD_OPTIONS.map((o) => [o.value, o.label]))}
+            >
+              <SelectTrigger id={`paid-method-${team.id}`} className="w-[200px]">
+                <SelectValue placeholder="Select method" />
+              </SelectTrigger>
+              <SelectContent>
+                {PAYMENT_METHOD_OPTIONS.map((opt) => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          {/* Team info */}
-          <p className="text-sm text-muted-foreground">
-            Members: {team.member_count}/4 &middot; Captain: {captainName}
-          </p>
+          {/* Reference number — Aria Phase 3 §B6 (optional) */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`paid-ref-${team.id}`}>
+              Reference number{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Input
+              id={`paid-ref-${team.id}`}
+              type="text"
+              value={paymentReference}
+              onChange={(e) => setPaymentReference(e.target.value)}
+              placeholder="Check #, transaction ID, etc."
+            />
+          </div>
 
-          <p className="text-sm text-muted-foreground">
-            The team will be moved to Trash. You can restore from Admin &rarr; Trash later.
-          </p>
+          {/* Date paid — Aria Phase 3 §B6 (optional) */}
+          <div className="space-y-1.5">
+            <Label htmlFor={`paid-date-${team.id}`}>
+              Date paid{" "}
+              <span className="text-muted-foreground font-normal">(optional)</span>
+            </Label>
+            <Input
+              id={`paid-date-${team.id}`}
+              type="date"
+              value={datePaid}
+              onChange={(e) => setDatePaid(e.target.value)}
+            />
+          </div>
 
-          {/* Type-to-confirm for paid teams */}
-          {requiresTypeConfirm && (
-            <div className="space-y-1.5">
-              <Label htmlFor={`delete-confirm-${team.id}`}>
-                Type the team name <span className="font-semibold">exactly</span> to confirm:
-              </Label>
-              <Input
-                id={`delete-confirm-${team.id}`}
-                value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
-                placeholder={team.captain_display_name}
-                autoComplete="off"
-              />
-            </div>
-          )}
-
-          {error && (
-            <p className="text-xs text-destructive">{error}</p>
-          )}
+          {error && <p className="text-xs text-destructive">{error}</p>}
         </div>
 
         <DialogFooter className="gap-2">
@@ -266,17 +254,77 @@ export function DeleteTeamDialog({ team, open, onOpenChange, onDeleted }: Delete
           >
             Cancel
           </Button>
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={handleDelete}
-            disabled={!deleteEnabled || pending || scoreCount === null}
-          >
-            {pending ? "Deleting..." : "Delete"}
+          <Button size="sm" onClick={handleConfirm} disabled={pending}>
+            {pending ? "Saving..." : "Confirm"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// DownloadCsvButton — local teams CSV export (Phase 4 universal helper pending)
+// Aria Phase 3 §B9: "Download CSV"
+// ---------------------------------------------------------------------------
+
+function DownloadCsvButton({ teams }: { teams: TeamWithMembers[] }) {
+  function handleDownload() {
+    const headers = [
+      "Captain",
+      "Session",
+      "Player 2",
+      "Player 3",
+      "Player 4",
+      "Payment Status",
+      "Amount Paid ($)",
+      "Payment Method",
+      "Reference Number",
+      "Date Paid",
+    ];
+
+    const rows = teams.map((team) => {
+      const captain = team.members.find((m) => m.role === "captain");
+      const players = team.members
+        .filter((m) => m.role !== "captain")
+        .sort((a, b) => a.slot - b.slot);
+
+      return [
+        captain?.full_name ?? "",
+        team.session,
+        players[0]?.full_name ?? "",
+        players[1]?.full_name ?? "",
+        players[2]?.full_name ?? "",
+        team.payment_status,
+        (team.amount_paid_cents / 100).toFixed(2),
+        team.payment_method ?? "",
+        team.payment_reference ?? "",
+        team.paid_at
+          ? (() => {
+              const d = new Date(team.paid_at!);
+              return isNaN(d.getTime()) ? team.paid_at ?? "" : d.toLocaleDateString();
+            })()
+          : "",
+      ]
+        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
+        .join(",");
+    });
+
+    const csv = [headers.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `teams-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return (
+    <Button size="sm" variant="outline" onClick={handleDownload}>
+      <Download className="size-4 mr-1" />
+      Download CSV
+    </Button>
   );
 }
 
@@ -295,24 +343,25 @@ type ModalState = {
   team: TeamWithMembers | null;
 };
 
+type StatusFilter = "pending" | "paid" | "all";
+
 export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListProps) {
   const router = useRouter();
-  const teams = initialTeams;
+  const [, startTransition] = useTransition();
   const [modal, setModal] = useState<ModalState>({ open: false, mode: "create", team: null });
-  const [markingPaidId, setMarkingPaidId] = useState<string | null>(null);
+  const [markPaidTeam, setMarkPaidTeam] = useState<TeamWithMembers | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
-  // After a mutation we refresh via router.refresh() so Next.js RSC re-fetches in place.
-  // Note: team-modal fires its own per-mode toast ("Team created" / "Team updated")
-  // before calling onSuccess. Adding one here would stack two toasts on every save.
   function handleModalSuccess() {
     setModal((d) => ({ ...d, open: false }));
-    router.refresh();
+    startTransition(() => { router.refresh(); });
   }
 
   function handleMarkPaidDone() {
-    setMarkingPaidId(null);
+    setMarkPaidTeam(null);
     toast.success("Payment recorded");
-    router.refresh();
+    startTransition(() => { router.refresh(); });
   }
 
   const captainName = (team: TeamWithMembers): string => {
@@ -325,25 +374,76 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
     return member.full_name?.trim() ? member.full_name : "(deleted contact)";
   };
 
+  // Status tab counts
+  const pendingCount = useMemo(() => initialTeams.filter((t) => t.payment_status === "pending").length, [initialTeams]);
+  const paidCount = useMemo(() => initialTeams.filter((t) => t.payment_status === "paid").length, [initialTeams]);
+  const allCount = initialTeams.length;
+
+  const statusTabs = [
+    { id: "pending", label: "Pending", count: pendingCount },
+    { id: "paid", label: "Paid", count: paidCount },
+    { id: "all", label: "All", count: allCount },
+  ];
+
+  const hasActiveFilters = search.trim().length > 0 || statusFilter !== "all";
+
+  const displayedTeams = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    let filtered = initialTeams;
+
+    if (statusFilter !== "all") {
+      filtered = filtered.filter((t) => t.payment_status === statusFilter);
+    }
+
+    if (q) {
+      filtered = filtered.filter((t) => {
+        const cap = t.members.find((m) => m.role === "captain");
+        const capName = cap?.full_name?.toLowerCase() ?? "";
+        return capName.includes(q);
+      });
+    }
+
+    return filtered;
+  }, [initialTeams, search, statusFilter]);
+
   return (
-    <div className="space-y-6">
-      {/* Action bar */}
-      <div className="flex items-center justify-between">
+    <div className="space-y-0">
+      {/* Status tabs — Aria Phase 3 §B1 */}
+      <StatusTabs
+        tabs={statusTabs}
+        activeId={statusFilter}
+        onChange={(id) => setStatusFilter(id as StatusFilter)}
+        ariaLabel="Team payment status"
+      />
+
+      {/* Filter bar — search + session filter */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by captain name"
+      />
+
+      {/* Toolbar: count + Download CSV + New Team */}
+      <div className="flex items-center justify-between px-4 py-3 bg-card border-b border-border/60">
         <p className="text-[0.8125rem] text-muted-foreground">
-          {teams.length} team{teams.length !== 1 ? "s" : ""}
+          {displayedTeams.length} team{displayedTeams.length !== 1 ? "s" : ""}
         </p>
-        <Button size="sm" onClick={() => setModal({ open: true, mode: "create", team: null })}>
-          <Plus className="size-4" />
-          New Team
-        </Button>
+        <div className="flex items-center gap-2">
+          <DownloadCsvButton teams={displayedTeams} />
+          <Button size="sm" onClick={() => setModal({ open: true, mode: "create", team: null })}>
+            <Plus className="size-4" />
+            New Team
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">
+      <div className="overflow-hidden rounded-b-lg border-x border-b border-border/60 shadow-sm">
         <Table>
           <TableHeader className="bg-neutral-50">
             <TableRow>
-              {["Team", "Captain", "Members", "Session", "Payment", "Open Slots", "Actions"].map(
+              {/* F-T1: CAPTAIN column dropped — team identity = captain via Team column */}
+              {["Team", "Members", "Session", "Payment", "Open Slots", ""].map(
                 (h) => (
                   <TableHead
                     key={h}
@@ -356,36 +456,61 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
             </TableRow>
           </TableHeader>
           <TableBody>
-            {teams.length === 0 ? (
+            {displayedTeams.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7}>
-                  <div className="py-16 flex flex-col items-center gap-3">
-                    <h3 className="font-display text-xl font-semibold text-foreground">
-                      No teams yet
-                    </h3>
-                    <p className="font-sans text-sm text-muted-foreground max-w-xs text-center">
-                      Use the &quot;New Team&quot; button above to build the first team.
-                    </p>
-                  </div>
+                <TableCell colSpan={6} className="p-0">
+                  <AdminEmptyState
+                    filterActive={hasActiveFilters}
+                    title={hasActiveFilters ? "No teams match your filters" : "No teams yet"}
+                    action={
+                      hasActiveFilters ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSearch("");
+                            setStatusFilter("all");
+                          }}
+                        >
+                          Clear filters
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => setModal({ open: true, mode: "create", team: null })}
+                        >
+                          Add team
+                        </Button>
+                      )
+                    }
+                  />
                 </TableCell>
               </TableRow>
             ) : (
-              teams.map((team) => (
-                <>
+              displayedTeams.map((team) => {
+                const captain = captainName(team);
+                // Aria Phase 3 §B2b — possessive form for aria-labels
+                const captainFull = team.members.find((m) => m.role === "captain")?.full_name?.trim();
+                const editLabel = captainFull
+                  ? `Edit ${captainFull}'s team`
+                  : "Edit team";
+                const deleteLabel = captainFull
+                  ? `Delete ${captainFull}'s team`
+                  : "Delete team";
+                const selectLabel = captainFull
+                  ? `Select ${captainFull}'s team`
+                  : "Select team";
+
+                return (
                   <TableRow
                     key={team.id}
-                    className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100"
+                    className="group/row border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100"
                   >
-                    {/* Team Name */}
+                    {/* Team (captain name = team identity) */}
                     <TableCell className="px-4 py-3">
                       <span className="text-[0.8125rem] font-medium text-foreground">
                         {team.captain_display_name}
                       </span>
-                    </TableCell>
-
-                    {/* Captain */}
-                    <TableCell className="px-4 py-3 text-[0.8125rem] text-muted-foreground">
-                      {captainName(team)}
                     </TableCell>
 
                     {/* Members */}
@@ -426,48 +551,36 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
                       )}
                     </TableCell>
 
-                    {/* Actions */}
-                    <TableCell className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setModal({ open: true, mode: "edit", team })}
-                        >
-                          Edit
-                        </Button>
-                        {team.payment_status !== "paid" && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() =>
-                              setMarkingPaidId(
-                                markingPaidId === team.id ? null : team.id
-                              )
-                            }
-                          >
-                            Mark Paid
-                          </Button>
-                        )}
+                    {/* Row actions — hover-reveal per design D6 */}
+                    <TableCell className="px-4 py-3 w-32">
+                      <div className="flex items-center justify-end gap-2">
+                        <RowActions
+                          editLabel={editLabel}
+                          deleteLabel={deleteLabel}
+                          selectLabel={selectLabel}
+                          onEdit={() => setModal({ open: true, mode: "edit", team })}
+                          onDelete={() => setModal({ open: true, mode: "edit", team })}
+                          surfaceSpecial={
+                            team.payment_status === "pending" ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="text-[0.75rem] h-7 px-2"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setMarkPaidTeam(team);
+                                }}
+                              >
+                                Mark paid
+                              </Button>
+                            ) : undefined
+                          }
+                        />
                       </div>
                     </TableCell>
                   </TableRow>
-
-                  {/* Inline Mark Paid form */}
-                  {markingPaidId === team.id && (
-                    <TableRow key={`${team.id}-mark-paid`} className="bg-neutral-50">
-                      <TableCell colSpan={7} className="px-6 py-4">
-                        <MarkPaidForm
-                          team={team}
-                          defaultFeeDollars={defaultFeeDollars}
-                          onDone={handleMarkPaidDone}
-                          onCancel={() => setMarkingPaidId(null)}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              ))
+                );
+              })
             )}
           </TableBody>
         </Table>
@@ -480,6 +593,16 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
         onOpenChange={(open) => setModal((d) => ({ ...d, open }))}
         onSuccess={handleModalSuccess}
       />
+
+      {markPaidTeam && (
+        <MarkPaidModal
+          team={markPaidTeam}
+          defaultFeeDollars={defaultFeeDollars}
+          open={!!markPaidTeam}
+          onOpenChange={(open) => { if (!open) setMarkPaidTeam(null); }}
+          onDone={handleMarkPaidDone}
+        />
+      )}
     </div>
   );
 }

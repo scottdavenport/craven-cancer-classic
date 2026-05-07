@@ -423,7 +423,7 @@ describe("markTeamPaid", () => {
       { from: mockFrom } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
     );
 
-    const result = await markTeamPaid("team-uuid", 70000);
+    const result = await markTeamPaid("team-uuid", { amount_cents: 70000, payment_method: "check" });
 
     expect(mockFrom).toHaveBeenCalledWith("teams");
     expect(mockUpdate).toHaveBeenCalledWith({
@@ -443,7 +443,7 @@ describe("markTeamPaid", () => {
       { from: mockFrom } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
     );
 
-    const result = await markTeamPaid("team-uuid", 70000);
+    const result = await markTeamPaid("team-uuid", { amount_cents: 70000, payment_method: "check" });
 
     expect(result).toMatchObject({ error: "DB error" });
   });

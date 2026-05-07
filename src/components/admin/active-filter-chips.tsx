@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 
 interface FilterChip {
   id: string;
-  label: string;
+  keyText: string;
+  valueText?: string;
   onRemove: () => void;
 }
 
@@ -36,10 +37,17 @@ export function ActiveFilterChips({
           key={chip.id}
           className="inline-flex items-center gap-1.5 h-[26px] pl-2.5 pr-1 rounded-full bg-brand-muted text-brand-darker text-[12.5px] font-medium"
         >
-          <span className="font-semibold">{chip.label}</span>
+          {chip.valueText !== undefined ? (
+            <>
+              <span className="font-semibold">{chip.keyText}:</span>
+              <span className="font-medium">{chip.valueText}</span>
+            </>
+          ) : (
+            <span className="font-semibold">{chip.keyText}</span>
+          )}
           <button
             type="button"
-            aria-label={`Remove ${chip.label} filter`}
+            aria-label={`Remove ${chip.keyText} filter`}
             onClick={chip.onRemove}
             className={cn(
               "size-[18px] rounded-full inline-flex items-center justify-center",

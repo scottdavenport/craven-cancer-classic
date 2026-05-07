@@ -59,7 +59,7 @@ export function StatusTabs({
             {tab.label}
             <span
               className={cn(
-                "inline-flex items-center justify-content-center",
+                "inline-flex items-center justify-center",
                 "min-w-[22px] h-[18px] px-1.5",
                 "rounded-full",
                 "text-[11px] font-semibold tabular-nums",

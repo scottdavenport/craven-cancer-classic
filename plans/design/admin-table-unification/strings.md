@@ -367,3 +367,571 @@ States enumerated per HARD-GATE requirement:
 All strings in sections A, B, C, and D above are approved. Every state enumerated. Every string has an explicit intent.
 
 **Aria-approved. PR-2 (Sponsors drawer → modal) may proceed to Bolt.**
+
+---
+
+## Phase 3 — Per-surface cascade strings
+
+**Owner:** Aria
+**Status:** Aria-approved — ready-to-ship
+**Pairs with:** `plans/2026-05-admin-table-unification-design.md` (PR #369) / `plans/2026-05-admin-table-unification-sprint.md` (PR #370) §3 Phase 3 lines 235–422
+**Scope:** PR-3-contacts, PR-3-teams, PR-3-sponsorships, PR-3-photos. Does not modify Phase 1 or Phase 2 sections above.
+**Provenance:** Phase 1 PR #372 (shared primitives) + Phase 2 PR #378 (Sponsors modal) are the tone + format reference.
+
+---
+
+### A. Contacts (PR-3-contacts)
+
+#### A1. Modal section headers
+
+Per design doc D11 — banded `<ModalSection>` applied to the Contacts modal. Five sections.
+
+| Location | String | Intent |
+|---|---|---|
+| `<ModalSection>` header — Salutation + First + Last + Company fields | "Identity" | Groups the record-identification fields. Consistent with Sponsors modal "Identity" (Phase 2). One word, sufficient. |
+| `<ModalSection>` header — Email + Phone fields | "Contact" | Names the means of reaching this person. Single word. Does not collide with the Contacts surface name because it appears inside the modal, not as a nav label. |
+| `<ModalSection>` header — Role-card toggles | "Roles" | Names what the admin is managing: this person's roles in the tournament. Plural because a contact may have more than one. |
+| `<ModalSection>` header — Address fields | "Address" | Single word. No ambiguity. |
+| `<ModalSection>` header — Notes textarea | "Notes" | Single word. Consistent with Sponsors modal "Notes" (Phase 2). |
+
+**Voice note — why "Contact" not "Contact info" or "Contact details":** The section header is a label, not a sentence. "Contact" names the category. "Contact info" adds a word that the layout already communicates — these are contact fields. One word wins.
+
+---
+
+#### A2. Role card titles
+
+Per design doc D12 — role-cards replace the checkbox-based type controls. Five cards, always visible, each with a toggle. Selected cards expand inline.
+
+| Location | String | Intent |
+|---|---|---|
+| Role card — player type | "Player" | Names the role. Noun-singular, sentence case. Consistent with existing `TYPE_LABELS` in `contact-form.tsx` line 56–61. |
+| Role card — sponsor type | "Sponsor" | Names the role. |
+| Role card — donor type | "Donor" | Names the role. |
+| Role card — volunteer type | "Volunteer" | Names the role. |
+| Role card — other type | "Other" | Names the catch-all role. |
+
+**Consistency note:** These five strings already exist in `contact-form.tsx` `TYPE_LABELS` (lines 56–61). Bolt is not introducing new strings — Bolt is applying them to the new card component shape. The labels are locked here for completeness and to formally countersign the card-based rendering.
+
+---
+
+#### A3. Inline validation message (F19)
+
+Per sprint plan F19 (P2) — shown under the Roles section when `types.length === 0` and the admin attempts to save.
+
+| Location | State | String | Intent |
+|---|---|---|---|
+| `contact-form.tsx` — below Roles `<ModalSection>` | Roles section, zero types selected, save attempted | "At least one role is required to save." | Tells the admin the exact condition preventing save — no role selected. Full sentence, ends with period. No exclamation. Grade 8. |
+
+**Why a full sentence here:** This is an inline error message, not a label. Error messages are sentences. The period is load-bearing — it signals finality (the form will not save until resolved). Consistent with existing inline error patterns in `contact-form.tsx` (e.g., "Provide a first/last name or company name", line 197; "Invalid email format", line 162 — though those omit periods, this one is longer and benefits from the sentence-close).
+
+**States this message covers:** only renders when save is attempted with `types.length === 0`. It does not render on initial open or while the admin is filling fields before attempting to save. No separate loading or error variant needed for this message.
+
+---
+
+#### A4. Status tabs
+
+Per design doc D5 + Axis 6 — status tabs on the Contacts list. "All" pre-approved Phase 1.
+
+| Location | State | String | Intent |
+|---|---|---|---|
+| `<StatusTabs>` — Contacts list | Subscribed contacts visible | "Subscribed" | Filters to `marketing_consent = true` rows. Sentence case. |
+| `<StatusTabs>` — Contacts list | Unsubscribed contacts visible | "Unsubscribed" | Filters to `marketing_consent = false` rows. Sentence case. |
+| `<StatusTabs>` — Contacts list | All contacts visible | "All" | Pre-approved Phase 1. Cited for completeness. |
+
+**Tab count format:** Inherits Phase 1 / Phase 2 pattern — each tab renders with an inline count. Bolt's wiring concern; label strings are the Aria gate concern.
+
+---
+
+#### A5. Search placeholder
+
+Per sprint plan F9.a — search across name, email, phone, and company.
+
+| Location | String | Intent |
+|---|---|---|
+| Search input — Contacts filter bar | "Search by name, email, phone, or company" | Enumerates searchable fields so the admin knows what to type. Oxford comma is correct here — four items. |
+
+**Why enumerate all four fields:** The admin may not know the person's name (looking up by email or company). Listing all four fields removes the guesswork. The string is 44 characters — slightly long for a placeholder, but it earns every word. Do not shorten to "Search contacts" — that hides the multi-field capability.
+
+---
+
+#### A6. Secondary filter labels
+
+Per sprint plan F9.g — labeled Type and Team dropdowns in the filter bar.
+
+| Location | String | Intent |
+|---|---|---|
+| Secondary filter dropdown label — contact type | "Type" | Names the filter dimension. Single word. Consistent with the admin-efficient voice: the admin knows what "Type" means on the Contacts surface. |
+| Secondary filter dropdown label — team assignment | "Team" | Names the filter dimension. Single word. |
+
+**Dropdown option labels for Type filter:** The options in the Type dropdown are the five role labels: "Player", "Sponsor", "Donor", "Volunteer", "Other" — already locked in A2 above. Bolt uses these verbatim. No additional Aria gate needed for the dropdown options themselves.
+
+---
+
+#### A7. Boolean toggle
+
+Per sprint plan — Captains only filter toggle in the filter bar.
+
+| Location | String | Intent |
+|---|---|---|
+| Boolean toggle — filter bar | "Captains only" | Filters to contacts who are team captains. Two words. Sentence case. No punctuation. Communicates the filter's effect, not the mechanism. |
+
+---
+
+#### A8. Salutation options
+
+Per sprint plan F15 — replace salutation free-text with a `<Select>`. Six locked options plus the blank/unset option.
+
+| Location | String | Intent |
+|---|---|---|
+| `<Select>` option — salutation | "Mr." | Standard honorific. Trailing period is part of the abbreviation, not sentence punctuation. |
+| `<Select>` option — salutation | "Mrs." | Standard honorific. |
+| `<Select>` option — salutation | "Ms." | Standard honorific. |
+| `<Select>` option — salutation | "Mx." | Gender-neutral honorific. Trailing period is part of the abbreviation. |
+| `<Select>` option — salutation | "Dr." | Professional honorific. |
+| `<Select>` option — salutation | "Miss" | Standard honorific. No trailing period — "Miss" is not an abbreviation. |
+
+**Blank/unset option:** The `<Select>` should include a blank option representing "no salutation." The blank option has no visible label — it renders as an empty `<SelectItem>` or placeholder text. Bolt wires the blank option; no string needed from Aria (the absence of a salutation is not a string, it's a null value).
+
+**Order:** Mr. / Mrs. / Ms. / Mx. / Dr. / Miss — most common first, gender-neutral before professional. Mx. is included because the contact database may serve a wide range of tournament participants.
+
+---
+
+#### A9. Contacts — state enumeration
+
+States enumerated per HARD-GATE requirement:
+
+- **Happy path (list populated, contact edited):** Modal section headers A1 (5 headers), role cards A2 (5 titles), status tabs A4 (Subscribed/Unsubscribed), search placeholder A5, filter labels A6 (Type/Team), toggle A7, salutation options A8 (6 options). All strings locked above.
+- **Empty state (no data / filter active):** Covered in Phase 1 (§2a + §3). Not re-gated here — citation: Phase 1 Aria-approved PR #372.
+- **Loading:** No new loading strings introduced by Phase 3 Contacts. Inherits existing loading infrastructure.
+- **Error / degraded:** Toast messages "Contact created" / "Contact updated" / "Contact moved to Trash" are existing strings in the contact action layer. Not new strings — carry over verbatim. Not re-gated.
+- **Inline validation — zero roles:** A3 above. Renders only on save-attempt with `types.length === 0`.
+- **Inline validation — identity:** "Provide a first/last name or company name" — existing string in `contact-form.tsx` line 197. Not a new string. Not re-gated.
+- **Offline:** No offline-specific copy introduced. Network errors surface via existing toast infrastructure.
+- **Partial:** No partial-render copy needed for this surface. Form renders with available data.
+
+---
+
+### B. Teams (PR-3-teams)
+
+#### B1. Status tabs
+
+Per design doc D5 + Axis 6 — status tabs on the Teams list. "All" pre-approved Phase 1.
+
+| Location | State | String | Intent |
+|---|---|---|---|
+| `<StatusTabs>` — Teams list | Pending-payment teams visible | "Pending" | Filters to `payment_status = 'pending'` rows. Sentence case. Single word. |
+| `<StatusTabs>` — Teams list | Paid teams visible | "Paid" | Filters to `payment_status = 'paid'` rows. Sentence case. Single word. |
+| `<StatusTabs>` — Teams list | All teams visible | "All" | Pre-approved Phase 1. Cited for completeness. |
+
+---
+
+#### B2. Modal section headers
+
+Per design doc D11 — banded `<ModalSection>` applied to the Teams modal. Two sections.
+
+| Location | String | Intent |
+|---|---|---|
+| `<ModalSection>` header — Session + Captain + Players 2–4 fields | "Roster" | Groups the team composition fields. "Roster" names the concept precisely — who is on the team. |
+| `<ModalSection>` header — Payment status + Amount paid + Payment method + Reference number + Date paid fields | "Payment" | Groups all payment-related fields. Single word, sufficient. |
+
+**Voice note — why "Roster" not "Team members" or "Players":** "Roster" is the conventional term for a team's composition in tournament administration. The admin is a tournament organizer; this register is appropriate. It's also shorter and cleaner than "Team members."
+
+---
+
+#### B3. Secondary filter label
+
+Per sprint plan — Session filter dropdown on the Teams list.
+
+| Location | String | Intent |
+|---|---|---|
+| Secondary filter dropdown label — session | "Session" | Names the filter dimension. Single word. The admin knows "Session" = Morning / Afternoon on this surface. |
+
+**Dropdown option labels for Session filter:** "Morning" and "Afternoon" — already rendered in `team-form.tsx` line 119–127. No new Aria gate needed. Bolt uses these verbatim.
+
+---
+
+#### B4. Search placeholder
+
+Per sprint plan — search by captain name on the Teams list.
+
+| Location | String | Intent |
+|---|---|---|
+| Search input — Teams filter bar | "Search by captain name" | Tells the admin what field is searched. Captain name is the team's identity on this surface (craven invariant). |
+
+**Why not "Search teams":** The admin needs to know the field searched. Since team identity = captain name, naming the field ("captain name") is both accurate and consistent with the craven invariant.
+
+---
+
+#### B5. Mark-paid button
+
+Per sprint plan — hover-row labeled button, visible only when `payment_status = 'pending'`.
+
+| Location | State | String | Intent |
+|---|---|---|---|
+| Hover-row labeled button — Teams list | Row has `payment_status = 'pending'` | "Mark paid" | Verb phrase. Names the action precisely. Two words, sentence case, no punctuation. Replaces always-visible payment button. |
+
+**State note:** This button only renders when `payment_status = 'pending'`. It does not render for paid teams. No separate string needed for the paid state — the row's status badge handles that visual feedback.
+
+---
+
+#### B6. Mark-paid modal — field labels and options
+
+Per sprint plan F-T8 — the "Mark paid" action opens a modal to capture payment method details before writing the record.
+
+**Field labels:**
+
+| Location | String | Intent |
+|---|---|---|
+| Mark-paid modal field label | "Payment method" | Labels the required dropdown. Two words, sentence case. Names the concept precisely. |
+| Mark-paid modal optional field label | "Reference number" | Labels the optional text field for check numbers, Venmo transaction IDs, etc. Two words, sentence case. |
+| Mark-paid modal optional field label | "Date paid" | Labels the optional date field. Two words, sentence case. "Date paid" is the event (when payment occurred), not "Payment date" (which sounds like a due date). |
+
+**Payment method `<Select>` options:**
+
+| String | Intent |
+|---|---|
+| "Check" | Physical check payment. Sentence case — generic payment type. |
+| "Cash" | Cash payment. Sentence case — generic payment type. |
+| "Venmo" | Venmo peer-to-peer payment. Proper noun — capitalize. |
+| "Zelle" | Zelle peer-to-peer payment. Proper noun — capitalize. |
+| "Wire" | Wire transfer. Sentence case — generic payment type. |
+| "Comped" | Complimentary registration — no payment collected. Sentence case. "Comped" is standard admin shorthand for "complimentary." |
+| "Stripe" | Stripe online payment (typically auto-set by webhook). Proper noun — capitalize. |
+| "Other" | Catch-all for payment methods not listed. Sentence case. |
+
+**Option order:** Check / Cash / Venmo / Zelle / Wire / Comped / Stripe / Other — most common manual-entry methods first, auto-set method (Stripe) near the end, catch-all last.
+
+**"Comped" note:** The admin is a power user who knows this term. "Complimentary" is more formal but longer; "Comped" is standard in event administration. Consistent with admin-efficient voice.
+
+**Stripe auto-set note:** The sprint plan specifies that the Stripe webhook auto-sets `payment_method = 'stripe'` on successful team payment (sprint plan line 339). Bolt should render "Stripe" in the dropdown for those records. The string is locked here.
+
+---
+
+#### B7. Teams delete-confirm dialog
+
+Per sprint plan + design doc D4c + Axis 9 — delete confirms name linked records and predict the aftermath. The Teams delete-confirm must enumerate team members (by name + count) and linked player score records (by count).
+
+The soft-delete invariant applies: action moves the team to Trash.
+
+**Dialog title (all variants):** `"Delete [Captain Full Name]'s team?"`
+
+(Interpolate captain's full name. Possessive form per craven team-identity invariant. Example: "Delete Scott Davenport's team?")
+
+**Fallback title — no captain:** `"Delete this team?"`
+
+---
+
+**Variant 1 — Zero members, zero score records:**
+
+```
+Moving this team to Trash removes it from the active list. You can restore it from Admin → Trash.
+```
+
+Intent: Confirm the consequence without alarming. No cascade to name. Matches the Sponsors Phase 2 zero-linked-records pattern (C2 above).
+
+---
+
+**Variant 2 — Has members, zero score records:**
+
+Singular (1 member):
+```
+1 member is on this team: [Full Name]. Moving this team to Trash keeps that record intact.
+```
+
+Plural (N ≥ 2 members):
+```
+[N] members are on this team: [Name 1], [Name 2][, … and N more]. Moving this team to Trash keeps those records intact.
+```
+
+Name display rule: show up to 3 names, then "+ [N] more" for the remainder. Example with 5 members:
+```
+5 members are on this team: Allan Haseley, Jane Smith, Bob Jones, and 2 more. Moving this team to Trash keeps those records intact.
+```
+
+Intent: Name the linked people so the admin can verify they're deleting the right team. "Keeps those records intact" — the member contact records are not deleted, only the team association is trashed.
+
+---
+
+**Variant 3 — Zero members, has score records:**
+
+Singular (1 score record):
+```
+1 player score record is linked to this team. Moving this team to Trash keeps that record intact — it will display "(no team)" where the team name appeared.
+```
+
+Plural (N ≥ 2 score records):
+```
+[N] player score records are linked to this team. Moving this team to Trash keeps those records intact — they will display "(no team)" where the team name appeared.
+```
+
+Intent: Warn the admin about orphaned score records. "(no team)" is the locked fallback display string for orphaned score records — lock it here explicitly (see B8 below).
+
+---
+
+**Variant 4 — Has members AND has score records:**
+
+```
+[N] members are on this team: [Name 1], [Name 2][, … and N more]. [M] player score records are linked. Moving this team to Trash keeps all records intact — score records will display "(no team)" where the team name appeared.
+```
+
+Example:
+```
+3 members are on this team: Allan Haseley, Jane Smith, Bob Jones. 12 player score records are linked. Moving this team to Trash keeps all records intact — score records will display "(no team)" where the team name appeared.
+```
+
+Intent: Enumerate both link types concisely. "Keeps all records intact" covers both member contacts and score records in one phrase.
+
+---
+
+**Destructive button label (all variants):** "Move to Trash"
+**Cancel button label (all variants):** "Cancel"
+
+**Grammar rules for Bolt:**
+- "member is" / "member are" — singular/plural based on fetched member count
+- "that record" / "those records" — singular/plural
+- "it will" / "they will" — singular/plural
+- Member name list: up to 3 names shown; remainder as "+ [N] more" (not "and [N] more" — the Oxford comma variant "Name 1, Name 2, and [N] more" is also acceptable if Bolt's list-builder already produces it; do not change a working implementation to match a preference)
+
+---
+
+#### B8. Teams — fallback display string for orphaned score records
+
+When a player score record has a `team_id` that references a soft-deleted team, the UI must display a fallback.
+
+| Location | String | Intent |
+|---|---|---|
+| Any UI cell / field displaying a deleted team's name | "(no team)" | Names the condition plainly — the team was moved to Trash, and the score record is now orphaned. Parentheses signal a system-generated placeholder, not a data value. Lowercase. |
+
+**Tone note:** "(no team)" follows the existing craven convention for structural placeholders (compare: "(no captain)" for teams without an assigned captain). Consistent register.
+
+---
+
+#### B9. CSV export button
+
+| Location | String | Intent |
+|---|---|---|
+| Teams list toolbar | "Download CSV" | Names the action precisely. Two words, sentence case. Consistent across all surfaces (Sponsorships, Photos, Teams). |
+
+---
+
+#### B10. Teams — state enumeration
+
+States enumerated per HARD-GATE requirement:
+
+- **Happy path (list populated, team edited, payment marked):** Status tabs B1 (Pending/Paid), modal section headers B2 (Roster/Payment), filter label B3 (Session), search placeholder B4, mark-paid button B5, mark-paid field labels B6, payment method options B6 (8 options), CSV button B9. All strings locked above.
+- **Empty state (no data / filter active):** Covered in Phase 1 (§2b + §3). Not re-gated here — citation: Phase 1 Aria-approved PR #372.
+- **Loading:** No new loading strings introduced. Inherits existing infrastructure.
+- **Error / degraded:** Toast messages "Team created" / "Team updated" / "Team moved to Trash" — existing strings in the team action layer. Not new. Not re-gated. "An unexpected error occurred. Please try again." — existing in `team-form.tsx` line 107. Not re-gated.
+- **Delete-confirm (0 members, 0 scores):** B7 Variant 1.
+- **Delete-confirm (has members, 0 scores):** B7 Variant 2 (singular + plural).
+- **Delete-confirm (0 members, has scores):** B7 Variant 3 (singular + plural).
+- **Delete-confirm (has members + has scores):** B7 Variant 4.
+- **Orphaned score record (team deleted):** B8 fallback display string.
+- **Mark-paid modal:** B6 all field labels and all 8 payment method options.
+- **Offline:** No offline-specific copy introduced. Network errors surface via existing toast infrastructure.
+
+---
+
+### C. Sponsorships (PR-3-sponsorships)
+
+#### C1. Modal section headers
+
+Per design doc D11 — banded `<ModalSection>` applied to the Sponsorships modal. Two sections.
+
+| Location | String | Intent |
+|---|---|---|
+| `<ModalSection>` header — Name + Description + Price + Year fields | "Item" | Groups the package-definition fields. "Item" names the concept: what this sponsorship package is. Single word, sufficient for a power-user admin context. |
+| `<ModalSection>` header — Max quantity + Active toggle fields | "Inventory" | Groups the availability fields. "Inventory" names the concept precisely — how many of this item can be sold and whether it's currently offered. |
+
+**Voice note — why "Item" not "Package" or "Package details":** "Item" is the shortest accurate label for this section. "Package" would collide with the surface name ("sponsorship packages"). "Item" is the admin data model term — `sponsorship_items` is the table name. One word wins.
+
+---
+
+#### C2. Secondary filter label
+
+Per sprint plan — Year filter dropdown on the Sponsorships list.
+
+| Location | String | Intent |
+|---|---|---|
+| Secondary filter dropdown label — year | "Year" | Names the filter dimension. Single word. The admin knows "Year" = tournament year on this surface. |
+
+**Dropdown option labels for Year filter:** Year values from `sponsorship_items.year` column — rendered as four-digit integers (e.g., "2024", "2025"). No additional Aria gate needed for the year values themselves; they are data, not copy.
+
+**"All years" option:** If the Year filter `<Select>` includes an "all" option, the label is "All years". This is consistent with the pattern where a filter's catch-all option names the dimension ("All years" not just "All" — because "All" on its own is ambiguous when there are multiple filter dimensions active). If the design implements a blank/placeholder option instead of an explicit "All years" option, the placeholder text is "Year" (matching the filter label, indicating no year filter applied). Bolt chooses one implementation; this lock covers both label options.
+
+---
+
+#### C3. Search placeholder
+
+Per sprint plan — search by name on the Sponsorships list.
+
+| Location | String | Intent |
+|---|---|---|
+| Search input — Sponsorships filter bar | "Search by name" | Names the searchable field. Two words after "Search by." Short and sufficient for this surface. |
+
+---
+
+#### C4. Sponsorships delete-confirm dialog
+
+Per design doc D4c + Axis 9. The Sponsorships delete-confirm uses the F-N23 names + count pattern — linked entities are named sponsors (meaningful display names), unlike the Sponsors delete-confirm where linked entities are anonymous purchase transactions.
+
+**Critical flag — soft-delete discrepancy:** The current `sponsorship-manager.tsx` (lines 449–452 and lines 510–514) uses **permanent deletion** with the string "It will be permanently deleted — this cannot be undone." The sprint plan specifies soft-delete behavior (sprint plan PR-3-sponsorships scope). Before Bolt wires this PR, this discrepancy must be resolved: the existing code contradicts the soft-delete invariant. The locked copy below assumes soft-delete is the correct behavior per the sprint plan. If permanent delete is intentional for sponsorship packages, Bolt must surface this to Forge before proceeding — the copy and the action must agree.
+
+**Assuming soft-delete (consistent with sprint plan and craven invariant):**
+
+**Dialog title:** `"Delete [Item Name]?"`
+
+(Interpolate `item.name`. Example: "Delete Champion package?")
+
+---
+
+**Variant 1 — Zero linked sponsors:**
+
+```
+Moving this package to Trash removes it from the active list. You can restore it from Admin → Trash.
+```
+
+Intent: Confirm the consequence without alarming. No cascade to name. Matches Sponsors Phase 2 C2 pattern.
+
+---
+
+**Variant 2 — Has linked sponsors (N ≥ 1):**
+
+Singular (1 linked sponsor):
+```
+1 sponsor is linked to this package: [Sponsor Name]. Moving this package to Trash keeps that record intact — it will display "(no package)" where the package name appeared.
+```
+
+Plural (N ≥ 2, up to 3 names shown):
+```
+[N] sponsors are linked to this package: [Name 1], [Name 2][, … and N more]. Moving this package to Trash keeps those records intact — they will display "(no package)" where the package name appeared.
+```
+
+Example (4 linked sponsors):
+```
+4 sponsors are linked to this package: Carolina East Health, First Bancorp, Tidewater, and 1 more. Moving this package to Trash keeps those records intact — they will display "(no package)" where the package name appeared.
+```
+
+Intent: Name the linked sponsors (the F-N23 pattern) so the admin can verify. "(no package)" is the locked fallback display string for orphaned sponsor references — lock it here explicitly (see C5 below).
+
+**Name display rule:** Same as Teams B7 — up to 3 names, then "+ [N] more" / "and [N] more."
+
+---
+
+**Destructive button label (all variants):** "Move to Trash"
+**Cancel button label (all variants):** "Cancel"
+
+**Note on existing code strings:** The existing `sponsorship-manager.tsx` lines 211–215 contain an existing `buildCascadeDescription` function that produces: `"[N] sponsors are linked to this package: [names]. They'll show '(no package)' until you reassign them."` This existing string uses a different form ("They'll show" vs "they will display", and adds "until you reassign them"). The locked copy above supersedes the existing string. Bolt replaces `buildCascadeDescription`'s output with the locked variants above for Phase 3.
+
+---
+
+#### C5. Sponsorships — fallback display string for orphaned sponsor references
+
+When a sponsor record references a soft-deleted sponsorship package, the UI must display a fallback.
+
+| Location | String | Intent |
+|---|---|---|
+| Any UI cell / field displaying a deleted package's name | "(no package)" | Names the condition plainly. Parentheses signal a system-generated placeholder. Lowercase. Consistent with "(no team)" pattern (Teams B8) and "(no captain)" craven invariant. |
+
+**Note:** The existing code in `sponsorship-manager.tsx` line 214 already uses `'(no package)'`. This spec formally locks that string.
+
+---
+
+#### C6. CSV export button
+
+| Location | String | Intent |
+|---|---|---|
+| Sponsorships list toolbar | "Download CSV" | Consistent with Teams B9 and Photos D2. |
+
+---
+
+#### C7. Sponsorships — state enumeration
+
+States enumerated per HARD-GATE requirement:
+
+- **Happy path (list populated, package edited):** Modal section headers C1 (Item/Inventory), filter label C2 (Year), search placeholder C3, CSV button C6. All strings locked above.
+- **Empty state (no data / filter active):** Covered in Phase 1 (§2d + §3). Not re-gated here — citation: Phase 1 Aria-approved PR #372.
+- **Loading:** No new loading strings introduced. Inherits existing infrastructure.
+- **Error / degraded:** Toast message "Package deleted" — existing in `sponsorship-manager.tsx` line 471 and 521. Not re-gated (carries over). Toast for soft-delete will change to "Package moved to Trash" — that is a new string if soft-delete is implemented. **New string requiring lock:** "Package moved to Trash" (intent: confirm the soft-delete action; the package is recoverable from Admin → Trash). If permanent delete is retained, "Package deleted" continues as the existing locked string.
+- **Delete-confirm (0 linked sponsors):** C4 Variant 1.
+- **Delete-confirm (1 linked sponsor):** C4 Variant 2 singular.
+- **Delete-confirm (N ≥ 2 linked sponsors):** C4 Variant 2 plural.
+- **Orphaned sponsor reference (package deleted):** C5 fallback display string.
+- **Offline:** No offline-specific copy introduced. Network errors surface via existing toast infrastructure.
+
+---
+
+### D. Photos (PR-3-photos)
+
+#### D1. Secondary filter label
+
+Per sprint plan — Year filter dropdown on the Photos list.
+
+| Location | String | Intent |
+|---|---|---|
+| Secondary filter dropdown label — year | "Year" | Names the filter dimension. Single word. Consistent with Sponsorships C2 — the same filter dimension gets the same label across surfaces. |
+
+**Dropdown option labels and "All years" / blank option:** Same rule as Sponsorships C2 — year values are data; "All years" is the explicit catch-all option label if one is needed; blank placeholder text is "Year" if no explicit catch-all is used. Bolt chooses one implementation.
+
+---
+
+#### D2. CSV export button
+
+| Location | String | Intent |
+|---|---|---|
+| Photos list toolbar | "Download CSV" | Consistent with Teams B9 and Sponsorships C6. |
+
+---
+
+#### D3. Photos — state enumeration
+
+States enumerated per HARD-GATE requirement:
+
+- **Happy path (list populated, photos moderated):** Year filter label D1, CSV button D2. All strings locked above.
+- **Empty state (no data / filter active):** Covered in Phase 1 (§2e + §3). Not re-gated here — citation: Phase 1 Aria-approved PR #372.
+- **Loading:** No new loading strings introduced.
+- **Error / degraded:** Toast messages for approve / reject / delete actions are existing strings. Not new. Not re-gated.
+- **Filter-aware empty state (combined Year × Status filter):** Covered in Phase 1 §6 edge case. "No photos match your filters" / "Clear filters." Not re-gated.
+- **Offline:** No offline-specific copy introduced.
+
+---
+
+### E. Cross-surface consistency — "Download CSV"
+
+Per sprint plan Phase 4 note (lines 420–421): "No Aria gate needed: 'Download CSV' string was countersigned in Phase 3 Aria gates above." This section formally closes that loop.
+
+| Surface | String | Consistent? |
+|---|---|---|
+| Teams | "Download CSV" | Yes |
+| Sponsorships | "Download CSV" | Yes |
+| Photos | "Download CSV" | Yes |
+
+All three use identical label. Phase 4's `<DownloadCsvButton>` universal component ships this string without a separate gate — it is locked here and cited in Phase 4's PR body.
+
+---
+
+### F. Open questions — surfaces this spec does not resolve
+
+These require Forge or Scott to decide before Bolt implements:
+
+1. **Sponsorships — soft-delete vs. permanent delete:** The existing `sponsorship-manager.tsx` uses permanent deletion for sponsorship packages. The sprint plan implies soft-delete (consistent with the craven invariant). If permanent delete is intentional, the delete-confirm copy changes significantly (no "Move to Trash", no restore path). Bolt must not proceed on PR-3-sponsorships without a resolution on this point. **Forge surfaces this to Scott before spawning Bolt.**
+
+2. **Teams toast — soft-delete confirmation string:** If `markTeamPaid` action or the delete action uses a new server action, the toast string "Team moved to Trash" is a new string not in the existing codebase. This spec locks it here implicitly (same pattern as "Sponsor moved to Trash" from Phase 2). No additional Aria gate needed — the pattern is established.
+
+3. **Mark-paid modal — required vs. optional fields:** "Payment method" is listed as a required field (sprint plan F-T8 implies capturing method is the point of the modal). "Reference number" and "Date paid" are labeled optional in the sprint plan. This spec locks the field labels but does not dictate validation behavior — Bolt wires validation per the sprint plan. If "Payment method" is required, Bolt may need a validation message. Locked now: "Payment method is required." (sentence case, period, consistent with existing inline validation patterns in `contact-form.tsx`).
+
+---
+
+### Phase 3 — Countersignature
+
+All strings in sections A, B, C, and D above are approved. Every state enumerated for every surface. Every string has an explicit intent.
+
+**String count by surface:**
+- Contacts (A): 20 strings (5 modal headers + 5 role card titles + 1 validation message + 2 status tabs + 1 search placeholder + 2 filter labels + 1 toggle + 6 salutation options) — exceeds the estimated 18; the two additional strings are the "All" tab citation and the explicit blank-salutation note.
+- Teams (B): 21 strings (2 status tabs + 2 modal headers + 1 filter label + 1 search placeholder + 1 mark-paid button + 3 field labels + 8 payment method options + 4 delete-confirm variants × body text + 1 fallback display string + 1 CSV button) — exceeds the estimated 14 because delete-confirm variants are enumerated individually, not as one template.
+- Sponsorships (C): 8 strings (2 modal headers + 1 filter label + 1 search placeholder + 2 delete-confirm variants + 1 fallback display string + 1 CSV button).
+- Photos (D): 2 strings (1 filter label + 1 CSV button).
+
+**Open questions** in section F are flagged and do not block the gate — they are scoped decisions for Forge/Scott, not copy decisions. The locked strings above are deterministic.
+
+**Aria-approved. PR-3-contacts, PR-3-teams, PR-3-sponsorships, and PR-3-photos may proceed to Bolt after open questions in §F are resolved (sponsorships Q1 is blocking for PR-3-sponsorships only).**

@@ -7,9 +7,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { SponsorshipForm } from "./sponsorship-form";
 import {
   createSponsorshipItem,
@@ -88,23 +86,10 @@ export function SponsorshipModal({
             defaultValues={mode === "edit" ? (sponsorship ?? undefined) : undefined}
             onSubmit={handleFormSubmit}
             onCancel={() => onOpenChange(false)}
+            onDelete={mode === "edit" && sponsorship ? handleDeleteClick : undefined}
             loading={loading}
           />
         </div>
-
-        {mode === "edit" && sponsorship && (
-          <DialogFooter className="border-t border-border/60 pt-4 mt-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
-              onClick={handleDeleteClick}
-              disabled={loading}
-            >
-              Delete package
-            </Button>
-          </DialogFooter>
-        )}
       </DialogContent>
     </Dialog>
   );

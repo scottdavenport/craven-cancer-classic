@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -12,15 +12,25 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Dialog,
   DialogContent,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Plus, Pencil, ChevronDown } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import { StatusTabs } from "@/components/admin/status-tabs";
+import { FilterBar } from "@/components/admin/filter-bar";
+import { RowActions } from "@/components/admin/row-actions";
 import { SponsorshipModal } from "./sponsorship-modal";
 import {
   getSponsorshipItems,
@@ -34,72 +44,7 @@ import type { SponsorshipPurchase } from "@/types/database";
 // Types
 // ---------------------------------------------------------------------------
 
-type SponsorshipCategory = "sponsorship" | "tribute" | "supporter";
-type CategoryFilter = "all" | SponsorshipCategory;
-
-const CATEGORY_FILTER_OPTIONS: { value: CategoryFilter; label: string }[] = [
-  { value: "all", label: "All" },
-  { value: "sponsorship", label: "Sponsorship" },
-  { value: "tribute", label: "Tribute" },
-  { value: "supporter", label: "Supporter" },
-];
-
-// ---------------------------------------------------------------------------
-// CategoryFilterSelect — inline listbox (no portal) so test isolation works
-// ---------------------------------------------------------------------------
-
-interface CategoryFilterSelectProps {
-  value: CategoryFilter;
-  onChange: (value: CategoryFilter) => void;
-}
-
-function CategoryFilterSelect({ value, onChange }: CategoryFilterSelectProps) {
-  const [open, setOpen] = useState(false);
-  const selectedLabel =
-    CATEGORY_FILTER_OPTIONS.find((o) => o.value === value)?.label ?? "All";
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        data-testid="category-filter"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        onClick={() => setOpen((prev) => !prev)}
-        className="flex h-7 items-center gap-1.5 rounded-lg border border-input bg-transparent px-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
-      >
-        {selectedLabel}
-        <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-      </button>
-      {open && (
-        <ul
-          role="listbox"
-          className="absolute left-0 top-full z-50 mt-1 min-w-[160px] overflow-hidden rounded-lg border border-border bg-popover text-popover-foreground shadow-md"
-        >
-          {CATEGORY_FILTER_OPTIONS.map((opt) => (
-            <li
-              key={opt.value}
-              role="option"
-              aria-selected={value === opt.value}
-              className="cursor-default px-3 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground"
-              onClick={() => {
-                onChange(opt.value);
-                setOpen(false);
-              }}
-            >
-              {opt.label}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
-interface SponsorshipManagerProps {
-  items: SponsorshipItemWithCount[];
-  purchases: SponsorshipPurchase[];
-}
+type StatusFilter = "active" | "inactive" | "all";
 
 type ModalState = {
   open: boolean;
@@ -115,6 +60,15 @@ type CascadeDialogState = {
 };
 
 // ---------------------------------------------------------------------------
+// Props
+// ---------------------------------------------------------------------------
+
+interface SponsorshipManagerProps {
+  items: SponsorshipItemWithCount[];
+  purchases: SponsorshipPurchase[];
+}
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
@@ -122,14 +76,24 @@ export function SponsorshipManager({
   items: initialItems,
   purchases,
 }: SponsorshipManagerProps) {
+  const currentYear = new Date().getFullYear();
+
   const [items, setItems] = useState<SponsorshipItemWithCount[]>(initialItems);
   const [isPending, startTransition] = useTransition();
-  const [categoryFilter, setCategoryFilter] = useState<CategoryFilter>("all");
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [yearFilter, setYearFilter] = useState<number>(currentYear);
+  const [search, setSearch] = useState("");
+
+  // Modal
   const [modal, setModal] = useState<ModalState>({
     open: false,
     mode: "create",
     sponsorship: null,
   });
+
+  // Dialogs
   const [cascadeDialog, setCascadeDialog] = useState<CascadeDialogState>({
     open: false,
     item: null,
@@ -140,23 +104,40 @@ export function SponsorshipManager({
   const [pendingDeleteItem, setPendingDeleteItem] = useState<SponsorshipItemWithCount | null>(null);
 
   // ---------------------------------------------------------------------------
-  // Derived: filtered lists
+  // Available years (from initial items + current year)
   // ---------------------------------------------------------------------------
 
-  const filteredItems =
-    categoryFilter === "all"
-      ? items
-      : items.filter((item) => item.category === categoryFilter);
+  const availableYears = useMemo(() => {
+    const years = new Set<number>(initialItems.map((s) => s.year ?? currentYear));
+    years.add(currentYear);
+    return Array.from(years).sort((a, b) => b - a);
+  }, [initialItems, currentYear]);
 
-  // Build a set of filtered item IDs so purchases can be filtered by category via item_id
-  const filteredItemIds = new Set(filteredItems.map((item) => item.id));
+  // ---------------------------------------------------------------------------
+  // Status tab counts
+  // ---------------------------------------------------------------------------
 
-  const filteredPurchases =
-    categoryFilter === "all"
-      ? purchases
-      : purchases.filter((p) => filteredItemIds.has(p.item_id));
+  const activeCount = useMemo(() => items.filter((i) => i.active).length, [items]);
+  const inactiveCount = useMemo(() => items.filter((i) => !i.active).length, [items]);
+  const allCount = items.length;
 
-  const showTributeRecipient = categoryFilter === "tribute";
+  const statusTabs = [
+    { id: "active", label: "Active", count: activeCount },
+    { id: "inactive", label: "Inactive", count: inactiveCount },
+    { id: "all", label: "All", count: allCount },
+  ];
+
+  // ---------------------------------------------------------------------------
+  // Derived: filtered list (client-side search; status+year are server-filtered on refetch)
+  // ---------------------------------------------------------------------------
+
+  const filteredItems = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return items;
+    return items.filter((item) => item.name.toLowerCase().includes(q));
+  }, [items, search]);
+
+  const hasActiveFilters = search.trim().length > 0;
 
   // ---------------------------------------------------------------------------
   // Stats (always based on full, unfiltered sets)
@@ -167,13 +148,18 @@ export function SponsorshipManager({
     .reduce((sum, p) => sum + p.amount_paid_cents, 0);
 
   // ---------------------------------------------------------------------------
-  // Handlers
+  // Refetch
   // ---------------------------------------------------------------------------
 
-  function refetch() {
+  function refetch(opts?: { year?: number; status?: StatusFilter }) {
+    const resolvedYear = opts?.year ?? yearFilter;
+    const resolvedStatus = opts?.status ?? statusFilter;
     startTransition(async () => {
       try {
-        const fresh = await getSponsorshipItems();
+        const fresh = await getSponsorshipItems({
+          year: resolvedYear,
+          status: resolvedStatus,
+        });
         setItems(fresh);
       } catch (err) {
         console.error("[SponsorshipManager] refetch failed:", err);
@@ -181,9 +167,26 @@ export function SponsorshipManager({
     });
   }
 
+  function handleStatusChange(status: string) {
+    const s = status as StatusFilter;
+    setStatusFilter(s);
+    refetch({ status: s });
+  }
+
+  function handleYearChange(yearStr: string | null) {
+    if (yearStr === null) return;
+    const year = Number(yearStr);
+    setYearFilter(year);
+    refetch({ year });
+  }
+
   function handleModalSuccess() {
     refetch();
   }
+
+  // ---------------------------------------------------------------------------
+  // Delete handlers
+  // ---------------------------------------------------------------------------
 
   async function handleDeleteRequest(item: SponsorshipItemWithCount) {
     if (item.active_sponsor_count > 0) {
@@ -197,22 +200,26 @@ export function SponsorshipManager({
         setCascadeDialog({ open: false, item: null, names: [], loading: false });
       }
     } else {
-      // Normal delete confirm — no cascade warning
+      // No linked sponsors — simple soft-delete confirm
       setPendingDeleteItem(item);
       setConfirmOpen(true);
     }
   }
 
-  function buildCascadeDescription(names: string[], count: number): string {
-    if (names.length === 0) return "";
+  // Build cascade body per Aria Phase 3 §C4
+  function buildCascadeBody(names: string[], count: number): string {
+    if (count === 1) {
+      const name = names[0] ?? "";
+      return `1 sponsor is linked to this package: ${name}. Moving this package to Trash keeps that record intact — it will display "(no package)" where the package name appeared.`;
+    }
     const maxShow = 3;
     const shown = names.slice(0, maxShow);
     const remaining = count - maxShow;
-    const nameList = shown.join(", ");
-    if (remaining > 0) {
-      return `${count} sponsors are linked to this package: ${nameList}, … and ${remaining} more. They'll show '(no package)' until you reassign them.`;
-    }
-    return `${count} sponsors are linked to this package: ${nameList}. They'll show '(no package)' until you reassign them.`;
+    const nameList =
+      remaining > 0
+        ? shown.join(", ") + `, and ${remaining} more`
+        : shown.join(", ");
+    return `${count} sponsors are linked to this package: ${nameList}. Moving this package to Trash keeps those records intact — they will display "(no package)" where the package name appeared.`;
   }
 
   // ---------------------------------------------------------------------------
@@ -220,9 +227,54 @@ export function SponsorshipManager({
   // ---------------------------------------------------------------------------
 
   return (
-    <div className="space-y-6" style={{ opacity: isPending ? 0.6 : 1 }}>
+    <div style={{ opacity: isPending ? 0.6 : 1 }}>
+      {/* Status tabs */}
+      <StatusTabs
+        tabs={statusTabs}
+        activeId={statusFilter}
+        onChange={handleStatusChange}
+        ariaLabel="Sponsorship package status"
+      />
+
+      {/* Filter bar: search + year filter */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by name"
+      >
+        {/* Year filter */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.10em] text-muted-foreground">
+            Year
+          </label>
+          <Select
+            value={String(yearFilter)}
+            onValueChange={handleYearChange}
+            items={availableYears.reduce<Record<string, string>>((acc, y) => {
+              acc[String(y)] = String(y);
+              return acc;
+            }, {})}
+          >
+            <SelectTrigger
+              aria-label="Year"
+              data-testid="year-filter-trigger"
+              className="w-full"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </FilterBar>
+
       {/* Stats */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-3 py-4">
         <Card className="shadow-sm border border-border/60">
           <CardContent className="pt-4">
             <p className="font-display text-2xl font-bold text-foreground">{items.length}</p>
@@ -245,16 +297,7 @@ export function SponsorshipManager({
         </Card>
       </div>
 
-      {/* Category filter chip */}
-      <div className="flex items-center gap-3">
-        <span className="text-sm font-medium text-muted-foreground">Filter:</span>
-        <CategoryFilterSelect
-          value={categoryFilter}
-          onChange={setCategoryFilter}
-        />
-      </div>
-
-      {/* Sponsorship items */}
+      {/* Sponsorship items table */}
       <Card className="shadow-sm border border-border/60">
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle className="font-sans text-base font-semibold">
@@ -279,24 +322,15 @@ export function SponsorshipManager({
                   <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Sponsors</TableHead>
                   <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Max</TableHead>
                   <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
-                  <TableHead className="w-16" />
+                  <TableHead className="w-24" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredItems.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={7}>
-                      <AdminEmptyState title="No sponsorship packages yet" />
-                    </TableCell>
-                  </TableRow>
-                ) : (
+                {filteredItems.length > 0 ? (
                   filteredItems.map((item) => (
                     <TableRow
                       key={item.id}
-                      className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer"
-                      onClick={() =>
-                        setModal({ open: true, mode: "edit", sponsorship: item })
-                      }
+                      className="group/row border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100"
                     >
                       <TableCell>
                         <p className="font-medium text-[0.9375rem]">{item.name}</p>
@@ -340,29 +374,56 @@ export function SponsorshipManager({
                         </span>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setModal({ open: true, mode: "edit", sponsorship: item });
-                          }}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-2">
+                          <RowActions
+                            editLabel={`Edit ${item.name || "sponsorship package"}`}
+                            deleteLabel={`Delete ${item.name || "sponsorship package"}`}
+                            selectLabel={`Select ${item.name || "sponsorship package"}`}
+                            onEdit={() => setModal({ open: true, mode: "edit", sponsorship: item })}
+                            onDelete={() => handleDeleteRequest(item)}
+                          />
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
-                )}
+                ) : null}
               </TableBody>
             </Table>
           </div>
+          {filteredItems.length === 0 && (
+            <AdminEmptyState
+              filterActive={hasActiveFilters}
+              title={
+                hasActiveFilters
+                  ? "No sponsorship packages match your filters"
+                  : "No sponsorship packages yet"
+              }
+              action={
+                hasActiveFilters ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSearch("")}
+                  >
+                    Clear filters
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setModal({ open: true, mode: "create", sponsorship: null })}
+                  >
+                    Add sponsorship package
+                  </Button>
+                )
+              }
+            />
+          )}
         </CardContent>
       </Card>
 
       {/* Purchases */}
-      {filteredPurchases.length > 0 && (
-        <Card className="shadow-sm border border-border/60">
+      {purchases.length > 0 && (
+        <Card className="shadow-sm border border-border/60 mt-6">
           <CardHeader>
             <CardTitle className="font-sans text-base font-semibold">Recent Purchases</CardTitle>
           </CardHeader>
@@ -373,16 +434,13 @@ export function SponsorshipManager({
                   <TableRow className="bg-neutral-50">
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Purchaser</TableHead>
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Company</TableHead>
-                    {showTributeRecipient && (
-                      <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Honored</TableHead>
-                    )}
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Status</TableHead>
                     <TableHead className="text-right text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Amount</TableHead>
                     <TableHead className="text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPurchases.map((p) => (
+                  {purchases.map((p) => (
                     <TableRow key={p.id}>
                       <TableCell>
                         <p className="text-[0.9375rem] font-medium">{p.purchaser_name}</p>
@@ -393,11 +451,6 @@ export function SponsorshipManager({
                       <TableCell className="text-sm">
                         {p.company_name || "—"}
                       </TableCell>
-                      {showTributeRecipient && (
-                        <TableCell className="text-sm">
-                          {p.tribute_recipient || "—"}
-                        </TableCell>
-                      )}
                       <TableCell>
                         <span
                           className={
@@ -439,7 +492,7 @@ export function SponsorshipManager({
         onDeleteRequest={handleDeleteRequest}
       />
 
-      {/* Normal delete confirm dialog (zero linked sponsors) */}
+      {/* Soft-delete confirm dialog — zero linked sponsors (Aria Phase 3 §C4 Variant 1) */}
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent className="sm:max-w-md" showCloseButton={false}>
           <DialogHeader>
@@ -448,7 +501,7 @@ export function SponsorshipManager({
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            This package has no linked sponsors. It will be permanently deleted — this cannot be undone.
+            Moving this package to Trash removes it from the active list. You can restore it from Admin → Trash.
           </p>
           <DialogFooter className="gap-2">
             <Button
@@ -468,19 +521,19 @@ export function SponsorshipManager({
                   toast.error(result.error);
                   return;
                 }
-                toast.success("Package deleted");
+                toast.success("Package moved to Trash");
                 setConfirmOpen(false);
                 setModal((d) => ({ ...d, open: false }));
                 refetch();
               }}
             >
-              Delete
+              Move to Trash
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Cascade warning dialog (linked sponsors exist) */}
+      {/* Cascade confirm dialog — linked sponsors exist (Aria Phase 3 §C4 Variant 2) */}
       <Dialog
         open={cascadeDialog.open}
         onOpenChange={(open) =>
@@ -494,7 +547,7 @@ export function SponsorshipManager({
             </DialogTitle>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            {buildCascadeDescription(
+            {buildCascadeBody(
               cascadeDialog.names,
               cascadeDialog.item?.active_sponsor_count ?? cascadeDialog.names.length
             )}
@@ -517,13 +570,13 @@ export function SponsorshipManager({
                   toast.error(result.error);
                   return;
                 }
-                toast.success("Package deleted");
+                toast.success("Package moved to Trash");
                 setCascadeDialog((d) => ({ ...d, open: false }));
                 setModal((d) => ({ ...d, open: false }));
                 refetch();
               }}
             >
-              Delete
+              Move to Trash
             </Button>
           </DialogFooter>
         </DialogContent>

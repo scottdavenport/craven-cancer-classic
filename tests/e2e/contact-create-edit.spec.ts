@@ -47,7 +47,10 @@ test.describe("Contact create/edit via modal", () => {
     await expect(newRow).toBeVisible();
 
     // ---- Edit the contact ----
-    await newRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button.
+    // RowActions cluster is opacity-0 until hover; force:true bypasses visibility constraint.
+    await newRow.hover();
+    await newRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible();
 
     // Verify values pre-filled
@@ -65,7 +68,9 @@ test.describe("Contact create/edit via modal", () => {
     // ---- Cleanup: soft-delete the test contact ----
     // Scope to the specific row by TEST_EMAIL so leftover contacts from prior runs don't confuse the locator
     const testRow = page.getByRole("row", { name: new RegExp(TEST_EMAIL) });
-    await testRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await testRow.hover();
+    await testRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("button", { name: /delete/i }).click();
 

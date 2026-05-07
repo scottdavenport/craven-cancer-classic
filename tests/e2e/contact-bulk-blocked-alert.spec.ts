@@ -27,15 +27,16 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
     await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
 
     // Select at least one contact to trigger the bulk-action bar.
-    // Scope to tbody to exclude the select-all header checkbox.
-    const checkboxes = page.locator("tbody").getByRole("checkbox");
+    // Scope to tbody primary Checkbox buttons only ([data-slot="checkbox"]) to avoid
+    // the duplicate role="checkbox" from RowActions <input> in the same row.
+    const checkboxes = page.locator("tbody [data-slot='checkbox']");
     const count = await checkboxes.count();
     if (count < 1) {
       test.skip(true, "No contacts in DB — cannot test bulk-action bar");
       return;
     }
 
-    await checkboxes.first().check();
+    await checkboxes.first().click();
 
     // Bulk-action bar should appear — use first() to avoid strict-mode violation on duplicate spans
     await expect(page.getByText(/1 selected/i).first()).toBeVisible({ timeout: 3_000 });
@@ -53,15 +54,16 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
     await page.goto("/admin/contacts");
     await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
 
-    // Scope to tbody to exclude the select-all header checkbox.
-    const checkboxes = page.locator("tbody").getByRole("checkbox");
+    // Scope to tbody primary Checkbox buttons only ([data-slot="checkbox"]) to avoid
+    // the duplicate role="checkbox" from RowActions <input> in the same row.
+    const checkboxes = page.locator("tbody [data-slot='checkbox']");
     const count = await checkboxes.count();
     if (count < 1) {
       test.skip(true, "No contacts in DB");
       return;
     }
 
-    await checkboxes.first().check();
+    await checkboxes.first().click();
     await expect(page.getByText(/1 selected/i).first()).toBeVisible({ timeout: 3_000 });
 
     // Sprint 31 contract: "Add type" SelectTrigger must exist.
@@ -90,8 +92,9 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
         .catch(() => null);
     }
 
-    // Select first 3 contacts — scope to tbody to exclude the select-all header checkbox.
-    const checkboxes = page.locator("tbody").getByRole("checkbox");
+    // Select first 3 contacts — scope to tbody primary Checkbox buttons only ([data-slot="checkbox"])
+    // to avoid the duplicate role="checkbox" from RowActions <input> in each row.
+    const checkboxes = page.locator("tbody [data-slot='checkbox']");
     const count = await checkboxes.count();
     if (count < 2) {
       test.skip(true, "Not enough contacts to run bulk blocked Alert test (need 2+)");
@@ -100,7 +103,7 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
 
     const selectCount = Math.min(count, 3);
     for (let i = 0; i < selectCount; i++) {
-      await checkboxes.nth(i).check();
+      await checkboxes.nth(i).click();
     }
 
     // use first() to avoid strict-mode violation on duplicate spans
@@ -110,9 +113,10 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
 
     // Sprint 31: "Remove type" SelectTrigger in bulk bar.
     // Rendered as role="combobox" with aria-label="Remove type" (SelectTrigger from shadcn).
+    // Use .first() to resolve strict-mode violation when .or() matches multiple elements.
     const removeBulkBtn = page
       .getByRole("combobox", { name: /remove type/i })
-      .or(page.getByRole("button", { name: /remove type/i }));
+      .first();
 
     await expect(removeBulkBtn).toBeVisible({ timeout: 3_000 });
     await removeBulkBtn.click();
@@ -191,8 +195,9 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
       .catch(() => null);
 
     // Select first 5 contacts (or fewer if fewer exist) — stays well under the 500-row bulk-action cap.
-    // Scoped to tbody to exclude the header checkbox.
-    const checkboxes = page.locator("tbody").getByRole("checkbox");
+    // Scoped to tbody primary Checkbox buttons only ([data-slot="checkbox"]) to avoid the duplicate
+    // role="checkbox" from RowActions <input> in each row.
+    const checkboxes = page.locator("tbody [data-slot='checkbox']");
     const count = await checkboxes.count();
     if (count < 1) {
       test.info().annotations.push({
@@ -206,14 +211,13 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
     const selectCount = Math.min(count, 3);
     for (let i = 0; i < selectCount; i++) {
       // Re-evaluate current row count before each iteration — DOM may re-render.
-      const currentCount = await page.locator("tbody").getByRole("checkbox").count();
+      const currentCount = await page.locator("tbody [data-slot='checkbox']").count();
       if (i >= currentCount) break;
-      const cb = page.locator("tbody").getByRole("checkbox").nth(i);
+      const cb = page.locator("tbody [data-slot='checkbox']").nth(i);
       await cb.waitFor({ state: "visible", timeout: 5_000 });
-      // Use dispatchEvent rather than check()/click() — check() blocks on pending
-      // navigations that Next.js router triggers after row interactions (prefetch),
-      // causing indefinite hangs on the 3rd+ row in team-filtered views.
-      await cb.dispatchEvent("click");
+      // Use click() — the Checkbox button's click bubbles to <td onClick> to update React state.
+      // dispatchEvent("click") doesn't bubble through Next.js's synthetic event system.
+      await cb.click();
     }
 
     // Wait for the bulk-action bar's "X selected" indicator — this confirms

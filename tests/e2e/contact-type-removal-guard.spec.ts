@@ -40,7 +40,9 @@ test.describe("Sprint 31 — type-removal guard", () => {
     const firstContactRow = page.locator("tbody").getByRole("row").first();
     await expect(firstContactRow).toBeVisible({ timeout: 5_000 });
 
-    await firstContactRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await firstContactRow.hover();
+    await firstContactRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
 
     // Sprint 31: centered modal
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
@@ -136,7 +138,9 @@ test.describe("Sprint 31 — type-removal guard", () => {
       return;
     }
 
-    await firstRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await firstRow.hover();
+    await firstRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
 
     // This contact should be a Player (on a team)
@@ -207,7 +211,9 @@ test.describe("Sprint 31 — type-removal guard", () => {
       return;
     }
 
-    await firstSponsorRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await firstSponsorRow.hover();
+    await firstSponsorRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
 
     const sponsorSwitch = page.getByRole("switch", { name: /toggle sponsor role/i });

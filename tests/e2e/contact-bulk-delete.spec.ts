@@ -52,7 +52,8 @@ test.describe("Bulk delete contacts", () => {
     const rowCount = await rows.count();
 
     for (let i = 0; i < rowCount; i++) {
-      await rows.nth(i).getByRole("checkbox").check();
+      // Scope to [data-slot="checkbox"] to avoid the duplicate RowActions <input[type=checkbox]>
+      await rows.nth(i).locator("[data-slot='checkbox']").click();
     }
 
     // ---- Click Delete in bulk action bar ----

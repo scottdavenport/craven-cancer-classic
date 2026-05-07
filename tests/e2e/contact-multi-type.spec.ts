@@ -50,7 +50,9 @@ async function fillBasicFields(
 async function softDeleteContact(page: Page, fullName: string) {
   const row = page.getByRole("row").filter({ hasText: fullName });
   if (await row.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    await row.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await row.hover();
+    await row.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
     const deleteBtn = page.getByRole("button", { name: /delete/i });
     if (await deleteBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
@@ -223,7 +225,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(blankRecogRow).toBeVisible();
 
     // Re-open and verify recognition_name is empty string
-    await blankRecogRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await blankRecogRow.hover();
+    await blankRecogRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
     const recognitionNameField = page
@@ -303,7 +307,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     const preserveRow = page.getByRole("row").filter({ hasText: preserveEmail });
 
     // Re-open and uncheck Player
-    await preserveRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await preserveRow.hover();
+    await preserveRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
     await page.getByRole("switch", { name: /toggle player role/i }).uncheck();
@@ -315,7 +321,8 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
     // Re-open and re-check Player — values must restore
-    await preserveRow.click();
+    await preserveRow.hover();
+    await preserveRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
     await page.getByRole("switch", { name: /toggle player role/i }).check();
@@ -372,7 +379,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     expect(chipClassName).toMatch(/warning|amber/i);
 
     // Re-open and verify Volunteer switch is still on
-    await contactRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await contactRow.hover();
+    await contactRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
     await expect(page.getByRole("switch", { name: /toggle volunteer role/i })).toBeChecked();
 
@@ -405,7 +414,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(psRow).toBeVisible();
 
     // Re-open and verify both switches are on
-    await psRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await psRow.hover();
+    await psRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
     await expect(page.getByRole("switch", { name: /toggle player role/i })).toBeChecked();
@@ -480,7 +491,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(hcRow).toBeVisible();
 
     // Re-open and update through the range.
-    await hcRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await hcRow.hover();
+    await hcRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
     // Upper bound: 54 must save cleanly.
@@ -489,7 +502,8 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
     // Out-of-range upper: 55 must surface a validation error and NOT save.
-    await hcRow.click();
+    await hcRow.hover();
+    await hcRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
     await dialogHandicapInput.fill("55");
     await page.getByRole("button", { name: "Save", exact: true }).click();

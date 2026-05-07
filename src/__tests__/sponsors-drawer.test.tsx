@@ -66,19 +66,19 @@ beforeEach(() => {
 });
 
 describe("SponsorList drawer integration", () => {
-  it("clicking a row opens the drawer in edit mode with sponsor name in title", async () => {
+  it("clicking the edit action opens the modal in edit mode with sponsor name in title", async () => {
     const user = userEvent.setup();
     const sponsor = makeSponsor({ name: "Acme Corp" });
 
     render(<SponsorList sponsors={[sponsor]} sponsorshipItems={sponsorshipItems} />);
 
-    // Drawer should not be visible yet
+    // Modal should not be visible yet
     expect(screen.queryByText("Edit Sponsor: Acme Corp")).not.toBeInTheDocument();
 
-    // Click the row
-    await user.click(screen.getByText("Acme Corp"));
+    // Phase 2: row click no longer opens the modal — use RowActions edit button
+    await user.click(screen.getByRole("button", { name: /edit acme corp/i }));
 
-    // Drawer title should appear
+    // Modal title should appear (DialogTitle renders "Edit Sponsor: Acme Corp")
     expect(screen.getByText("Edit Sponsor: Acme Corp")).toBeInTheDocument();
   });
 
@@ -123,7 +123,7 @@ describe("SponsorList drawer integration", () => {
     });
   });
 
-  it("clicking Delete in drawer footer shows ConfirmDialog; confirming calls deleteSponsor", async () => {
+  it("clicking 'Move to Trash' in modal footer shows ConfirmDialog; confirming calls deleteSponsor", async () => {
     const user = userEvent.setup();
     const sponsor = makeSponsor({ name: "Delete Me Corp" });
     mockDeleteSponsor.mockResolvedValue({ ok: true });
@@ -131,20 +131,20 @@ describe("SponsorList drawer integration", () => {
 
     render(<SponsorList sponsors={[sponsor]} sponsorshipItems={sponsorshipItems} />);
 
-    // Open edit drawer
-    await user.click(screen.getByText("Delete Me Corp"));
+    // Phase 2: open edit modal via RowActions trash icon (row click no longer opens modal)
+    await user.click(screen.getByRole("button", { name: /delete delete me corp/i }));
     expect(screen.getByText("Edit Sponsor: Delete Me Corp")).toBeInTheDocument();
 
-    // Click Delete sponsor button in footer
-    await user.click(screen.getByRole("button", { name: /delete sponsor/i }));
+    // Click "Move to Trash" in modal footer (Phase 2: replaces old "Delete sponsor" button)
+    await user.click(screen.getByRole("button", { name: /move to trash/i }));
 
-    // ConfirmDialog should appear
+    // ConfirmDialog title should appear
     expect(
       screen.getByText(/delete delete me corp/i)
     ).toBeInTheDocument();
 
-    // Confirm deletion
-    await user.click(screen.getByRole("button", { name: /^delete$/i }));
+    // Confirm deletion — confirm dialog button is also "Move to Trash"
+    await user.click(screen.getByRole("button", { name: /move to trash/i }));
 
     await waitFor(() => {
       expect(mockDeleteSponsor).toHaveBeenCalledWith(sponsor.id);

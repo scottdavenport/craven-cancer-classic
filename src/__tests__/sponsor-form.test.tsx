@@ -226,14 +226,12 @@ describe("SponsorForm — contact picker (#199)", () => {
   });
 
   it("with contacts in defaultValues.contact_ids, picker shows pre-selected contacts", () => {
-    // Pass contact_ids as a pre-populated value so picker shows pill chips
+    // Pass initialContacts so the form hydrates selectedContacts on mount.
+    // (Phase 2: SponsorForm uses initialContacts, not contacts, to populate the picker.)
     render(
       <SponsorForm
         {...makeProps({
-          defaultValues: {
-            contact_ids: ["contact-uuid-1"],
-          },
-          contacts: [
+          initialContacts: [
             { id: "contact-uuid-1", full_name: "Jane Doe", email: "jane@example.com", company: null },
           ],
         })}

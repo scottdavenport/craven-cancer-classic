@@ -73,14 +73,16 @@ import type { TeamWithMembers } from "@/app/admin/teams/actions";
  * Display identity = captain's full_name from the members array.
  */
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
-  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-abc",
-    // team_name deliberately omitted — Sprint 32 contract drop
+    captain_display_name: "Captain Jane",
     year: 2026,
     captain_contact_id: "contact-captain",
     payment_status: "pending",
     amount_paid_cents: 0,
+    payment_method: null,
+    payment_reference: null,
+    paid_at: null,
     session: "morning",
     members: [
       { contact_id: "contact-captain", full_name: "Captain Jane", role: "captain", slot: 1 },
@@ -107,7 +109,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         // A dialog role indicates centered modal (not sheet/drawer)
@@ -122,7 +125,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         // Modal title should reference captain's name, not a team_name field
@@ -137,7 +141,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -209,7 +214,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         expect(screen.getByRole("dialog")).toBeInTheDocument();

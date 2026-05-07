@@ -57,6 +57,48 @@ vi.mock("../team-drawer", () => ({
   TeamDrawer: () => null,
 }));
 
+// Phase 3: mock base-ui Select as native <select> so jsdom can drive it without
+// floating-ui / portal / keyboard-navigation complexity.
+vi.mock("@/components/ui/select", () => ({
+  Select: ({
+    value,
+    onValueChange,
+    children,
+  }: {
+    value?: string;
+    onValueChange?: (v: string) => void;
+    items?: Record<string, string>;
+    children: React.ReactNode;
+  }) => (
+    <select
+      data-testid="payment-method-select"
+      value={value ?? ""}
+      onChange={(e) => onValueChange?.(e.target.value)}
+    >
+      <option value="">Select method</option>
+      <option value="check">Check</option>
+      <option value="cash">Cash</option>
+      <option value="venmo">Venmo</option>
+      <option value="zelle">Zelle</option>
+      <option value="wire">Wire</option>
+      <option value="comped">Comped</option>
+      <option value="stripe">Stripe</option>
+      <option value="other">Other</option>
+    </select>
+  ),
+  SelectTrigger: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectValue: ({ placeholder }: { placeholder?: string }) => <span>{placeholder}</span>,
+  SelectContent: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectItem: ({ value, children }: { value: string; children: React.ReactNode }) => (
+    <option value={value}>{children}</option>
+  ),
+  SelectGroup: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectLabel: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  SelectSeparator: () => null,
+  SelectScrollUpButton: () => null,
+  SelectScrollDownButton: () => null,
+}));
+
 // ---------------------------------------------------------------------------
 // Import after mocks
 // ---------------------------------------------------------------------------
@@ -71,14 +113,16 @@ import type { TeamWithMembers } from "../actions";
 // ---------------------------------------------------------------------------
 
 function makeTeam(overrides: Partial<TeamWithMembers> = {}): TeamWithMembers {
-  // @ts-expect-error Sprint 32: team_name dropped from type post-migration
   return {
     id: "team-1",
-    // team_name omitted — Sprint 32 contract drop; display = captain full name
+    captain_display_name: "Alice Captain",
     year: 2026,
     captain_contact_id: "c-1",
     payment_status: "pending",
     amount_paid_cents: 0,
+    payment_method: null,
+    payment_reference: null,
+    paid_at: null,
     session: "morning",
     member_count: 1,
     open_slots: 3,
@@ -115,8 +159,8 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
     it("calls router.refresh() after drawer save", async () => {
       renderList();
 
-      // Open drawer via Edit button
-      fireEvent.click(screen.getByText("Edit"));
+      // Phase 3: Edit is now hover-reveal icon-only with aria-label "Edit <captain>'s team"
+      fireEvent.click(screen.getByRole("button", { name: /edit alice captain's team/i }));
 
       await act(async () => {
         fireEvent.click(screen.getByTestId("drawer-success"));
@@ -131,7 +175,8 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
       // every save stacks two toasts (Watchdog catch on PR #260).
       renderList();
 
-      fireEvent.click(screen.getByText("Edit"));
+      // Phase 3: Edit is now hover-reveal icon-only with aria-label "Edit <captain>'s team"
+      fireEvent.click(screen.getByRole("button", { name: /edit alice captain's team/i }));
 
       await act(async () => {
         fireEvent.click(screen.getByTestId("drawer-success"));
@@ -149,7 +194,8 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
       });
 
       renderList();
-      fireEvent.click(screen.getByText("Edit"));
+      // Phase 3: Edit is now hover-reveal icon-only with aria-label "Edit <captain>'s team"
+      fireEvent.click(screen.getByRole("button", { name: /edit alice captain's team/i }));
 
       await act(async () => {
         fireEvent.click(screen.getByTestId("drawer-success"));
@@ -167,8 +213,13 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
     it("calls router.refresh() after team is marked paid", async () => {
       renderList();
 
-      // Open the inline mark-paid form
-      fireEvent.click(screen.getByText("Mark Paid"));
+      // Phase 3: button text is "Mark paid" (lowercase); lives in RowActions surfaceSpecial slot
+      fireEvent.click(screen.getByText("Mark paid"));
+
+      // F-T8 P1: payment method is required before Confirm succeeds
+      fireEvent.change(screen.getByTestId("payment-method-select"), {
+        target: { value: "check" },
+      });
 
       // Submit with default amount
       await act(async () => {
@@ -183,7 +234,13 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
     it("calls toast.success('Payment recorded') after team is marked paid", async () => {
       renderList();
 
-      fireEvent.click(screen.getByText("Mark Paid"));
+      // Phase 3: button text is "Mark paid" (lowercase)
+      fireEvent.click(screen.getByText("Mark paid"));
+
+      // F-T8 P1: payment method is required before Confirm succeeds
+      fireEvent.change(screen.getByTestId("payment-method-select"), {
+        target: { value: "check" },
+      });
 
       await act(async () => {
         fireEvent.click(screen.getByText("Confirm"));
@@ -203,7 +260,13 @@ describe("TeamList — Sprint 26 router.refresh regression (#139)", () => {
       });
 
       renderList();
-      fireEvent.click(screen.getByText("Mark Paid"));
+      // Phase 3: button text is "Mark paid" (lowercase)
+      fireEvent.click(screen.getByText("Mark paid"));
+
+      // F-T8 P1: payment method is required before Confirm succeeds
+      fireEvent.change(screen.getByTestId("payment-method-select"), {
+        target: { value: "check" },
+      });
 
       await act(async () => {
         fireEvent.click(screen.getByText("Confirm"));

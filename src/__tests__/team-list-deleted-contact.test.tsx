@@ -109,11 +109,17 @@ describe("TeamList — deleted contact placeholder", () => {
 
   describe("soft-deleted contact — placeholder rendering", () => {
     it("renders '(deleted contact)' when a member's full_name is empty string (contacts_active join null)", () => {
-      // When contacts_active returns null for a soft-deleted contact, Bolt maps it to full_name = ""
+      // When contacts_active returns null for a soft-deleted contact, Bolt maps it to full_name = "".
+      // Phase 3: the Team column renders captain_display_name directly (F-T1 dropped CAPTAIN column).
+      // memberDisplayName() only runs for non-captain members in the Members column.
+      // Test via a player member with full_name = "" so memberDisplayName() returns the placeholder.
       const team = makeTeam({
         members: [
-          makeMember({ contact_id: "c1", full_name: "", role: "captain", slot: 1 }),
+          makeMember({ contact_id: "c1", full_name: "Alice Admin", role: "captain", slot: 1 }),
+          makeMember({ contact_id: "c2", full_name: "", role: "player", slot: 2 }),
         ],
+        member_count: 2,
+        open_slots: 2,
       });
 
       render(<TeamList teams={[team]} defaultFeeDollars={400} />);
@@ -123,11 +129,15 @@ describe("TeamList — deleted contact placeholder", () => {
     });
 
     it("renders '(deleted contact)' when a member's full_name is null (contacts_active join null)", () => {
+      // Phase 3: non-captain member with null full_name → memberDisplayName() → "(deleted contact)"
       const team = makeTeam({
         members: [
+          makeMember({ contact_id: "c1", full_name: "Alice Admin", role: "captain", slot: 1 }),
           // TypeScript allows null even if the type says string — simulates the join returning null
-          makeMember({ contact_id: "c1", full_name: null as unknown as string, role: "captain", slot: 1 }),
+          makeMember({ contact_id: "c2", full_name: null as unknown as string, role: "player", slot: 2 }),
         ],
+        member_count: 2,
+        open_slots: 2,
       });
 
       render(<TeamList teams={[team]} defaultFeeDollars={400} />);
@@ -136,7 +146,10 @@ describe("TeamList — deleted contact placeholder", () => {
     });
 
     it("renders placeholder for the deleted slot and name for the active slot", () => {
+      // Phase 3: captain_display_name is the Team column source — must match the active captain name.
+      // The deleted slot is a player member with full_name = "" → memberDisplayName() → "(deleted contact)".
       const team = makeTeam({
+        captain_display_name: "Active Captain",
         members: [
           makeMember({ contact_id: "c1", full_name: "Active Captain", role: "captain", slot: 1 }),
           makeMember({ contact_id: "c2", full_name: "", role: "player", slot: 2 }),
@@ -147,40 +160,44 @@ describe("TeamList — deleted contact placeholder", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={400} />);
 
-      // Active captain renders by name
+      // Active captain renders via captain_display_name in the Team column
       expect(screen.getByText("Active Captain")).toBeInTheDocument();
-      // Deleted player slot renders placeholder
+      // Deleted player slot renders placeholder via memberDisplayName() in the Members column
       expect(screen.getByText("(deleted contact)")).toBeInTheDocument();
     });
 
     it("does not render an empty string or blank where the deleted contact slot is", () => {
+      // Phase 3: player member with empty full_name → memberDisplayName() → "(deleted contact)"
+      // Confirms the impl emits the placeholder string, not a blank/empty node.
       const team = makeTeam({
         members: [
-          makeMember({ contact_id: "c1", full_name: "", role: "captain", slot: 1 }),
-        ],
-      });
-
-      const { container } = render(<TeamList teams={[team]} defaultFeeDollars={400} />);
-
-      // There should be no cell containing only whitespace where the captain name would go
-      // (i.e., the placeholder is rendered, not a blank span)
-      expect(screen.getByText("(deleted contact)")).toBeInTheDocument();
-      // The empty string "—" (the current fallback) should NOT appear for this slot
-      // once the placeholder is implemented — this assertion ensures the captain cell
-      // doesn't fall through to the old "—" default
-      const captainCell = screen.queryByText("—");
-      // If "—" appears, it means the placeholder was not rendered
-      expect(captainCell).not.toBeInTheDocument();
-    });
-
-    it("renders multiple deleted contact placeholders when multiple slots reference soft-deleted contacts", () => {
-      const team = makeTeam({
-        members: [
-          makeMember({ contact_id: "c1", full_name: "", role: "captain", slot: 1 }),
+          makeMember({ contact_id: "c1", full_name: "Alice Admin", role: "captain", slot: 1 }),
           makeMember({ contact_id: "c2", full_name: "", role: "player", slot: 2 }),
         ],
         member_count: 2,
         open_slots: 2,
+      });
+
+      render(<TeamList teams={[team]} defaultFeeDollars={400} />);
+
+      // The placeholder is rendered, not a blank span
+      expect(screen.getByText("(deleted contact)")).toBeInTheDocument();
+      // "—" is returned by captainName() only when no captain exists (dead variable, never rendered)
+      // Confirm it doesn't bleed into the DOM
+      expect(screen.queryByText("—")).not.toBeInTheDocument();
+    });
+
+    it("renders multiple deleted contact placeholders when multiple slots reference soft-deleted contacts", () => {
+      // Phase 3: two player members with empty full_name → memberDisplayName() × 2 → 2 placeholders.
+      // Captain renders via captain_display_name (not memberDisplayName), so captain slot doesn't count.
+      const team = makeTeam({
+        members: [
+          makeMember({ contact_id: "c1", full_name: "Alice Admin", role: "captain", slot: 1 }),
+          makeMember({ contact_id: "c2", full_name: "", role: "player", slot: 2 }),
+          makeMember({ contact_id: "c3", full_name: "", role: "player", slot: 3 }),
+        ],
+        member_count: 3,
+        open_slots: 1,
       });
 
       render(<TeamList teams={[team]} defaultFeeDollars={400} />);

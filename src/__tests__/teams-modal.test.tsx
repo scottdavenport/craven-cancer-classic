@@ -109,7 +109,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         // A dialog role indicates centered modal (not sheet/drawer)
@@ -124,7 +125,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         // Modal title should reference captain's name, not a team_name field
@@ -139,7 +141,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         expect(screen.getByRole("dialog")).toBeInTheDocument();
@@ -211,7 +214,8 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
 
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      await user.click(screen.getByRole("button", { name: /^edit$/i }));
+      // Phase 3: Edit button is hover-reveal icon-only; aria-label = "Edit <captain>'s team"
+      await user.click(screen.getByRole("button", { name: /edit captain jane's team/i }));
 
       await waitFor(() => {
         expect(screen.getByRole("dialog")).toBeInTheDocument();

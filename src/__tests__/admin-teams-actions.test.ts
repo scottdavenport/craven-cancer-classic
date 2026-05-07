@@ -423,12 +423,22 @@ describe("markTeamPaid", () => {
       { from: mockFrom } as unknown as Awaited<ReturnType<typeof serverModule.createClient>>
     );
 
-    const result = await markTeamPaid("team-uuid", { amount_cents: 70000, payment_method: "check" });
+    // F-T8 P1: markTeamPaid now accepts payment_method, payment_reference, paid_at
+    const result = await markTeamPaid("team-uuid", {
+      amount_cents: 70000,
+      payment_method: "check",
+      payment_reference: "1234",
+      paid_at: "2026-01-15T00:00:00.000Z",
+    });
 
     expect(mockFrom).toHaveBeenCalledWith("teams");
+    // Assert full payload sent by new impl (per feedback_spec_spy_assertions_required)
     expect(mockUpdate).toHaveBeenCalledWith({
       payment_status: "paid",
       amount_paid_cents: 70000,
+      payment_method: "check",
+      payment_reference: "1234",
+      paid_at: "2026-01-15T00:00:00.000Z",
     });
     expect(mockEq).toHaveBeenCalledWith("id", "team-uuid");
     expect(result).toEqual({ ok: true });

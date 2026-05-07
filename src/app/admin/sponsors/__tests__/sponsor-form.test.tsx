@@ -14,7 +14,7 @@
  */
 
 import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { SponsorForm } from "../sponsor-form";
 import type { SponsorshipItemOption } from "../sponsor-form";
@@ -22,6 +22,16 @@ import type { SponsorshipItemOption } from "../sponsor-form";
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
+
+// ModalSection is a thin wrapper; mock it to render title + children for test isolation.
+vi.mock("@/components/admin/modal-section", () => ({
+  ModalSection: ({ title, children }: { title: string; children: React.ReactNode }) => (
+    <div data-testid={`modal-section-${title.toLowerCase().replace(/\s+/g, "-")}`}>
+      <span data-testid="modal-section-title">{title}</span>
+      {children}
+    </div>
+  ),
+}));
 
 // FileUploadField will be created in PR A. Mock it here so the import resolves
 // and the rendered output is testable.
@@ -57,11 +67,21 @@ vi.mock("@/components/ui/file-upload", () => ({
 vi.mock("@/components/admin/contact-typeahead", () => ({
   ContactTypeaheadMulti: ({
     label,
+    value,
   }: {
     label: string;
-    value: unknown[];
+    value: Array<{ id: string; full_name: string }>;
     onChange: (v: unknown[]) => void;
-  }) => <div data-testid="contact-typeahead">{label}</div>,
+  }) => (
+    <div data-testid="contact-typeahead">
+      {label}
+      {value.map((c) => (
+        <span key={c.id} data-testid={`contact-chip-${c.id}`}>
+          {c.full_name}
+        </span>
+      ))}
+    </div>
+  ),
 }));
 
 // ---------------------------------------------------------------------------
@@ -446,6 +466,45 @@ describe("SponsorForm — PR B changes", () => {
       expect(onSubmit).toHaveBeenCalledTimes(1);
       const fd: FormData = onSubmit.mock.calls[0][0];
       expect(fd.get("remove_logo")).toBe("true");
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // TEST F-S21: initialContacts prop update hydrates selected contacts (P0 fix)
+  //
+  // This is the regression test for the F-S21 P0 contact-unlink bug.
+  // Root cause: useState(seedContacts) freezes the initial value and ignores
+  // updates from the parent when initialContacts prop changes (e.g. after async
+  // load in the modal).
+  //
+  // Fix: useState([]) + useEffect(() => setSelectedContacts(initialContacts), [initialContacts])
+  // ensures contacts hydrate correctly when the prop updates after mount.
+  //
+  // Per feedback_dom_unmount_masks_state_bugs.md: the test must RERENDER (not
+  // just assert on the DOM after initial mount) to verify state was actually
+  // updated — not just that the DOM mounted correctly once.
+  // -------------------------------------------------------------------------
+  describe("F-S21 — initialContacts prop update hydrates contacts (P0)", () => {
+    it("renders linked contacts when initialContacts prop updates after mount", async () => {
+      const { rerender } = renderForm({ initialContacts: [] });
+
+      // Initial state: no contacts rendered
+      expect(screen.queryByTestId("contact-chip-1")).not.toBeInTheDocument();
+
+      // Simulate the parent modal finishing async contact load and passing updated prop
+      rerender(
+        <SponsorForm
+          initialContacts={[{ id: "1", full_name: "Test Contact", email: null, company: null }]}
+          sponsorshipItems={ITEMS}
+          onSubmit={vi.fn()}
+          onCancel={vi.fn()}
+          loading={false}
+        />
+      );
+
+      await waitFor(() => {
+        expect(screen.getByText("Test Contact")).toBeInTheDocument();
+      });
     });
   });
 });

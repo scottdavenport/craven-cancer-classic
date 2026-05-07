@@ -124,7 +124,7 @@ Object.defineProperty(window, "location", {
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
-import { SponsorDrawer } from "@/app/admin/sponsors/sponsor-drawer";
+import { SponsorModal } from "@/app/admin/sponsors/sponsor-modal";
 import { ScoreManager } from "@/app/admin/scores/score-manager";
 import { SponsorshipManager } from "@/app/admin/sponsorships/sponsorship-manager";
 import { PhotoModeration } from "@/app/admin/photos/photo-moderation";
@@ -267,10 +267,10 @@ beforeEach(() => {
 // Area 1 — SponsorDrawer
 // ===========================================================================
 
-describe("Area 1 — SponsorDrawer delete copy", () => {
+describe("Area 1 — SponsorModal delete copy", () => {
   function renderDrawer(sponsor: Sponsor) {
     return render(
-      <SponsorDrawer
+      <SponsorModal
         open={true}
         onOpenChange={vi.fn()}
         mode="edit"

@@ -8,7 +8,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -25,6 +24,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import { FilterBar } from "@/components/admin/filter-bar";
+import { StatusTabs } from "@/components/admin/status-tabs";
+import { RowActions } from "@/components/admin/row-actions";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
 import { getSponsors } from "./actions";
-import { SponsorDrawer } from "./sponsor-drawer";
+import { SponsorModal } from "./sponsor-modal";
 import type { SponsorshipItemOption } from "./sponsor-form";
 import type { Sponsor } from "@/types/database";
 
@@ -43,7 +45,7 @@ interface SponsorListProps {
   sponsorshipItems: SponsorshipItemOption[];
 }
 
-type DrawerState = {
+type ModalState = {
   open: boolean;
   mode: "create" | "edit";
   sponsor: Sponsor | null;
@@ -51,7 +53,7 @@ type DrawerState = {
 
 type SortKey = "name" | "tier" | "website" | "payment_status" | "amount_paid_cents";
 type SortDir = "asc" | "desc";
-type StatusFilter = "all" | "active" | "inactive";
+type StatusFilter = "active" | "inactive" | "all";
 
 const STATUS_RANK: Record<string, number> = { pending: 0, paid: 1, comped: 2 };
 
@@ -108,7 +110,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
 
   const [sponsors, setSponsors] = useState<Sponsor[]>(initialSponsors);
   const [isPending, startTransition] = useTransition();
-  const [drawer, setDrawer] = useState<DrawerState>({
+  const [modal, setModal] = useState<ModalState>({
     open: false,
     mode: "create",
     sponsor: null,
@@ -117,7 +119,8 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
   const [sortKey, setSortKey] = useState<SortKey | null>(null);
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [yearFilter, setYearFilter] = useState<number>(currentYear);
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("active");
+  const [tierFilter, setTierFilter] = useState<string>("all");
 
   function refetch(opts?: { year?: number; is_active?: boolean }) {
     startTransition(async () => {
@@ -138,9 +141,10 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
     refetch({ year, is_active: isActiveArg });
   }
 
-  function handleStatusChange(status: StatusFilter) {
-    setStatusFilter(status);
-    const isActiveArg = status === "active" ? true : status === "inactive" ? false : undefined;
+  function handleStatusChange(status: string) {
+    const s = status as StatusFilter;
+    setStatusFilter(s);
+    const isActiveArg = s === "active" ? true : s === "inactive" ? false : undefined;
     refetch({ year: yearFilter, is_active: isActiveArg });
   }
 
@@ -174,6 +178,27 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
     return map;
   }, [sponsorshipItems]);
 
+  // Compute counts per status tab from current sponsors array
+  const activeCount = useMemo(() => sponsors.filter((s) => (s as Sponsor & { is_active?: boolean }).is_active !== false).length, [sponsors]);
+  const inactiveCount = useMemo(() => sponsors.filter((s) => (s as Sponsor & { is_active?: boolean }).is_active === false).length, [sponsors]);
+  const allCount = sponsors.length;
+
+  const statusTabs = [
+    { id: "active", label: "Active", count: activeCount },
+    { id: "inactive", label: "Inactive", count: inactiveCount },
+    { id: "all", label: "All", count: allCount },
+  ];
+
+  const tierItems = useMemo(() => {
+    const items: Record<string, string> = { all: "All tiers" };
+    for (const item of sponsorshipItems) {
+      items[item.id] = item.name;
+    }
+    return items;
+  }, [sponsorshipItems]);
+
+  const hasActiveFilters = search.trim().length > 0 || tierFilter !== "all";
+
   const displayedSponsors = useMemo(() => {
     const q = search.trim().toLowerCase();
 
@@ -187,6 +212,10 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
           );
         })
       : sponsors;
+
+    if (tierFilter !== "all") {
+      filtered = filtered.filter((s) => s.tier_id === tierFilter);
+    }
 
     filtered = [...filtered].sort((a, b) => {
       if (sortKey !== null) {
@@ -225,7 +254,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
     });
 
     return filtered;
-  }, [sponsors, search, sortKey, sortDir, tierNameById]);
+  }, [sponsors, search, sortKey, sortDir, tierNameById, tierFilter]);
 
   function arrowFor(key: SortKey) {
     if (sortKey !== key) return null;
@@ -236,65 +265,76 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
     "text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground cursor-pointer select-none";
 
   return (
-    <div className="space-y-6">
-      {/* Filter row */}
-      <div className="flex flex-wrap gap-3 items-center">
-        {/* Search input */}
-        <Input
-          placeholder="Search sponsors…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
+    <div className="space-y-0">
+      {/* Status tabs */}
+      <StatusTabs
+        tabs={statusTabs}
+        activeId={statusFilter}
+        onChange={handleStatusChange}
+        ariaLabel="Sponsor status"
+      />
 
-        {/* Year filter — base-ui Select */}
-        <Select
-          value={String(yearFilter)}
-          onValueChange={handleYearChange}
-          items={yearItems}
-        >
-          <SelectTrigger
-            aria-label="Year"
-            data-testid="year-filter-trigger"
-            className="w-[100px]"
+      {/* Filter bar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search sponsors…"
+      >
+        {/* Year filter */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.10em] text-muted-foreground">
+            Year
+          </label>
+          <Select
+            value={String(yearFilter)}
+            onValueChange={handleYearChange}
+            items={yearItems}
           >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {availableYears.map((y) => (
-              <SelectItem key={y} value={String(y)}>
-                {y}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Status filter */}
-        <div role="radiogroup" aria-label="Status filter" className="flex gap-1 rounded-md border border-input overflow-hidden">
-          {(["all", "active", "inactive"] as StatusFilter[]).map((s) => {
-            const label = s === "all" ? "All" : s === "active" ? "Active" : "Inactive";
-            return (
-              <button
-                key={s}
-                type="button"
-                role="radio"
-                aria-label={label}
-                aria-checked={statusFilter === s}
-                onClick={() => handleStatusChange(s)}
-                data-testid={`status-filter-${s}`}
-                className={
-                  `px-3 py-1 text-sm capitalize transition-colors ` +
-                  (statusFilter === s
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-background text-foreground hover:bg-neutral-100")
-                }
-              >
-                {label}
-              </button>
-            );
-          })}
+            <SelectTrigger
+              aria-label="Year"
+              data-testid="year-filter-trigger"
+              className="w-full"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {availableYears.map((y) => (
+                <SelectItem key={y} value={String(y)}>
+                  {y}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-      </div>
+
+        {/* Tier filter */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.10em] text-muted-foreground">
+            Tier
+          </label>
+          <Select
+            value={tierFilter}
+            onValueChange={(v) => setTierFilter(v ?? "all")}
+            items={tierItems}
+          >
+            <SelectTrigger
+              aria-label="Tier"
+              data-testid="tier-filter-trigger"
+              className="w-full"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All tiers</SelectItem>
+              {sponsorshipItems.map((item) => (
+                <SelectItem key={item.id} value={item.id}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </FilterBar>
 
       {/* Sponsors table */}
       <Card
@@ -307,7 +347,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
           </CardTitle>
           <Button
             size="sm"
-            onClick={() => setDrawer({ open: true, mode: "create", sponsor: null })}
+            onClick={() => setModal({ open: true, mode: "create", sponsor: null })}
           >
             <Plus className="mr-1 h-4 w-4" />
             New Sponsor
@@ -339,6 +379,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                   >
                     Amount{arrowFor("amount_paid_cents")}
                   </TableHead>
+                  <TableHead className={headClass} />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -349,10 +390,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                     return (
                       <TableRow
                         key={sponsor.id}
-                        className="border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer"
-                        onClick={() =>
-                          setDrawer({ open: true, mode: "edit", sponsor })
-                        }
+                        className="group/row border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100"
                       >
                         <TableCell className="w-10">
                           <LogoCell logoUrl={sponsor.logo_url ?? null} sponsorName={sponsor.name} />
@@ -399,6 +437,17 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                         <TableCell className="text-right font-mono tabular-nums">
                           ${(sponsor.amount_paid_cents / 100).toLocaleString()}
                         </TableCell>
+                        <TableCell className="w-24">
+                          <div className="flex items-center justify-end gap-2">
+                            <RowActions
+                              editLabel={`Edit ${sponsor.name || "sponsor"}`}
+                              deleteLabel={`Delete ${sponsor.name || "sponsor"}`}
+                              selectLabel={`Select ${sponsor.name || "sponsor"}`}
+                              onEdit={() => setModal({ open: true, mode: "edit", sponsor })}
+                              onDelete={() => setModal({ open: true, mode: "edit", sponsor })}
+                            />
+                          </div>
+                        </TableCell>
                       </TableRow>
                     );
                   })
@@ -408,18 +457,39 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
           </div>
           {displayedSponsors.length === 0 && (
             <AdminEmptyState
-              title="No sponsors yet"
-              body="Add your first sponsor to see it here."
+              filterActive={hasActiveFilters}
+              title={hasActiveFilters ? "No sponsors match your filters" : "No sponsors yet"}
+              action={
+                hasActiveFilters ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      setSearch("");
+                      setTierFilter("all");
+                    }}
+                  >
+                    Clear filters
+                  </Button>
+                ) : (
+                  <Button
+                    size="sm"
+                    onClick={() => setModal({ open: true, mode: "create", sponsor: null })}
+                  >
+                    Add sponsor
+                  </Button>
+                )
+              }
             />
           )}
         </CardContent>
       </Card>
 
-      <SponsorDrawer
-        open={drawer.open}
-        onOpenChange={(open) => setDrawer((d) => ({ ...d, open }))}
-        mode={drawer.mode}
-        sponsor={drawer.sponsor ?? undefined}
+      <SponsorModal
+        open={modal.open}
+        onOpenChange={(open) => setModal((d) => ({ ...d, open }))}
+        mode={modal.mode}
+        sponsor={modal.sponsor ?? undefined}
         sponsorshipItems={sponsorshipItems}
         onSuccess={() => refetch({ year: yearFilter })}
       />

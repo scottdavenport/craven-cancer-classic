@@ -28,11 +28,12 @@ vi.mock("../actions", () => ({
   createSponsor: vi.fn(),
   updateSponsor: vi.fn(),
   deleteSponsor: vi.fn(),
+  getSponsorPurchaseCount: vi.fn(async () => 0),
 }));
 
-// Mock SponsorDrawer to avoid rendering the full sheet
-vi.mock("../sponsor-drawer", () => ({
-  SponsorDrawer: ({
+// Mock SponsorModal to avoid rendering the full dialog
+vi.mock("../sponsor-modal", () => ({
+  SponsorModal: ({
     open,
     mode,
   }: {

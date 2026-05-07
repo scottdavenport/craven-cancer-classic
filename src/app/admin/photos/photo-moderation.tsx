@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Check, X, Trash2 } from "lucide-react";
-import { updatePhotoStatus, deletePhoto } from "./actions";
+import { updatePhotoStatus, deletePhoto, exportPhotosCSV } from "./actions";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import type { Photo } from "@/types/database";
 import { Tabs, TabsList, TabsTrigger, TabsPanel } from "@/components/ui/tabs";
@@ -14,8 +21,6 @@ import { Tabs, TabsList, TabsTrigger, TabsPanel } from "@/components/ui/tabs";
 interface PhotoModerationProps {
   photos: Photo[];
 }
-
-type FilterTab = "all" | "pending" | "approved" | "rejected";
 
 function StatusBadge({ status }: { status: string }) {
   const base =
@@ -49,10 +54,25 @@ function StatusBadge({ status }: { status: string }) {
 export function PhotoModeration({ photos }: PhotoModerationProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null);
+  const [yearFilter, setYearFilter] = useState<string>("all");
+  const [exporting, setExporting] = useState(false);
 
-  const pendingPhotos = photos.filter((p) => p.status === "pending");
-  const approvedPhotos = photos.filter((p) => p.status === "approved");
-  const rejectedPhotos = photos.filter((p) => p.status === "rejected");
+  // Derive available years from the full photos set, descending
+  const availableYears = useMemo(() => {
+    return Array.from(new Set(photos.map((p) => p.year))).sort((a, b) => b - a);
+  }, [photos]);
+
+  // Client-side year filter
+  const filteredPhotos = useMemo(() => {
+    if (yearFilter === "all") return photos;
+    return photos.filter((p) => p.year === Number(yearFilter));
+  }, [photos, yearFilter]);
+
+  const filterActive = yearFilter !== "all";
+
+  const pendingPhotos = filteredPhotos.filter((p) => p.status === "pending");
+  const approvedPhotos = filteredPhotos.filter((p) => p.status === "approved");
+  const rejectedPhotos = filteredPhotos.filter((p) => p.status === "rejected");
 
   async function handleApprove(id: string) {
     setLoading(id);
@@ -73,9 +93,57 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
     setLoading(null);
   }
 
-  function PhotoGrid({ items, emptyTitle, emptyBody }: { items: Photo[]; emptyTitle: string; emptyBody?: string }) {
+  async function handleExportCSV() {
+    setExporting(true);
+    try {
+      const yearParam = yearFilter !== "all" ? Number(yearFilter) : undefined;
+      const csv = await exportPhotosCSV(yearParam);
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const today = new Date().toISOString().slice(0, 10);
+      const suffix = yearFilter !== "all" ? `-${yearFilter}` : "";
+      const filename = `photos${suffix}-${today}.csv`;
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("[PhotoModeration] exportPhotosCSV failed:", err);
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function clearFilters() {
+    setYearFilter("all");
+  }
+
+  function PhotoGrid({
+    items,
+    filterActive: gridFilterActive,
+  }: {
+    items: Photo[];
+    filterActive: boolean;
+  }) {
     if (items.length === 0) {
-      return <AdminEmptyState title={emptyTitle} body={emptyBody} />;
+      return (
+        <AdminEmptyState
+          filterActive={gridFilterActive}
+          title={
+            gridFilterActive
+              ? "No photos match your filters"
+              : "No photos yet"
+          }
+          action={
+            gridFilterActive ? (
+              <Button variant="ghost" size="sm" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            ) : undefined
+          }
+        />
+      );
     }
     return (
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -121,6 +189,7 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
                     variant="outline"
                     onClick={() => handleApprove(photo.id)}
                     disabled={loading === photo.id}
+                    aria-label={`Approve photo from ${photo.uploaded_by_name}`}
                     className="text-success hover:text-success"
                   >
                     <Check className="mr-1 h-3.5 w-3.5" />
@@ -133,6 +202,7 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
                     variant="outline"
                     onClick={() => handleReject(photo.id)}
                     disabled={loading === photo.id}
+                    aria-label={`Reject photo from ${photo.uploaded_by_name}`}
                     className="hover:text-destructive hover:border-destructive/40 transition-colors duration-150"
                   >
                     <X className="mr-1 h-3.5 w-3.5" />
@@ -145,6 +215,7 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
                   onClick={() => setDeleteTarget(photo)}
                   disabled={loading === photo.id}
                   title="Delete photo"
+                  aria-label={`Delete photo from ${photo.uploaded_by_name}`}
                   className="ml-auto text-destructive hover:bg-destructive/10 transition-colors duration-150"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
@@ -159,6 +230,38 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
 
   return (
     <div className="space-y-6">
+      {/* Filter bar — Year only (D1). Photos has no search input per design. */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-medium text-muted-foreground">Year</span>
+          <Select
+            value={yearFilter}
+            onValueChange={(v) => setYearFilter(v ?? "all")}
+          >
+            <SelectTrigger className="w-[140px]">
+              <SelectValue placeholder="All years" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All years</SelectItem>
+              {availableYears.map((year) => (
+                <SelectItem key={year} value={String(year)}>
+                  {year}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleExportCSV}
+          disabled={exporting}
+        >
+          {exporting ? "Exporting..." : "Download CSV"}
+        </Button>
+      </div>
+
       <Tabs defaultValue="pending">
         <TabsList className="flex gap-1 border-b border-border">
           <TabsTrigger
@@ -184,7 +287,7 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
           </TabsTrigger>
           <TabsTrigger
             value="all"
-            count={photos.length}
+            count={filteredPhotos.length}
             className="px-4 py-2 text-sm font-medium transition-colors data-[selected]:border-b-2 data-[selected]:border-primary data-[selected]:text-foreground text-muted-foreground hover:text-foreground"
           >
             All
@@ -192,22 +295,24 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
         </TabsList>
 
         <TabsPanel value="pending" className="mt-6">
-          <PhotoGrid items={pendingPhotos} emptyTitle="No pending photos" emptyBody="Photos submitted via the public gallery appear here." />
+          <PhotoGrid items={pendingPhotos} filterActive={filterActive} />
         </TabsPanel>
         <TabsPanel value="approved" className="mt-6">
-          <PhotoGrid items={approvedPhotos} emptyTitle="No approved photos" />
+          <PhotoGrid items={approvedPhotos} filterActive={filterActive} />
         </TabsPanel>
         <TabsPanel value="rejected" className="mt-6">
-          <PhotoGrid items={rejectedPhotos} emptyTitle="No rejected photos" />
+          <PhotoGrid items={rejectedPhotos} filterActive={filterActive} />
         </TabsPanel>
         <TabsPanel value="all" className="mt-6">
-          <PhotoGrid items={photos} emptyTitle="No photos" />
+          <PhotoGrid items={filteredPhotos} filterActive={filterActive} />
         </TabsPanel>
       </Tabs>
 
       <ConfirmDialog
         open={deleteTarget !== null}
-        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null);
+        }}
         title="Delete this photo?"
         description="This permanently removes the photo — it cannot be restored from Trash."
         confirmLabel="Delete"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -15,6 +15,7 @@ import {
 import { FileUploadField } from "@/components/ui/file-upload";
 import { ContactTypeaheadMulti } from "@/components/admin/contact-typeahead";
 import type { ContactPickResult } from "@/components/admin/contact-typeahead";
+import { ModalSection } from "@/components/admin/modal-section";
 import type { Sponsor } from "@/types/database";
 
 export interface SponsorshipItemOption {
@@ -55,13 +56,15 @@ export function SponsorForm({
     defaultValues?.is_active !== false
   );
 
-  const seedContacts: ContactPickResult[] = initialContacts !== undefined
-    ? initialContacts
-    : (defaultValues?.contact_ids ?? [])
-        .map((id) => contacts.find((c) => c.id === id))
-        .filter((c): c is ContactPickResult => !!c);
-
-  const [selectedContacts, setSelectedContacts] = useState<ContactPickResult[]>(seedContacts);
+  // F-S21 fix: use useState([]) + useEffect to hydrate contacts when initialContacts prop
+  // updates after mount. Using useState(initialContacts) would freeze the initial value
+  // and ignore updates from the parent modal (which loads contacts asynchronously).
+  const [selectedContacts, setSelectedContacts] = useState<ContactPickResult[]>([]);
+  useEffect(() => {
+    if (initialContacts !== undefined) {
+      setSelectedContacts(initialContacts);
+    }
+  }, [initialContacts]);
   const [nameError, setNameError] = useState<string | null>(null);
   const savedLogoUrl = defaultValues?.logo_url ?? null;
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -120,110 +123,116 @@ export function SponsorForm({
 
   return (
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label htmlFor="sf-name">Sponsor Name</Label>
-          <Input
-            id="sf-name"
-            name="name"
-            defaultValue={defaultValues?.name}
-            required
-            onChange={() => setNameError(null)}
-          />
-          {nameError && (
-            <p className="text-destructive text-sm">{nameError}</p>
-          )}
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="sf-tier_id">Sponsorship level</Label>
-          <input type="hidden" name="tier_id" value={tierId} />
-          <Select
-            value={tierId}
-            onValueChange={(v) => setTierId(v ?? "")}
-            items={Object.fromEntries(
-              sponsorshipItems.map((item) => [
-                item.id,
-                `${item.name} — $${(item.price_cents / 100).toLocaleString()}`,
-              ])
+      {/* Identity section: Name + Tier */}
+      <ModalSection title="Identity">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="sf-name">Sponsor Name</Label>
+            <Input
+              id="sf-name"
+              name="name"
+              defaultValue={defaultValues?.name}
+              required
+              onChange={() => setNameError(null)}
+            />
+            {nameError && (
+              <p className="text-destructive text-sm">{nameError}</p>
             )}
-          >
-            <SelectPrimitive.Trigger
-              id="sf-tier_id"
-              data-slot="select-trigger"
-              className="flex w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground"
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sf-tier_id">Sponsorship level</Label>
+            <input type="hidden" name="tier_id" value={tierId} />
+            <Select
+              value={tierId}
+              onValueChange={(v) => setTierId(v ?? "")}
+              items={Object.fromEntries(
+                sponsorshipItems.map((item) => [
+                  item.id,
+                  `${item.name} — $${(item.price_cents / 100).toLocaleString()}`,
+                ])
+              )}
             >
-              <SelectValue placeholder="Select a level" />
-              <SelectPrimitive.Icon render={<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none size-4 text-muted-foreground" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>} />
-            </SelectPrimitive.Trigger>
-            <SelectContent>
-              {sponsorshipItems.map((item) => (
-                <SelectItem key={item.id} value={item.id}>
-                  {item.name} — ${(item.price_cents / 100).toLocaleString()}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="sf-payment_status">Payment Status</Label>
-          <input type="hidden" name="payment_status" value={paymentStatus} />
-          <Select
-            value={paymentStatus}
-            onValueChange={(v) => setPaymentStatus(v ?? "pending")}
-            items={{ pending: "Pending", paid: "Paid", comped: "Comped" }}
-          >
-            <SelectPrimitive.Trigger
-              id="sf-payment_status"
-              data-slot="select-trigger"
-              className="flex w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground"
+              <SelectPrimitive.Trigger
+                id="sf-tier_id"
+                data-slot="select-trigger"
+                className="flex w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground"
+              >
+                <SelectValue placeholder="Select a level" />
+                <SelectPrimitive.Icon render={<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none size-4 text-muted-foreground" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>} />
+              </SelectPrimitive.Trigger>
+              <SelectContent>
+                {sponsorshipItems.map((item) => (
+                  <SelectItem key={item.id} value={item.id}>
+                    {item.name} — ${(item.price_cents / 100).toLocaleString()}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sf-payment_status">Payment Status</Label>
+            <input type="hidden" name="payment_status" value={paymentStatus} />
+            <Select
+              value={paymentStatus}
+              onValueChange={(v) => setPaymentStatus(v ?? "pending")}
+              items={{ pending: "Pending", paid: "Paid", comped: "Comped" }}
             >
-              <SelectValue />
-              <SelectPrimitive.Icon render={<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none size-4 text-muted-foreground" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>} />
-            </SelectPrimitive.Trigger>
-            <SelectContent>
-              <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
-              <SelectItem value="comped">Comped</SelectItem>
-            </SelectContent>
-          </Select>
+              <SelectPrimitive.Trigger
+                id="sf-payment_status"
+                data-slot="select-trigger"
+                className="flex w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent py-2 pr-2 pl-2.5 text-sm whitespace-nowrap transition-colors outline-none select-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive data-placeholder:text-muted-foreground"
+              >
+                <SelectValue />
+                <SelectPrimitive.Icon render={<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="pointer-events-none size-4 text-muted-foreground" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>} />
+              </SelectPrimitive.Trigger>
+              <SelectContent>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="comped">Comped</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sf-amount_paid">Amount Paid</Label>
+            <Input
+              id="sf-amount_paid"
+              name="amount_paid"
+              type="number"
+              step="0.01"
+              defaultValue={
+                defaultValues?.amount_paid_cents != null
+                  ? defaultValues.amount_paid_cents / 100
+                  : 0
+              }
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="sf-website">Website</Label>
+            <Input
+              id="sf-website"
+              name="website"
+              type="url"
+              defaultValue={defaultValues?.website ?? ""}
+            />
+          </div>
+          <div className="flex items-center gap-3 pt-6">
+            <input type="hidden" name="is_active" value={String(isActive)} />
+            <Switch
+              id="sf-is_active"
+              checked={isActive}
+              onCheckedChange={setIsActive}
+              aria-label="Active"
+            />
+            <Label htmlFor="sf-is_active" className="cursor-pointer select-none">
+              Active
+            </Label>
+          </div>
         </div>
+      </ModalSection>
+
+      {/* Linked contacts section */}
+      <ModalSection title="Linked contacts">
         <div className="space-y-1.5">
-          <Label htmlFor="sf-amount_paid">Amount Paid</Label>
-          <Input
-            id="sf-amount_paid"
-            name="amount_paid"
-            type="number"
-            step="0.01"
-            defaultValue={
-              defaultValues?.amount_paid_cents != null
-                ? defaultValues.amount_paid_cents / 100
-                : 0
-            }
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="sf-website">Website</Label>
-          <Input
-            id="sf-website"
-            name="website"
-            type="url"
-            defaultValue={defaultValues?.website ?? ""}
-          />
-        </div>
-        <div className="flex items-center gap-3 pt-6">
-          <input type="hidden" name="is_active" value={String(isActive)} />
-          <Switch
-            id="sf-is_active"
-            checked={isActive}
-            onCheckedChange={setIsActive}
-            aria-label="Active"
-          />
-          <Label htmlFor="sf-is_active" className="cursor-pointer select-none">
-            Active
-          </Label>
-        </div>
-        <div className="space-y-1.5 sm:col-span-2">
-          <Label>Contacts</Label>
           <ContactTypeaheadMulti
             label="Search contacts"
             value={selectedContacts}
@@ -234,7 +243,11 @@ export function SponsorForm({
             Link contacts to this sponsor to track who the company or individual representative is.
           </p>
         </div>
-        <div className="space-y-1.5 sm:col-span-2">
+      </ModalSection>
+
+      {/* Logo section */}
+      <ModalSection title="Logo">
+        <div className="space-y-1.5">
           <FileUploadField
             label="Logo"
             name="logo"
@@ -263,7 +276,18 @@ export function SponsorForm({
             </Button>
           )}
         </div>
-      </div>
+      </ModalSection>
+
+      {/* Notes section — notes column not yet in sponsors schema; section header shipped per Aria gate */}
+      <ModalSection title="Notes">
+        <textarea
+          name="notes"
+          id="sf-notes"
+          rows={3}
+          placeholder="Internal notes about this sponsor…"
+          className="w-full rounded-lg border border-input bg-transparent px-3 py-2 text-sm resize-none outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 placeholder:text-muted-foreground"
+        />
+      </ModalSection>
 
       <div className="flex gap-2">
         <Button type="submit" disabled={disabled || loading}>

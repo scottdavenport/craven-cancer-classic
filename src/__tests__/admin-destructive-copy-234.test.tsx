@@ -14,7 +14,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 // ---------------------------------------------------------------------------
@@ -124,7 +124,7 @@ Object.defineProperty(window, "location", {
 // Imports (after mocks)
 // ---------------------------------------------------------------------------
 
-import { SponsorDrawer } from "@/app/admin/sponsors/sponsor-drawer";
+import { SponsorModal } from "@/app/admin/sponsors/sponsor-modal";
 import { ScoreManager } from "@/app/admin/scores/score-manager";
 import { SponsorshipManager } from "@/app/admin/sponsorships/sponsorship-manager";
 import { PhotoModeration } from "@/app/admin/photos/photo-moderation";
@@ -267,10 +267,10 @@ beforeEach(() => {
 // Area 1 — SponsorDrawer
 // ===========================================================================
 
-describe("Area 1 — SponsorDrawer delete copy", () => {
+describe("Area 1 — SponsorModal delete copy", () => {
   function renderDrawer(sponsor: Sponsor) {
     return render(
-      <SponsorDrawer
+      <SponsorModal
         open={true}
         onOpenChange={vi.fn()}
         mode="edit"
@@ -282,22 +282,26 @@ describe("Area 1 — SponsorDrawer delete copy", () => {
   }
 
   describe("confirm dialog description", () => {
-    it("says 'moved to Trash' and mentions restore path (RED: currently says cannot be undone)", async () => {
+    it("says 'moved to Trash' and mentions restore path (Bolt ships C2 variant)", async () => {
       const user = userEvent.setup();
       const sponsor = makeSponsor();
       renderDrawer(sponsor);
 
-      // Wait for contacts to load (getSponsorContacts mock resolves)
+      // Wait for contacts to load (getSponsorContacts mock resolves).
+      // Bolt renamed the trigger button from "Delete sponsor" to "Move to Trash"
+      // per Phase 2 §C Aria-approved locked copy.
       await waitFor(() =>
-        expect(screen.queryByRole("button", { name: /delete sponsor/i })).toBeInTheDocument()
+        expect(screen.queryByRole("button", { name: /move to trash/i })).toBeInTheDocument()
       );
 
       // Open confirm dialog
-      await user.click(screen.getByRole("button", { name: /delete sponsor/i }));
+      await user.click(screen.getByRole("button", { name: /move to trash/i }));
 
+      // Bolt's C2 body (0 linked records, always used until sponsor_id FK ships):
+      // "Moving [Sponsor Name] to Trash removes it from the active list. You can restore it from Admin → Trash."
       await waitFor(() => {
         expect(
-          screen.getByText("This sponsor will be moved to Trash. You can restore from Admin → Trash.")
+          screen.getByText("Moving Acme Corp to Trash removes it from the active list. You can restore it from Admin → Trash.")
         ).toBeInTheDocument();
       });
     });
@@ -308,9 +312,9 @@ describe("Area 1 — SponsorDrawer delete copy", () => {
       renderDrawer(sponsor);
 
       await waitFor(() =>
-        expect(screen.queryByRole("button", { name: /delete sponsor/i })).toBeInTheDocument()
+        expect(screen.queryByRole("button", { name: /move to trash/i })).toBeInTheDocument()
       );
-      await user.click(screen.getByRole("button", { name: /delete sponsor/i }));
+      await user.click(screen.getByRole("button", { name: /move to trash/i }));
 
       await waitFor(() => {
         // New copy replaces this entirely
@@ -322,21 +326,33 @@ describe("Area 1 — SponsorDrawer delete copy", () => {
   });
 
   describe("toast on delete success", () => {
-    it("calls toast.success with 'Sponsor moved to Trash' (RED: currently 'Sponsor deleted')", async () => {
+    it("calls toast.success with 'Sponsor moved to Trash' (Bolt ships correct toast)", async () => {
       const user = userEvent.setup();
       mockDeleteSponsor.mockResolvedValue({});
       const sponsor = makeSponsor();
       renderDrawer(sponsor);
 
       await waitFor(() =>
-        expect(screen.queryByRole("button", { name: /delete sponsor/i })).toBeInTheDocument()
+        expect(screen.queryByRole("button", { name: /move to trash/i })).toBeInTheDocument()
       );
 
-      await user.click(screen.getByRole("button", { name: /delete sponsor/i }));
-      await waitFor(() =>
-        expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument()
-      );
-      await user.click(screen.getByRole("button", { name: /^delete$/i }));
+      await user.click(screen.getByRole("button", { name: /move to trash/i }));
+
+      // Confirm dialog's destructive button also says "Move to Trash" per Aria §C locked copy.
+      // There are now two "Move to Trash" buttons: the trigger (in modal footer) and the confirm
+      // button in the nested dialog. After clicking the first, the confirm dialog opens and both
+      // are present. We want the one inside the confirm dialog (role="dialog" context).
+      await waitFor(() => {
+        const dialogs = screen.getAllByRole("dialog");
+        // The confirm dialog is the last-opened one; find "Move to Trash" within it
+        const confirmDialog = dialogs[dialogs.length - 1];
+        const confirmBtn = within(confirmDialog).getByRole("button", { name: /^move to trash$/i });
+        expect(confirmBtn).toBeInTheDocument();
+      });
+
+      const dialogs = screen.getAllByRole("dialog");
+      const confirmDialog = dialogs[dialogs.length - 1];
+      await user.click(within(confirmDialog).getByRole("button", { name: /^move to trash$/i }));
 
       await waitFor(() =>
         expect(mockDeleteSponsor).toHaveBeenCalledWith(sponsor.id)
@@ -353,13 +369,20 @@ describe("Area 1 — SponsorDrawer delete copy", () => {
       renderDrawer(sponsor);
 
       await waitFor(() =>
-        expect(screen.queryByRole("button", { name: /delete sponsor/i })).toBeInTheDocument()
+        expect(screen.queryByRole("button", { name: /move to trash/i })).toBeInTheDocument()
       );
-      await user.click(screen.getByRole("button", { name: /delete sponsor/i }));
-      await waitFor(() =>
-        expect(screen.getByRole("button", { name: /^delete$/i })).toBeInTheDocument()
-      );
-      await user.click(screen.getByRole("button", { name: /^delete$/i }));
+      await user.click(screen.getByRole("button", { name: /move to trash/i }));
+
+      await waitFor(() => {
+        const dialogs = screen.getAllByRole("dialog");
+        const confirmDialog = dialogs[dialogs.length - 1];
+        const confirmBtn = within(confirmDialog).getByRole("button", { name: /^move to trash$/i });
+        expect(confirmBtn).toBeInTheDocument();
+      });
+
+      const dialogs = screen.getAllByRole("dialog");
+      const confirmDialog = dialogs[dialogs.length - 1];
+      await user.click(within(confirmDialog).getByRole("button", { name: /^move to trash$/i }));
 
       await waitFor(() => expect(mockDeleteSponsor).toHaveBeenCalled());
       expect(mockToastSuccess).not.toHaveBeenCalledWith("Sponsor deleted");

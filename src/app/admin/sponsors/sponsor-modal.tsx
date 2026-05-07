@@ -3,21 +3,27 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetFooter,
-} from "@/components/ui/sheet";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { SponsorForm } from "./sponsor-form";
 import type { SponsorshipItemOption } from "./sponsor-form";
-import { createSponsor, updateSponsor, deleteSponsor, uploadSponsorLogo, getSponsorContacts, deleteSponsorLogo } from "./actions";
+import {
+  createSponsor,
+  updateSponsor,
+  deleteSponsor,
+  uploadSponsorLogo,
+  getSponsorContacts,
+  deleteSponsorLogo,
+} from "./actions";
 import type { Sponsor } from "@/types/database";
 import type { ContactPickResult } from "@/components/admin/contact-typeahead";
 
-interface SponsorDrawerProps {
+interface SponsorModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mode: "create" | "edit";
@@ -26,14 +32,14 @@ interface SponsorDrawerProps {
   onSuccess: () => void;
 }
 
-export function SponsorDrawer({
+export function SponsorModal({
   open,
   onOpenChange,
   mode,
   sponsor,
   sponsorshipItems,
   onSuccess,
-}: SponsorDrawerProps) {
+}: SponsorModalProps) {
   const [loading, setLoading] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [initialContacts, setInitialContacts] = useState<ContactPickResult[]>([]);
@@ -120,6 +126,13 @@ export function SponsorDrawer({
     }
   }
 
+  function handleDeleteClick() {
+    if (!sponsor) return;
+    // sponsorship_purchases.sponsor_id FK not yet in schema — use C2 (zero-linked) variant always.
+    // When the FK column ships, wire getSponsorPurchaseCount here and pass count to buildDeleteDescription.
+    setConfirmOpen(true);
+  }
+
   async function handleDeleteConfirmed() {
     if (!sponsor) return;
     setLoading(true);
@@ -130,6 +143,7 @@ export function SponsorDrawer({
         return;
       }
       toast.success("Sponsor moved to Trash");
+      setConfirmOpen(false);
       onOpenChange(false);
       onSuccess();
     } finally {
@@ -137,21 +151,27 @@ export function SponsorDrawer({
     }
   }
 
+  function buildDeleteDescription(): string {
+    const name = sponsor?.name ?? "this sponsor";
+    // C2 variant (Aria-approved): zero linked records — used until sponsorship_purchases.sponsor_id FK ships
+    return `Moving ${name} to Trash removes it from the active list. You can restore it from Admin → Trash.`;
+  }
+
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent
-          side="right"
-          className="sm:max-w-[540px] flex flex-col overflow-hidden p-0"
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent
+          className="sm:max-w-[560px] flex flex-col max-h-[90vh] overflow-hidden p-0"
           showCloseButton={false}
         >
-          <SheetHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
-            <SheetTitle>{title}</SheetTitle>
-          </SheetHeader>
+          <DialogHeader className="px-6 pt-6 pb-4 border-b border-border/60 shrink-0">
+            <DialogTitle>{title}</DialogTitle>
+          </DialogHeader>
 
           <div className="flex-1 overflow-y-auto px-6 py-4">
             {(mode === "create" || contactsLoaded) ? (
               <SponsorForm
+                key={sponsor?.id}
                 defaultValues={mode === "edit" ? sponsor : undefined}
                 initialContacts={initialContacts}
                 sponsorshipItems={sponsorshipItems}
@@ -167,29 +187,61 @@ export function SponsorDrawer({
           </div>
 
           {mode === "edit" && sponsor && (
-            <SheetFooter className="px-6 py-4 border-t border-border/60 shrink-0">
+            <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0 flex flex-row items-center justify-between">
               <Button
                 type="button"
                 variant="outline"
                 className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
-                onClick={() => setConfirmOpen(true)}
+                onClick={handleDeleteClick}
                 disabled={loading}
               >
-                Delete sponsor
+                Move to Trash
               </Button>
-            </SheetFooter>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => onOpenChange(false)}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </DialogFooter>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title={`Delete ${sponsor?.name ?? "this sponsor"}?`}
-        description="This sponsor will be moved to Trash. You can restore from Admin → Trash."
-        confirmLabel="Delete"
-        onConfirm={handleDeleteConfirmed}
-      />
+      <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <DialogContent className="sm:max-w-md" showCloseButton={false}>
+          <DialogHeader>
+            <DialogTitle className="text-destructive">
+              {`Delete ${sponsor?.name ?? "this sponsor"}?`}
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {buildDeleteDescription()}
+          </p>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmOpen(false)}
+              disabled={loading}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteConfirmed}
+              disabled={loading}
+            >
+              {loading ? "Moving…" : "Move to Trash"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

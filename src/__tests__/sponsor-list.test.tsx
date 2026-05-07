@@ -261,15 +261,15 @@ describe("SponsorList", () => {
         />
       );
 
-      // Open the edit drawer by clicking the sponsor row
-      await user.click(screen.getByText("Delete Me Corp"));
+      // Open the edit modal via RowActions trash icon (Phase 2: row click no longer opens modal)
+      await user.click(screen.getByRole("button", { name: /delete delete me corp/i }));
       expect(screen.getByText("Edit Sponsor: Delete Me Corp")).toBeInTheDocument();
 
-      // Click the delete button in the drawer footer
-      await user.click(screen.getByRole("button", { name: /delete sponsor/i }));
+      // Click "Move to Trash" in the modal footer (Phase 2: replaces old "Delete sponsor" button)
+      await user.click(screen.getByRole("button", { name: /move to trash/i }));
 
-      // Confirm dialog should appear — click confirm
-      const confirmBtn = screen.getByRole("button", { name: /^delete$/i });
+      // Confirm dialog should appear — click "Move to Trash" to confirm
+      const confirmBtn = screen.getByRole("button", { name: /move to trash/i });
       await user.click(confirmBtn);
 
       // deleteSponsor resolves → onSuccess fires → refetch → getSponsors called

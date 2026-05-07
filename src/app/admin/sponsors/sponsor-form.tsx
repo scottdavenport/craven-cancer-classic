@@ -228,6 +228,7 @@ export function SponsorForm({
             label="Search contacts"
             value={selectedContacts}
             onChange={setSelectedContacts}
+            defaultTypes={['sponsor']}
           />
           <p className="text-xs text-muted-foreground">
             Link contacts to this sponsor to track who the company or individual representative is.

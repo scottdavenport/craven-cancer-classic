@@ -19,6 +19,8 @@ export type ContactPickResult = {
   company: string | null;
 };
 
+type ContactType = "player" | "sponsor" | "donor" | "volunteer" | "other";
+
 // ---------------------------------------------------------------------------
 // Single-select ContactTypeahead
 // Used by TeamForm (captain / player slots) and as the building block for
@@ -31,6 +33,7 @@ interface ContactTypeaheadProps {
   onChange: (contact: ContactPickResult | null) => void;
   exclude?: string[]; // contact IDs to exclude from results
   onInlineOpenChange?: (open: boolean) => void;
+  defaultTypes?: ContactType[];
 }
 
 export function ContactTypeahead({
@@ -39,6 +42,7 @@ export function ContactTypeahead({
   onChange,
   exclude = [],
   onInlineOpenChange,
+  defaultTypes = [],
 }: ContactTypeaheadProps) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<ContactPickResult[]>([]);
@@ -157,7 +161,7 @@ export function ContactTypeahead({
         company: null,
         email: formEmail.trim() || null,
         phone: formPhone.trim() || null,
-        types: ["player"],
+        types: defaultTypes.length > 0 ? defaultTypes : ["other"],
         address1: null,
         address2: null,
         city: null,
@@ -286,7 +290,13 @@ export function ContactTypeahead({
           )}
           {inlineFormOpen && (
             <div className="rounded-xl border border-border bg-neutral-50 p-4 space-y-3">
-              <p className="text-sm font-semibold text-foreground">New Contact</p>
+              <p className="text-sm font-semibold text-foreground">
+                {defaultTypes.length === 1 && defaultTypes[0] === "player"
+                  ? "New Player"
+                  : defaultTypes.length === 1 && defaultTypes[0] === "sponsor"
+                    ? "New Sponsor Contact"
+                    : "New Contact"}
+              </p>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label htmlFor={`inline-first-${label}`}>First Name</Label>
@@ -374,12 +384,14 @@ interface ContactTypeaheadMultiProps {
   label: string;
   value: ContactPickResult[];
   onChange: (contacts: ContactPickResult[]) => void;
+  defaultTypes?: ContactType[];
 }
 
 export function ContactTypeaheadMulti({
   label,
   value,
   onChange,
+  defaultTypes = [],
 }: ContactTypeaheadMultiProps) {
   const selectedIds = value.map((c) => c.id);
 
@@ -421,6 +433,7 @@ export function ContactTypeaheadMulti({
         value={null}
         onChange={(c) => { if (c) handleAdd(c); }}
         exclude={selectedIds}
+        defaultTypes={defaultTypes}
       />
     </div>
   );

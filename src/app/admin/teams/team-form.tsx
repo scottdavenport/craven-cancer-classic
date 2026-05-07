@@ -134,6 +134,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         onChange={setCaptain}
         exclude={excludeFor(captain)}
         onInlineOpenChange={makeInlineHandler("captain")}
+        defaultTypes={['player']}
       />
 
       {/* Player 2 */}
@@ -143,6 +144,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         onChange={setPlayer2}
         exclude={excludeFor(player2)}
         onInlineOpenChange={makeInlineHandler("player2")}
+        defaultTypes={['player']}
       />
 
       {/* Player 3 */}
@@ -152,6 +154,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         onChange={setPlayer3}
         exclude={excludeFor(player3)}
         onInlineOpenChange={makeInlineHandler("player3")}
+        defaultTypes={['player']}
       />
 
       {/* Player 4 */}
@@ -161,6 +164,7 @@ export function TeamForm({ team, onSuccess, onCancel }: TeamFormProps) {
         onChange={setPlayer4}
         exclude={excludeFor(player4)}
         onInlineOpenChange={makeInlineHandler("player4")}
+        defaultTypes={['player']}
       />
 
       {error && (

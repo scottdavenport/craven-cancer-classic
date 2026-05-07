@@ -9,6 +9,16 @@
 -- throwing `ERROR: 42703: column "payment_method" does not exist` until
 -- this view recreation lands. Caught by Watchdog on PR #386 review via
 -- direct prod query (per feedback_verify_against_prod_not_source.md).
+--
+-- IMPORTANT: new columns MUST be appended at the END of the existing
+-- column list. Postgres `CREATE OR REPLACE VIEW` allows ADDING columns
+-- to the tail but rejects reordering — inserting a new column in the
+-- middle reads as a column rename and fails with SQLSTATE 42P16. The
+-- first attempt at this migration (PR #386) inserted payment_method
+-- after amount_paid_cents and the production deploy errored:
+-- `ERROR: cannot change name of view column "notes" to "payment_method"`.
+-- Hotfix retains the original 11 columns in their existing positions
+-- (1–11) and appends the 3 new payment columns at the end (12–14).
 
 CREATE OR REPLACE VIEW teams_active AS
 SELECT
@@ -17,14 +27,14 @@ SELECT
   payment_status,
   stripe_payment_id,
   amount_paid_cents,
-  payment_method,
-  payment_reference,
-  paid_at,
   notes,
   year,
   created_at,
   captain_contact_id,
   deleted_at,
-  deleted_by
+  deleted_by,
+  payment_method,
+  payment_reference,
+  paid_at
 FROM teams
 WHERE deleted_at IS NULL;

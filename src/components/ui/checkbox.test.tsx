@@ -57,10 +57,10 @@ describe("Checkbox — unchecked visual state", () => {
     expect(el!.className).toContain("bg-background");
   });
 
-  it("unchecked checkbox has border-border class", () => {
+  it("unchecked checkbox has border-slate-400 class", () => {
     const { container } = render(<Checkbox aria-label="test" checked={false} onCheckedChange={() => {}} />);
     const el = container.querySelector("[data-slot='checkbox']");
-    expect(el!.className).toContain("border-border");
+    expect(el!.className).toContain("border-slate-400");
   });
 
   it("unchecked checkbox does NOT render a Check icon", () => {

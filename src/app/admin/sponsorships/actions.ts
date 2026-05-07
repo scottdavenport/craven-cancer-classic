@@ -11,26 +11,48 @@ export type SponsorshipItemWithCount = SponsorshipItem & { active_sponsor_count:
 type SponsorshipCategory = "sponsorship" | "tribute" | "supporter";
 
 export async function getSponsorshipItems(
-  { category }: { category?: SponsorshipCategory } = {}
+  {
+    category,
+    year,
+    status,
+  }: {
+    category?: SponsorshipCategory;
+    year?: number;
+    status?: "active" | "inactive" | "all";
+  } = {}
 ): Promise<SponsorshipItemWithCount[]> {
   const supabase = await createClient();
   const currentYear = new Date().getFullYear();
+  const resolvedYear = year ?? currentYear;
 
+  // Query the base table directly so year, status, and deleted_at can all be combined.
+  // The sponsorship_items_active view is a subset of this (deleted_at IS NULL + active = true);
+  // we replicate those conditions here explicitly to support inactive/all status filters.
   let itemsQuery = supabase
-    .from("sponsorship_items_active")
+    .from("sponsorship_items")
     .select("*")
-    .eq("year", currentYear);
+    .eq("year", resolvedYear)
+    .is("deleted_at", null);
 
   if (category !== undefined) {
     itemsQuery = itemsQuery.eq("category", category);
   }
 
+  if (status === "active" || status === undefined) {
+    itemsQuery = itemsQuery.eq("active", true);
+  } else if (status === "inactive") {
+    itemsQuery = itemsQuery.eq("active", false);
+  }
+  // status === "all" → no active filter applied; deleted_at IS NULL already above
+
   const [itemsRes, sponsorsRes] = await Promise.all([
-    itemsQuery.order("price_cents", { ascending: false }),
+    itemsQuery
+      .order("sort_order", { ascending: true })
+      .order("price_cents", { ascending: false }),
     supabase
       .from("sponsors_active")
       .select("tier_id")
-      .eq("year", currentYear),
+      .eq("year", resolvedYear),
   ]);
 
   if (itemsRes.error) throw new Error(itemsRes.error.message);

@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
@@ -92,29 +91,35 @@ export function ContactModal({
             />
           </div>
 
-          <DialogFooter className="px-6 py-4 border-t border-border/60 shrink-0">
-            {mode === "edit" && contact && (
+          {/* F13.a: justify-between footer — Delete bottom-left, Cancel + Save bottom-right */}
+          {/* F13.b: bg-background to occlude scroll content */}
+          <div className="flex flex-row items-center justify-between px-6 py-4 border-t border-border/60 shrink-0 bg-background">
+            <div>
+              {mode === "edit" && contact && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
+                  onClick={() => setConfirmOpen(true)}
+                >
+                  Delete contact
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
               <Button
                 type="button"
                 variant="outline"
-                className="text-destructive hover:text-destructive border-destructive/30 hover:bg-destructive/10"
-                onClick={() => setConfirmOpen(true)}
+                disabled={submitting}
+                onClick={() => onOpenChange(false)}
               >
-                Delete contact
+                Cancel
               </Button>
-            )}
-            <Button
-              type="button"
-              variant="outline"
-              disabled={submitting}
-              onClick={() => onOpenChange(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" form="contact-form" disabled={!canSubmit || submitting}>
-              {mode === "create" ? "Create" : "Save"}
-            </Button>
-          </DialogFooter>
+              <Button type="submit" form="contact-form" disabled={!canSubmit || submitting}>
+                {mode === "create" ? "Create" : "Save"}
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
 

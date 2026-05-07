@@ -1,9 +1,7 @@
 "use client";
 
 import { useState, useMemo, useTransition } from "react";
-import Link from "next/link";
-import { Checkbox } from "@/components/ui/checkbox";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -11,8 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +17,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
+import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import { FilterBar } from "@/components/admin/filter-bar";
+import { StatusTabs } from "@/components/admin/status-tabs";
+import { RowActions } from "@/components/admin/row-actions";
+import { ActiveFilterChips } from "@/components/admin/active-filter-chips";
 import {
   exportContactsCSV,
   getContacts,
@@ -133,7 +135,7 @@ function relativeTime(dateStr: string): string {
   return rtf.format(-Math.floor(months / 12), "year");
 }
 
-const DATA_HEADERS = ["Name", "Email", "Type", "Company", "Year", "Consent", "Added"];
+const DATA_HEADERS = ["Name", "Email", "Type", "Company", "Consent", "Added"];
 
 type DrawerState = {
   open: boolean;
@@ -145,14 +147,15 @@ type BlockedAlert = {
   reasons: string[];
 };
 
+type StatusFilter = "subscribed" | "unsubscribed" | "all";
+
 export function ContactList({ contacts: initialContacts, teams }: ContactListProps) {
   const [contacts, setContacts] = useState<Contact[]>(initialContacts);
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [yearFilter, setYearFilter] = useState<string>("all");
-  const [companyFilter, setCompanyFilter] = useState<string>("");
-  const [consentFilter, setConsentFilter] = useState<string>("all");
   const [teamFilter, setTeamFilter] = useState<string>("all");
   const [captainOnly, setCaptainOnly] = useState(false);
+  const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
   const [isPending, startTransition] = useTransition();
   const [drawer, setDrawer] = useState<DrawerState>({
@@ -175,7 +178,6 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
       try {
         const filter: ContactFilter = {};
         if (typeFilter !== "all") filter.type = typeFilter as ContactType;
-        if (yearFilter !== "all") filter.year = Number(yearFilter);
         if (teamFilter !== "all") filter.team_id = teamFilter;
         if (captainOnly) filter.captain_only = true;
         const fresh = await getContacts(filter);
@@ -186,35 +188,45 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
     });
   }
 
-  // availableYears derived from the current contacts set (server-filtered when team/captain active)
-  const availableYears = useMemo(() => {
-    return Array.from(new Set(initialContacts.map((c) => c.year_first_seen))).sort(
-      (a, b) => b - a
-    );
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [initialContacts]);
-
-  // Client-side filters: type, year, company, consent
+  // Client-side filters: type, search (name/email/phone/company), consent (via status tabs)
   // team_id / captain_only are handled server-side via re-fetch
   const filtered = useMemo(() => {
     return contacts.filter((c) => {
       if (typeFilter !== "all" && !(c.types ?? []).includes(typeFilter)) return false;
-      if (yearFilter !== "all" && c.year_first_seen !== Number(yearFilter)) return false;
-      if (companyFilter.trim()) {
-        const search = companyFilter.trim().toLowerCase();
-        if (!(c.company ?? "").toLowerCase().includes(search)) return false;
+      if (statusFilter === "subscribed" && !c.marketing_consent) return false;
+      if (statusFilter === "unsubscribed" && c.marketing_consent) return false;
+      if (search.trim()) {
+        const q = search.trim().toLowerCase();
+        const displayName = c.first_name || c.last_name
+          ? [c.first_name, c.last_name].filter(Boolean).join(" ")
+          : null;
+        const nameMatch =
+          (displayName ?? "").toLowerCase().includes(q) ||
+          (c.full_name ?? "").toLowerCase().includes(q);
+        const emailMatch = (c.email ?? "").toLowerCase().includes(q);
+        const phoneMatch = (c.phone ?? "").toLowerCase().includes(q);
+        const companyMatch = (c.company ?? "").toLowerCase().includes(q);
+        if (!nameMatch && !emailMatch && !phoneMatch && !companyMatch) return false;
       }
-      if (consentFilter === "subscribed" && !c.marketing_consent) return false;
-      if (consentFilter === "unsubscribed" && c.marketing_consent) return false;
       return true;
     });
-  }, [contacts, typeFilter, yearFilter, companyFilter, consentFilter]);
+  }, [contacts, typeFilter, statusFilter, search]);
 
-  const isFiltered =
+  // Status tab counts from current (server-filtered) contacts
+  const subscribedCount = useMemo(() => contacts.filter((c) => c.marketing_consent).length, [contacts]);
+  const unsubscribedCount = useMemo(() => contacts.filter((c) => !c.marketing_consent).length, [contacts]);
+  const allCount = contacts.length;
+
+  const statusTabs = [
+    { id: "subscribed", label: "Subscribed", count: subscribedCount },
+    { id: "unsubscribed", label: "Unsubscribed", count: unsubscribedCount },
+    { id: "all", label: "All", count: allCount },
+  ];
+
+  const hasActiveFilters =
+    statusFilter !== "all" ||
     typeFilter !== "all" ||
-    yearFilter !== "all" ||
-    companyFilter.trim() !== "" ||
-    consentFilter !== "all" ||
+    search.trim() !== "" ||
     teamFilter !== "all" ||
     captainOnly;
 
@@ -246,12 +258,20 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
     fetchWithServerFilter(teamFilter, checked);
   }
 
+  function handleClearAllFilters() {
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setSearch("");
+    setTeamFilter("all");
+    setCaptainOnly(false);
+    fetchWithServerFilter("all", false);
+  }
+
   async function handleExportCSV() {
     setExporting(true);
     try {
       const filterArg: ContactFilter = {};
       if (typeFilter !== "all") filterArg.type = typeFilter as ContactType;
-      if (yearFilter !== "all") filterArg.year = Number(yearFilter);
       if (teamFilter !== "all") filterArg.team_id = teamFilter;
       if (captainOnly) filterArg.captain_only = true;
 
@@ -450,13 +470,162 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
     }
   }
 
+  // Build active filter chips
+  const filterChips = useMemo(() => {
+    const chips: Array<{ id: string; keyText: string; valueText?: string; onRemove: () => void }> = [];
+    if (statusFilter !== "all") {
+      chips.push({
+        id: "status",
+        keyText: "Status",
+        valueText: statusFilter === "subscribed" ? "Subscribed" : "Unsubscribed",
+        onRemove: () => setStatusFilter("all"),
+      });
+    }
+    if (typeFilter !== "all") {
+      const labels: Record<string, string> = {
+        player: "Player",
+        sponsor: "Sponsor",
+        donor: "Donor",
+        volunteer: "Volunteer",
+        other: "Other",
+      };
+      chips.push({
+        id: "type",
+        keyText: "Type",
+        valueText: labels[typeFilter] ?? typeFilter,
+        onRemove: () => setTypeFilter("all"),
+      });
+    }
+    if (teamFilter !== "all") {
+      const team = teams.find((t) => t.id === teamFilter);
+      chips.push({
+        id: "team",
+        keyText: "Team",
+        valueText: team?.captain_display_name ?? teamFilter,
+        onRemove: () => handleTeamFilterChange("all"),
+      });
+    }
+    if (captainOnly) {
+      chips.push({
+        id: "captains",
+        keyText: "Captains only",
+        onRemove: () => handleCaptainOnlyChange(false),
+      });
+    }
+    return chips;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, typeFilter, teamFilter, captainOnly, teams]);
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-0">
+      {/* Status tabs */}
+      <StatusTabs
+        tabs={statusTabs}
+        activeId={statusFilter}
+        onChange={(id) => setStatusFilter(id as StatusFilter)}
+        ariaLabel="Contact status"
+      />
+
+      {/* Filter bar */}
+      <FilterBar
+        searchValue={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search by name, email, phone, or company"
+        chips={
+          filterChips.length > 0 ? (
+            <ActiveFilterChips
+              chips={filterChips}
+              onClearAll={handleClearAllFilters}
+            />
+          ) : undefined
+        }
+      >
+        {/* Type filter */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Type
+          </label>
+          <Select
+            value={typeFilter}
+            onValueChange={(v) => setTypeFilter(v ?? "all")}
+            items={{
+              all: "All types",
+              player: "Player",
+              sponsor: "Sponsor",
+              donor: "Donor",
+              volunteer: "Volunteer",
+              other: "Other",
+            }}
+          >
+            <SelectTrigger
+              aria-label="Type"
+              data-testid="type-filter-trigger"
+              className="w-full"
+            >
+              <SelectValue placeholder="All types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All types</SelectItem>
+              <SelectItem value="player">Player</SelectItem>
+              <SelectItem value="sponsor">Sponsor</SelectItem>
+              <SelectItem value="donor">Donor</SelectItem>
+              <SelectItem value="volunteer">Volunteer</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Team filter */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            Team
+          </label>
+          <Select
+            value={teamFilter}
+            onValueChange={handleTeamFilterChange}
+            items={{
+              all: "All teams",
+              ...Object.fromEntries(teams.map((t) => [t.id, t.captain_display_name])),
+            }}
+          >
+            <SelectTrigger
+              aria-label="Team"
+              data-testid="team-filter-trigger"
+              className="w-full"
+            >
+              <SelectValue placeholder="All teams" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All teams</SelectItem>
+              {teams.map((t) => (
+                <SelectItem key={t.id} value={t.id}>
+                  {t.captain_display_name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Captains only toggle */}
+        <div className="space-y-1">
+          <label className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground">
+            &nbsp;
+          </label>
+          <label className="flex items-center gap-2 h-9 text-[0.8125rem] text-muted-foreground select-none">
+            <Checkbox
+              checked={captainOnly}
+              onCheckedChange={handleCaptainOnlyChange}
+            />
+            Captains only
+          </label>
+        </div>
+      </FilterBar>
+
       {/* Action bar */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between px-4 py-2 bg-card border-b border-border/60">
         <p className="text-[0.8125rem] text-muted-foreground">
           {filtered.length} contact{filtered.length !== 1 ? "s" : ""}
-          {isFiltered && contacts.length !== filtered.length
+          {hasActiveFilters && contacts.length !== filtered.length
             ? ` of ${contacts.length} total`
             : ""}
         </p>
@@ -479,120 +648,9 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
         </div>
       </div>
 
-      {/* Filter controls */}
-      <div className="flex flex-wrap gap-3 items-center">
-        {/* Type — 5 options including Volunteer */}
-        <Select
-          value={typeFilter}
-          onValueChange={(v) => setTypeFilter(v ?? "all")}
-          items={{
-            all: "All Types",
-            player: "Player",
-            sponsor: "Sponsor",
-            donor: "Donor",
-            volunteer: "Volunteer",
-            other: "Other",
-          }}
-        >
-          <SelectTrigger className="w-[160px]">
-            <SelectValue placeholder="All Types" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="player">Player</SelectItem>
-            <SelectItem value="sponsor">Sponsor</SelectItem>
-            <SelectItem value="donor">Donor</SelectItem>
-            <SelectItem value="volunteer">Volunteer</SelectItem>
-            <SelectItem value="other">Other</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Year */}
-        <Select
-          value={yearFilter}
-          onValueChange={(v) => setYearFilter(v ?? "all")}
-          items={{
-            all: "All Years",
-            ...Object.fromEntries(availableYears.map((y) => [String(y), String(y)])),
-          }}
-        >
-          <SelectTrigger className="w-[140px]">
-            <SelectValue placeholder="All Years" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Years</SelectItem>
-            {availableYears.map((year) => (
-              <SelectItem key={year} value={String(year)}>
-                {year}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Company search */}
-        <Input
-          type="text"
-          placeholder="Search company..."
-          value={companyFilter}
-          onChange={(e) => setCompanyFilter(e.target.value)}
-          className="w-[180px] text-sm"
-        />
-
-        {/* Consent filter */}
-        <Select
-          value={consentFilter}
-          onValueChange={(v) => setConsentFilter(v ?? "all")}
-          items={{
-            all: "All Contacts",
-            subscribed: "Subscribed only",
-            unsubscribed: "Unsubscribed only",
-          }}
-        >
-          <SelectTrigger className="w-[175px]">
-            <SelectValue placeholder="All Contacts" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Contacts</SelectItem>
-            <SelectItem value="subscribed">Subscribed only</SelectItem>
-            <SelectItem value="unsubscribed">Unsubscribed only</SelectItem>
-          </SelectContent>
-        </Select>
-
-        {/* Team filter */}
-        <Select
-          value={teamFilter}
-          onValueChange={handleTeamFilterChange}
-          items={{
-            all: "All Teams",
-            ...Object.fromEntries(teams.map((t) => [t.id, t.captain_display_name])),
-          }}
-        >
-          <SelectTrigger className="w-[175px]">
-            <SelectValue placeholder="All Teams" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Teams</SelectItem>
-            {teams.map((t) => (
-              <SelectItem key={t.id} value={t.id}>
-                {t.captain_display_name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        {/* Captain-only toggle */}
-        <label className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground cursor-pointer select-none">
-          <Checkbox
-            checked={captainOnly}
-            onCheckedChange={handleCaptainOnlyChange}
-          />
-          Captains only
-        </label>
-      </div>
-
       {/* Selection counter */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-2 text-[0.8125rem] text-muted-foreground">
+        <div className="flex items-center gap-2 px-4 py-2 text-[0.8125rem] text-muted-foreground bg-card border-b border-border/60">
           <span className="font-medium text-foreground">{selected.size} selected</span>
           {notInViewCount > 0 && (
             <span className="text-neutral-400">({notInViewCount} not in current view)</span>
@@ -609,7 +667,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-neutral-50 px-4 py-2.5 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border/60 bg-neutral-50 px-4 py-2.5 shadow-sm mx-4 my-2">
           <span className="text-[0.8125rem] font-semibold text-foreground mr-2">
             {selected.size} selected
           </span>
@@ -757,7 +815,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
           role="alert"
           aria-live="polite"
           data-testid="bulk-blocked-alert"
-          className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-muted/40 px-4 py-3 text-[0.8125rem]"
+          className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning-muted/40 px-4 py-3 text-[0.8125rem] mx-4"
         >
           <svg
             width="16"
@@ -805,7 +863,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
 
       {/* Table */}
       <div
-        className="overflow-x-auto rounded-lg border border-border/60 shadow-sm transition-opacity duration-150"
+        className="overflow-x-auto rounded-b-lg border border-border/60 shadow-sm transition-opacity duration-150"
         style={{ opacity: isPending ? 0.6 : 1 }}
       >
         {isPending && (
@@ -813,72 +871,79 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
             Refreshing...
           </div>
         )}
-        <table className="w-full caption-bottom text-sm">
-          <thead className="bg-neutral-50">
-            <tr>
-              {/* Checkbox header */}
-              <th className="px-4 py-3 w-10">
-                <Checkbox
-                  aria-label="Select all visible contacts"
-                  checked={allVisibleSelected}
-                  indeterminate={!allVisibleSelected && someVisibleSelected}
-                  onCheckedChange={() => handleHeaderCheckbox()}
-                />
-              </th>
-              {DATA_HEADERS.map((h) => (
-                <th
-                  key={h}
-                  className="px-4 py-3 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+        {filtered.length === 0 ? (
+          <AdminEmptyState
+            filterActive={hasActiveFilters}
+            title={hasActiveFilters ? "No contacts match your filters" : "No contacts yet"}
+            action={
+              hasActiveFilters ? (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleClearAllFilters}
                 >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.length === 0 ? (
+                  Clear filters
+                </Button>
+              ) : (
+                <Button
+                  size="sm"
+                  onClick={() => setDrawer({ open: true, mode: "create", contact: null })}
+                >
+                  Add contact
+                </Button>
+              )
+            }
+          />
+        ) : (
+          <table className="w-full caption-bottom text-sm">
+            <thead className="bg-neutral-50">
               <tr>
-                <td colSpan={DATA_HEADERS.length + 1}>
-                  <div className="py-16 flex flex-col items-center gap-3">
-                    <h3 className="font-display text-xl font-semibold text-foreground">
-                      No contacts found
-                    </h3>
-                    {isFiltered ? (
-                      <p className="font-sans text-sm text-muted-foreground max-w-xs text-center">
-                        No contacts match the current filters. Try clearing some filters.
-                      </p>
-                    ) : (
-                      <>
-                        <p className="font-sans text-sm text-muted-foreground max-w-xs text-center">
-                          Contacts are captured when visitors submit the email forms on
-                          public pages, or imported from the mailing list.
-                        </p>
-                        <Link
-                          href="/"
-                          className={buttonVariants({ variant: "outline", size: "sm" })}
-                        >
-                          View public forms
-                        </Link>
-                      </>
-                    )}
-                  </div>
-                </td>
+                {/* Checkbox header */}
+                <th className="px-4 py-3 w-10">
+                  <Checkbox
+                    aria-label="Select all"
+                    checked={allVisibleSelected}
+                    indeterminate={!allVisibleSelected && someVisibleSelected}
+                    onCheckedChange={() => handleHeaderCheckbox()}
+                  />
+                </th>
+                {DATA_HEADERS.map((h) => (
+                  <th
+                    key={h}
+                    className="px-4 py-3 text-left text-[0.6875rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground"
+                  >
+                    {h}
+                  </th>
+                ))}
+                {/* Row actions column */}
+                <th className="px-4 py-3 w-24" />
               </tr>
-            ) : (
-              filtered.map((contact, index) => {
+            </thead>
+            <tbody>
+              {filtered.map((contact, index) => {
                 const isSelected = selected.has(contact.id);
                 const displayName =
                   contact.first_name || contact.last_name
                     ? [contact.first_name, contact.last_name].filter(Boolean).join(" ")
                     : null;
+                const nameForLabel =
+                  displayName ?? contact.full_name ?? null;
+                const editLabel = nameForLabel
+                  ? `Edit ${nameForLabel}`
+                  : "Edit contact";
+                const deleteLabel = nameForLabel
+                  ? `Delete ${nameForLabel}`
+                  : "Delete contact";
+                const selectLabel = nameForLabel
+                  ? `Select ${nameForLabel}`
+                  : "Select contact";
 
                 return (
                   <tr
                     key={contact.id}
-                    className={`border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 cursor-pointer ${
+                    className={`group/row border-t border-border/60 hover:bg-neutral-50/50 transition-colors duration-100 ${
                       isSelected ? "bg-brand-muted/30" : ""
                     }`}
-                    onClick={() => setDrawer({ open: true, mode: "edit", contact })}
                   >
                     {/* Checkbox cell */}
                     <td
@@ -889,7 +954,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                       }}
                     >
                       <Checkbox
-                        aria-label={`Select ${contact.full_name}`}
+                        aria-label={selectLabel}
                         checked={isSelected}
                         onCheckedChange={() => {/* controlled by td onClick */}}
                       />
@@ -925,11 +990,6 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                       {contact.company ?? <span className="text-neutral-300">—</span>}
                     </td>
 
-                    {/* Year */}
-                    <td className="px-4 py-3 font-mono tabular-nums text-[0.8125rem] text-foreground text-center">
-                      {contact.year_first_seen}
-                    </td>
-
                     {/* Consent */}
                     <td className="px-4 py-3">
                       <ConsentBadge consented={contact.marketing_consent} />
@@ -939,12 +999,34 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
                     <td className="px-4 py-3 text-[0.75rem] text-muted-foreground">
                       {relativeTime(contact.created_at)}
                     </td>
+
+                    {/* Row actions */}
+                    <td className="px-4 py-3 w-24">
+                      <div className="flex items-center justify-end gap-2">
+                        <RowActions
+                          editLabel={editLabel}
+                          deleteLabel={deleteLabel}
+                          selectLabel={selectLabel}
+                          checked={isSelected}
+                          onCheckedChange={(checked) => {
+                            setSelected((prev) => {
+                              const next = new Set(prev);
+                              if (checked) next.add(contact.id);
+                              else next.delete(contact.id);
+                              return next;
+                            });
+                          }}
+                          onEdit={() => setDrawer({ open: true, mode: "edit", contact })}
+                          onDelete={() => setDrawer({ open: true, mode: "edit", contact })}
+                        />
+                      </div>
+                    </td>
                   </tr>
                 );
-              })
-            )}
-          </tbody>
-        </table>
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
 
       <ContactModal

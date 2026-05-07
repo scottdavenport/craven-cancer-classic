@@ -35,8 +35,8 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await page.getByLabel(/first name/i).fill("UniqueFirst");
       await page.getByLabel(/last name/i).fill(ORIG_LAST);
       await page.getByRole("textbox", { name: "Email" }).fill(SHARED_EMAIL);
-      // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
-      await page.getByRole("checkbox", { name: "Player", exact: true }).check();
+      // Pattern F: D12 role-cards — at least one type toggled on before Save is enabled
+      await page.getByRole("switch", { name: /toggle player role/i }).check();
       await page.getByRole("button", { name: /create|save/i }).click();
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
       await expect(page.getByText(`UniqueFirst ${ORIG_LAST}`)).toBeVisible();
@@ -59,8 +59,8 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await page.getByLabel(/first name/i).fill("UniqueFirst");
       await page.getByLabel(/last name/i).fill(REPL_LAST);
       await page.getByRole("textbox", { name: "Email" }).fill(SHARED_EMAIL);
-      // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
-      await page.getByRole("checkbox", { name: "Player", exact: true }).check();
+      // Pattern F: D12 role-cards — at least one type toggled on before Save is enabled
+      await page.getByRole("switch", { name: /toggle player role/i }).check();
       await page.getByRole("button", { name: /create|save/i }).click();
 
       // Should succeed — no duplicate error

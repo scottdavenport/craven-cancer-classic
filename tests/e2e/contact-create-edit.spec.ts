@@ -32,8 +32,8 @@ test.describe("Contact create/edit via modal", () => {
     await page.getByLabel(/last name/i).fill("E2ELast");
     await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
 
-    // Set type to donor
-    await page.getByRole("checkbox", { name: "Donor" }).check();
+    // Set type to donor (D12: role-card Switch toggle)
+    await page.getByRole("switch", { name: /toggle donor role/i }).check();
 
     // ---- Save ----
     await page.getByRole("button", { name: "Create", exact: true }).click();
@@ -54,9 +54,9 @@ test.describe("Contact create/edit via modal", () => {
     await expect(page.getByLabel(/first name/i)).toHaveValue("E2EFirst");
     await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(TEST_EMAIL);
 
-    // Change type from donor to sponsor
-    await page.getByRole("checkbox", { name: "Donor" }).uncheck();
-    await page.getByRole("checkbox", { name: "Sponsor" }).check();
+    // Change type from donor to sponsor (D12: role-card Switch toggles)
+    await page.getByRole("switch", { name: /toggle donor role/i }).uncheck();
+    await page.getByRole("switch", { name: /toggle sponsor role/i }).check();
 
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });

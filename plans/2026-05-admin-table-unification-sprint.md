@@ -562,6 +562,8 @@ The design doc adopts `sort_order ASC, price_cents DESC` from Sponsors. But Spon
 
 ## 8. Done Definition
 
+> **Status update 2026-05-08:** Phases 1–3 shipped. Phase 4 (CSV export universal) **DEFERRED** pending e2e test-refresh sprint (issue #394). Main e2e is timing out post-Phase-3 — UI work is correct, test suite hasn't caught up. CSV export buttons already wired per-surface in Phase 3 PRs (Teams, Sponsors, Sponsorships, Photos all have local exports); Phase 4 was the consolidation into a shared helper. Adjacent fixes shipped per the 5 below; follow-up issues filed for known regressions/gaps (#380, #381, #389, #390, #393, #394).
+
 All four phases shipped + merged:
 
 - [ ] All 5 list surfaces use the unified `<RowActions>` hover-reveal row pattern (no whole-row click on Contacts, no always-visible buttons on Teams, no always-visible pencil on Sponsorships).

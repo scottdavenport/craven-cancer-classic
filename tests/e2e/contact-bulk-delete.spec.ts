@@ -63,8 +63,16 @@ test.describe("Bulk delete contacts", () => {
     await expect(confirmBtn).toBeVisible({ timeout: 3_000 });
     await confirmBtn.click();
 
+    // Wait for the confirm dialog to close first — signals handleBulkDelete started.
+    // The dialog closes synchronously (setDeleteDialogOpen(false)) before the async
+    // bulkDeleteContacts call resolves. We then wait for the contacts to disappear,
+    // which happens after the async call + setContacts filter completes.
+    // Use 15_000ms to accommodate the network round-trip on chromium (PR #392 fix:
+    // setContacts optimistic filter still awaits the bulkDeleteContacts promise).
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+
     // Contacts disappear from list
-    await expect(page.getByText(`BulkDel1 ${SEED_TAG}`)).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(`BulkDel1 ${SEED_TAG}`)).not.toBeVisible({ timeout: 15_000 });
     await expect(page.getByText(`BulkDel2 ${SEED_TAG}`)).not.toBeVisible({ timeout: 5_000 });
     await expect(page.getByText(`BulkDel3 ${SEED_TAG}`)).not.toBeVisible({ timeout: 5_000 });
 

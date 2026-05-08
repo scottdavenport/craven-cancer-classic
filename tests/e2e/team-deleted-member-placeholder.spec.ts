@@ -53,13 +53,17 @@ test.describe("Team roster shows deleted-contact placeholder", () => {
       await page.getByLabel(/first name/i).fill("PlaceholderTest");
       await page.getByLabel(/last name/i).fill("Member");
       await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
-      // Pattern F: Sprint 31 requires at least one type checked before Save is enabled
-      await page.getByRole("checkbox", { name: "Player", exact: true }).check();
+      // D12: role-cards use Switch, not checkbox — getByRole("switch") with toggle label
+      await page.getByRole("switch", { name: /toggle player role/i }).check();
       await page.getByRole("button", { name: /create|save/i }).click();
       await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
       // ---- Step 3: Soft-delete this contact ----
-      await page.getByText(TEST_EMAIL).click();
+      // D12: row click does NOT open modal — edit via RowActions pencil button.
+      // RowActions cluster is opacity-0 until hover; force:true bypasses visibility constraint.
+      const contactRow = page.getByRole("row").filter({ hasText: TEST_EMAIL });
+      await contactRow.hover();
+      await contactRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByRole("button", { name: /delete/i }).click();
 

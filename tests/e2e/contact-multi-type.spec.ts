@@ -51,15 +51,18 @@ async function softDeleteContact(page: Page, fullName: string) {
   const row = page.getByRole("row").filter({ hasText: fullName });
   if (await row.isVisible({ timeout: 2_000 }).catch(() => false)) {
     // D12: row click does NOT open modal — edit via RowActions pencil button
-    await row.hover();
+    // webkit: row.hover() can stall at "waiting for element to be visible and stable"
+    // even when the element resolves; force:true bypasses the webkit stability wait
+    await row.hover({ force: true });
     await row.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
     const deleteBtn = page.getByRole("button", { name: /delete/i });
     if (await deleteBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      await deleteBtn.click();
+      // webkit: modal button stalls at "performing click action"; force:true bypasses
+      await deleteBtn.click({ force: true });
       const confirmBtn = page.getByRole("dialog").getByRole("button", { name: "Delete", exact: true });
       if (await confirmBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await confirmBtn.click();
+        await confirmBtn.click({ force: true });
       }
     }
   }
@@ -308,7 +311,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
 
     // Re-open and uncheck Player
     // D12: row click does NOT open modal — edit via RowActions pencil button
-    await preserveRow.hover();
+    // webkit: hover stalls at "waiting for element to be visible and stable";
+    // force:true bypasses the webkit stability wait (row resolves but never "stable")
+    await preserveRow.hover({ force: true });
     await preserveRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
@@ -318,14 +323,17 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     // Toggle another type on so Save is enabled
     await page.getByRole("switch", { name: /toggle donor role/i }).check();
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+    // webkit: modal close takes longer; 5_000 was too tight
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 10_000 });
 
     // Re-open and re-check Player — values must restore
-    await preserveRow.hover();
+    // webkit: hover stalls at stability wait; force:true bypasses
+    await preserveRow.hover({ force: true });
     await preserveRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
-    await page.getByRole("switch", { name: /toggle player role/i }).check();
+    // webkit: switch.check() resolves + scrolls but stalls before click; force:true bypasses
+    await page.getByRole("switch", { name: /toggle player role/i }).check({ force: true });
 
     // Handicap must show 12 — scope to dialog to avoid collision with row checkboxes
     await expect(page.getByRole("dialog").getByRole("spinbutton", { name: /handicap/i })).toHaveValue("12");

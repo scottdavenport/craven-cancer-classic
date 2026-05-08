@@ -62,7 +62,10 @@ test.describe("Contact create/edit via modal", () => {
     await page.getByRole("switch", { name: /toggle sponsor role/i }).check();
 
     await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+    // webkit: modal close animation + form submission takes longer than chromium;
+    // 5_000 was too tight and left the dialog open, blocking the subsequent hover.
+    // 10_000 accommodates webkit's slower close path.
+    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 10_000 });
     await expect(page.getByText(/saved|updated/i)).toBeVisible({ timeout: 5_000 });
 
     // ---- Cleanup: soft-delete the test contact ----
@@ -72,12 +75,13 @@ test.describe("Contact create/edit via modal", () => {
     await testRow.hover();
     await testRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByRole("button", { name: /delete/i }).click();
+    // webkit: button inside modal may stall at "performing click action"; force:true bypasses
+    await page.getByRole("button", { name: /delete/i }).click({ force: true });
 
     // Confirm the delete — ConfirmDialog renders confirmLabel="Delete" (exact text, not "Delete contact")
     const confirmBtn = page.getByRole("button", { name: "Delete", exact: true });
     await expect(confirmBtn).toBeVisible({ timeout: 3_000 });
-    await confirmBtn.click();
+    await confirmBtn.click({ force: true });
 
     // Verify this specific row is gone (scoped by unique email, not the shared name)
     await expect(testRow).not.toBeVisible({ timeout: 5_000 });

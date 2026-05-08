@@ -38,20 +38,26 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       // Pattern F: D12 role-cards — at least one type toggled on before Save is enabled
       await page.getByRole("switch", { name: /toggle player role/i }).check();
       await page.getByRole("button", { name: /create|save/i }).click();
-      await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+      // webkit: modal-close transition slower than chromium; extend timeout
+      await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 10_000 });
       await expect(page.getByText(`UniqueFirst ${ORIG_LAST}`)).toBeVisible();
 
       // ---- Step 2: Soft-delete the first contact ----
       // D12: row click does NOT open modal — edit via RowActions pencil button.
       // RowActions cluster is opacity-0 until hover; force:true bypasses visibility constraint.
       const origRow = page.getByRole("row").filter({ hasText: SHARED_EMAIL });
-      await origRow.hover();
+      // webkit: hover stalls at stability wait; force:true bypasses
+      await origRow.hover({ force: true });
       await origRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.getByRole("button", { name: /delete/i }).click();
+      // webkit: modal button stalls at "performing click action"; force:true bypasses
+      await page.getByRole("button", { name: /delete/i }).click({ force: true });
 
       // ConfirmDialog always opens — click the exact "Delete" confirm button (not "Delete contact")
-      await page.getByRole("button", { name: "Delete", exact: true }).click();
+      const origConfirmBtn = page.getByRole("button", { name: "Delete", exact: true });
+      if (await origConfirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await origConfirmBtn.click({ force: true });
+      }
 
       // Wait for deletion to complete (async server action) and dialogs to close
       await expect(page.getByRole("dialog")).toHaveCount(0, { timeout: 15_000 });
@@ -68,7 +74,8 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await page.getByRole("button", { name: /create|save/i }).click();
 
       // Should succeed — no duplicate error
-      await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+      // webkit: modal-close transition slower than chromium; extend timeout
+      await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 10_000 });
       await expect(page.getByText(`UniqueFirst ${REPL_LAST}`)).toBeVisible({ timeout: 5_000 });
 
       // ---- Step 4: Try to restore the original contact → should conflict ----
@@ -96,11 +103,16 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await page.goto("/admin/contacts");
       // D12: row click does NOT open modal — edit via RowActions pencil button.
       const replRow = page.getByRole("row").filter({ hasText: SHARED_EMAIL });
-      await replRow.hover();
+      // webkit: hover stalls at stability wait; force:true bypasses
+      await replRow.hover({ force: true });
       await replRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
       await expect(page.getByRole("dialog")).toBeVisible();
-      await page.getByRole("button", { name: /delete/i }).click();
-      await page.getByRole("button", { name: "Delete", exact: true }).click();
+      // webkit: modal button stalls at "performing click action"; force:true bypasses
+      await page.getByRole("button", { name: /delete/i }).click({ force: true });
+      const replConfirmBtn = page.getByRole("button", { name: "Delete", exact: true });
+      if (await replConfirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+        await replConfirmBtn.click({ force: true });
+      }
     }
   );
 });

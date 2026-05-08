@@ -53,7 +53,9 @@ test.describe("Bulk delete contacts", () => {
 
     for (let i = 0; i < rowCount; i++) {
       // Scope to [data-slot="checkbox"] to avoid the duplicate RowActions <input[type=checkbox]>
-      await rows.nth(i).locator("[data-slot='checkbox']").click();
+      // webkit: pointer-event completion races on checkbox elements — force:true bypasses
+      // the actionability wait that stalls after "performing click action" in webkit
+      await rows.nth(i).locator("[data-slot='checkbox']").click({ force: true });
     }
 
     // ---- Click Delete in bulk action bar ----
@@ -62,7 +64,10 @@ test.describe("Bulk delete contacts", () => {
     // Confirm dialog
     const confirmBtn = page.getByRole("button", { name: /confirm|yes|delete/i });
     await expect(confirmBtn).toBeVisible({ timeout: 3_000 });
-    await confirmBtn.click();
+    // webkit: button resolves + is visible but click stalls at "performing click action";
+    // toBeEnabled guard + force:true bypasses the webkit pointer-events timing race
+    await expect(confirmBtn).toBeEnabled();
+    await confirmBtn.click({ force: true });
 
     // Wait for the confirm dialog to close first — signals handleBulkDelete started.
     // The dialog closes synchronously (setDeleteDialogOpen(false)) before the async

@@ -22,7 +22,7 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         // Defensive: disable CSS transitions to prevent action-stability races.
         // No impact on currently-passing chromium tests.
-        reducedMotion: "reduce",
+        contextOptions: { reducedMotion: "reduce" },
       },
     },
     {
@@ -31,7 +31,7 @@ export default defineConfig({
         ...devices["Desktop Safari"],
         // Disable CSS transitions app-wide (prefers-reduced-motion: reduce).
         // Eliminates modal/opacity transition races that force:true cannot fix.
-        reducedMotion: "reduce",
+        contextOptions: { reducedMotion: "reduce" },
         // Extra headroom for webkit's slower JS engine on click/hover actions.
         // Default: 0 (unbounded up to test timeout). Was effectively ~5 s in CI.
         actionTimeout: 15_000,

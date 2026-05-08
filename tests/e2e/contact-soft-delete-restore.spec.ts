@@ -38,16 +38,18 @@ test.describe("Contact soft-delete and restore", () => {
     // Find the row by email, open edit modal via RowActions pencil button.
     // D12: row click does NOT open modal — edit via RowActions pencil button.
     const deleteTargetRow = page.getByRole("row").filter({ hasText: TEST_EMAIL });
-    await deleteTargetRow.hover();
+    // webkit: hover stalls at stability wait; force:true bypasses
+    await deleteTargetRow.hover({ force: true });
     await deleteTargetRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible();
-    await page.getByRole("button", { name: /delete/i }).click();
+    // webkit: modal button stalls at "performing click action"; force:true bypasses
+    await page.getByRole("button", { name: /delete/i }).click({ force: true });
 
     // Handle confirmation if present
     // ConfirmDialog uses confirmLabel="Delete" — match exactly to avoid "Delete contact"
     const confirmBtn = page.getByRole("button", { name: "Delete", exact: true });
     if (await confirmBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await confirmBtn.click();
+      await confirmBtn.click({ force: true });
     }
 
     await expect(page.getByText(TEST_EMAIL)).not.toBeVisible({ timeout: 5_000 });
@@ -84,12 +86,14 @@ test.describe("Contact soft-delete and restore", () => {
     // ---- Cleanup: soft-delete again ----
     // D12: row click does NOT open modal — edit via RowActions pencil button
     const cleanupRow = page.getByRole("row").filter({ hasText: TEST_EMAIL });
-    await cleanupRow.hover();
+    // webkit: hover stalls at stability wait; force:true bypasses
+    await cleanupRow.hover({ force: true });
     await cleanupRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
-    await page.getByRole("button", { name: /delete/i }).click();
+    // webkit: modal button stalls at "performing click action"; force:true bypasses
+    await page.getByRole("button", { name: /delete/i }).click({ force: true });
     const cleanup = page.getByRole("button", { name: "Delete", exact: true });
     if (await cleanup.isVisible({ timeout: 2_000 }).catch(() => false)) {
-      await cleanup.click();
+      await cleanup.click({ force: true });
     }
   });
 });

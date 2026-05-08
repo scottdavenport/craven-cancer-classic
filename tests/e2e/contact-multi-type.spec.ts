@@ -50,7 +50,9 @@ async function fillBasicFields(
 async function softDeleteContact(page: Page, fullName: string) {
   const row = page.getByRole("row").filter({ hasText: fullName });
   if (await row.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    await row.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await row.hover();
+    await row.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
     const deleteBtn = page.getByRole("button", { name: /delete/i });
     if (await deleteBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
@@ -77,9 +79,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: multiTypeEmail,
     });
 
-    // Sprint 31: checkboxes instead of dropdown
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
-    await page.getByRole("checkbox", { name: /^sponsor$/i }).check();
+    // D12: role-cards with Switch toggles instead of checkboxes
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
+    await page.getByRole("switch", { name: /toggle sponsor role/i }).check();
 
     // Create button must be enabled (≥1 type checked)
     await expect(page.getByRole("button", { name: "Create", exact: true })).toBeEnabled();
@@ -110,7 +112,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     });
 
     // Check Volunteer only (not Player)
-    await page.getByRole("checkbox", { name: /^volunteer$/i }).check();
+    await page.getByRole("switch", { name: /toggle volunteer role/i }).check();
 
     // Sprint 31 contract: Shirt Size section appears when Volunteer OR Player is checked
     await expect(page.getByLabel(/shirt size/i)).toBeVisible();
@@ -138,8 +140,8 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: playerVolEmail,
     });
 
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
-    await page.getByRole("checkbox", { name: /^volunteer$/i }).check();
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
+    await page.getByRole("switch", { name: /toggle volunteer role/i }).check();
 
     // Both Player and Volunteer are checked — Shirt Size is shared.
     // There must be exactly ONE shirt size field (not two).
@@ -167,7 +169,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: `e2e-donor-${TIMESTAMP}@example.com`,
     });
 
-    await page.getByRole("checkbox", { name: /^donor$/i }).check();
+    await page.getByRole("switch", { name: /toggle donor role/i }).check();
 
     // show_on_wall toggle — must be checked/ON by default
     const wallToggle = page
@@ -207,7 +209,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: blankRecogEmail,
     });
 
-    await page.getByRole("checkbox", { name: /^donor$/i }).check();
+    await page.getByRole("switch", { name: /toggle donor role/i }).check();
 
     // Leave recognition_name blank, keep show_on_wall toggled ON (default)
     const wallToggle = page
@@ -223,7 +225,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(blankRecogRow).toBeVisible();
 
     // Re-open and verify recognition_name is empty string
-    await blankRecogRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await blankRecogRow.hover();
+    await blankRecogRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
     const recognitionNameField = page
@@ -251,14 +255,14 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     // No type selected yet — Create must be disabled
     await expect(page.getByRole("button", { name: "Create", exact: true })).toBeDisabled();
 
-    // Check one type
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
+    // Toggle one type on
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
 
     // Now Create must be enabled
     await expect(page.getByRole("button", { name: "Create", exact: true })).toBeEnabled();
 
-    // Uncheck it — Create must go back to disabled
-    await page.getByRole("checkbox", { name: /^player$/i }).uncheck();
+    // Toggle it off — Create must go back to disabled
+    await page.getByRole("switch", { name: /toggle player role/i }).uncheck();
     await expect(page.getByRole("button", { name: "Create", exact: true })).toBeDisabled();
 
     // Close without saving
@@ -281,7 +285,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: `e2e-preserve-${TIMESTAMP}@example.com`,
     });
 
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
 
     // Fill handicap — scope to dialog to avoid strict-mode collision with
     // row-selection checkboxes labeled "Select Handicap Boundary" in the list
@@ -303,22 +307,25 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     const preserveRow = page.getByRole("row").filter({ hasText: preserveEmail });
 
     // Re-open and uncheck Player
-    await preserveRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await preserveRow.hover();
+    await preserveRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
-    await page.getByRole("checkbox", { name: /^player$/i }).uncheck();
+    await page.getByRole("switch", { name: /toggle player role/i }).uncheck();
     await expect(page.getByRole("dialog").getByRole("spinbutton", { name: /handicap/i })).not.toBeVisible();
 
-    // Check another type so Save is enabled
-    await page.getByRole("checkbox", { name: /^donor$/i }).check();
+    // Toggle another type on so Save is enabled
+    await page.getByRole("switch", { name: /toggle donor role/i }).check();
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
     // Re-open and re-check Player — values must restore
-    await preserveRow.click();
+    await preserveRow.hover();
+    await preserveRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
 
     // Handicap must show 12 — scope to dialog to avoid collision with row checkboxes
     await expect(page.getByRole("dialog").getByRole("spinbutton", { name: /handicap/i })).toHaveValue("12");
@@ -351,7 +358,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: volEmail,
     });
 
-    await page.getByRole("checkbox", { name: /^volunteer$/i }).check();
+    await page.getByRole("switch", { name: /toggle volunteer role/i }).check();
     await page.getByRole("button", { name: "Create", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
@@ -371,10 +378,12 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     const chipClassName = await volunteerChip.evaluate((el) => el.className);
     expect(chipClassName).toMatch(/warning|amber/i);
 
-    // Re-open and verify Volunteer checkbox is still checked
-    await contactRow.click();
+    // Re-open and verify Volunteer switch is still on
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await contactRow.hover();
+    await contactRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
-    await expect(page.getByRole("checkbox", { name: /^volunteer$/i })).toBeChecked();
+    await expect(page.getByRole("switch", { name: /toggle volunteer role/i })).toBeChecked();
 
     await page.keyboard.press("Escape");
     await softDeleteContact(page, volEmail);
@@ -394,8 +403,8 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: psEmail,
     });
 
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
-    await page.getByRole("checkbox", { name: /^sponsor$/i }).check();
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
+    await page.getByRole("switch", { name: /toggle sponsor role/i }).check();
 
     await page.getByRole("button", { name: "Create", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
@@ -404,12 +413,14 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     const psRow = page.getByRole("row").filter({ hasText: psEmail });
     await expect(psRow).toBeVisible();
 
-    // Re-open and verify both checkboxes are checked
-    await psRow.click();
+    // Re-open and verify both switches are on
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await psRow.hover();
+    await psRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
-    await expect(page.getByRole("checkbox", { name: /^player$/i })).toBeChecked();
-    await expect(page.getByRole("checkbox", { name: /^sponsor$/i })).toBeChecked();
+    await expect(page.getByRole("switch", { name: /toggle player role/i })).toBeChecked();
+    await expect(page.getByRole("switch", { name: /toggle sponsor role/i })).toBeChecked();
 
     await page.keyboard.press("Escape");
     await softDeleteContact(page, psEmail);
@@ -429,7 +440,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: `e2e-shirt-vocab-${TIMESTAMP}@example.com`,
     });
 
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
     const shirtSelect = page.getByRole("combobox", { name: /shirt size/i });
     await shirtSelect.click();
 
@@ -468,7 +479,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
       email: hcEmail,
     });
 
-    await page.getByRole("checkbox", { name: /^player$/i }).check();
+    await page.getByRole("switch", { name: /toggle player role/i }).check();
 
     // Lower bound: 0 must save cleanly.
     await dialogHandicapInput.fill("0");
@@ -480,7 +491,9 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(hcRow).toBeVisible();
 
     // Re-open and update through the range.
-    await hcRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await hcRow.hover();
+    await hcRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
 
     // Upper bound: 54 must save cleanly.
@@ -489,7 +502,8 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
     // Out-of-range upper: 55 must surface a validation error and NOT save.
-    await hcRow.click();
+    await hcRow.hover();
+    await hcRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 3_000 });
     await dialogHandicapInput.fill("55");
     await page.getByRole("button", { name: "Save", exact: true }).click();

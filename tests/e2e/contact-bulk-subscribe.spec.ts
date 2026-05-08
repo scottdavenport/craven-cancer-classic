@@ -22,10 +22,9 @@ test.describe("Bulk subscribe contacts", () => {
     await page.goto("/admin/contacts");
     await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
 
-    // Find contact row checkboxes — scope to tbody to exclude the select-all header checkbox.
-    // The hasNot filter does not exclude the thead checkbox (checkboxes don't contain thead
-    // as descendants). Scoping to tbody locator is the correct pattern.
-    const checkboxes = page.locator("tbody").getByRole("checkbox");
+    // Find contact row Checkbox buttons — scope to [data-slot="checkbox"] to exclude the
+    // duplicate RowActions <input type="checkbox"> and the header checkbox.
+    const checkboxes = page.locator("tbody [data-slot='checkbox']");
 
     // Need at least 3 contacts for this test
     const count = await checkboxes.count();
@@ -35,9 +34,9 @@ test.describe("Bulk subscribe contacts", () => {
     }
 
     // Select first 3 contacts
-    await checkboxes.nth(0).check();
-    await checkboxes.nth(1).check();
-    await checkboxes.nth(2).check();
+    await checkboxes.nth(0).click();
+    await checkboxes.nth(1).click();
+    await checkboxes.nth(2).click();
 
     // Bulk action bar should appear — use first() to avoid strict-mode violation on duplicate spans
     await expect(page.getByText(/3 selected/i).first()).toBeVisible({ timeout: 3_000 });

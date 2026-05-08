@@ -32,8 +32,8 @@ test.describe("Contact create/edit via modal", () => {
     await page.getByLabel(/last name/i).fill("E2ELast");
     await page.getByRole("textbox", { name: "Email" }).fill(TEST_EMAIL);
 
-    // Set type to donor
-    await page.getByRole("checkbox", { name: "Donor" }).check();
+    // Set type to donor (D12: role-card Switch toggle)
+    await page.getByRole("switch", { name: /toggle donor role/i }).check();
 
     // ---- Save ----
     await page.getByRole("button", { name: "Create", exact: true }).click();
@@ -47,16 +47,19 @@ test.describe("Contact create/edit via modal", () => {
     await expect(newRow).toBeVisible();
 
     // ---- Edit the contact ----
-    await newRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button.
+    // RowActions cluster is opacity-0 until hover; force:true bypasses visibility constraint.
+    await newRow.hover();
+    await newRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible();
 
     // Verify values pre-filled
     await expect(page.getByLabel(/first name/i)).toHaveValue("E2EFirst");
     await expect(page.getByRole("textbox", { name: "Email" })).toHaveValue(TEST_EMAIL);
 
-    // Change type from donor to sponsor
-    await page.getByRole("checkbox", { name: "Donor" }).uncheck();
-    await page.getByRole("checkbox", { name: "Sponsor" }).check();
+    // Change type from donor to sponsor (D12: role-card Switch toggles)
+    await page.getByRole("switch", { name: /toggle donor role/i }).uncheck();
+    await page.getByRole("switch", { name: /toggle sponsor role/i }).check();
 
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
@@ -65,7 +68,9 @@ test.describe("Contact create/edit via modal", () => {
     // ---- Cleanup: soft-delete the test contact ----
     // Scope to the specific row by TEST_EMAIL so leftover contacts from prior runs don't confuse the locator
     const testRow = page.getByRole("row", { name: new RegExp(TEST_EMAIL) });
-    await testRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await testRow.hover();
+    await testRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.getByRole("button", { name: /delete/i }).click();
 

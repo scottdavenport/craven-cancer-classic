@@ -40,15 +40,17 @@ test.describe("Sprint 31 — type-removal guard", () => {
     const firstContactRow = page.locator("tbody").getByRole("row").first();
     await expect(firstContactRow).toBeVisible({ timeout: 5_000 });
 
-    await firstContactRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await firstContactRow.hover();
+    await firstContactRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
 
     // Sprint 31: centered modal
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
 
-    // Verify Player is currently checked (Sprint 31 form has checkboxes).
+    // Verify Player switch is currently on (D12: role-card Switch toggles).
     // If type filter didn't apply (accessible-name mismatch), first row may not be a player.
-    const playerCheckbox = page.getByRole("checkbox", { name: /^player$/i });
-    if (!(await playerCheckbox.isChecked())) {
+    const playerSwitch = page.getByRole("switch", { name: /toggle player role/i });
+    if (!(await playerSwitch.isChecked())) {
       test.info().annotations.push({
         type: "info",
         description: "First contact row does not have Player type — type filter may not have applied. Guard path not exercised.",
@@ -57,13 +59,13 @@ test.describe("Sprint 31 — type-removal guard", () => {
       return;
     }
 
-    // Uncheck Player
-    await playerCheckbox.uncheck();
+    // Toggle Player off
+    await playerSwitch.uncheck();
 
-    // Ensure at least one other type is checked so Save is enabled
-    const donorCheckbox = page.getByRole("checkbox", { name: /^donor$/i });
-    if (!(await donorCheckbox.isChecked())) {
-      await donorCheckbox.check();
+    // Ensure at least one other type is on so Save is enabled
+    const donorSwitch = page.getByRole("switch", { name: /toggle donor role/i });
+    if (!(await donorSwitch.isChecked())) {
+      await donorSwitch.check();
     }
 
     await page.getByRole("button", { name: /save/i }).click();
@@ -136,22 +138,24 @@ test.describe("Sprint 31 — type-removal guard", () => {
       return;
     }
 
-    await firstRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await firstRow.hover();
+    await firstRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
 
     // This contact should be a Player (on a team)
-    const playerCheckbox = page.getByRole("checkbox", { name: /^player$/i });
-    if (!(await playerCheckbox.isChecked())) {
+    const playerSwitch2 = page.getByRole("switch", { name: /toggle player role/i });
+    if (!(await playerSwitch2.isChecked())) {
       // Not a player — guard won't fire for Player removal
       await page.keyboard.press("Escape");
       return;
     }
 
-    await playerCheckbox.uncheck();
+    await playerSwitch2.uncheck();
 
-    // Check Other so Save is enabled
-    const otherCheckbox = page.getByRole("checkbox", { name: /^other$/i });
-    await otherCheckbox.check();
+    // Toggle Other on so Save is enabled
+    const otherSwitch = page.getByRole("switch", { name: /toggle other role/i });
+    await otherSwitch.check();
 
     await page.getByRole("button", { name: /save/i }).click();
 
@@ -207,12 +211,14 @@ test.describe("Sprint 31 — type-removal guard", () => {
       return;
     }
 
-    await firstSponsorRow.click();
+    // D12: row click does NOT open modal — edit via RowActions pencil button
+    await firstSponsorRow.hover();
+    await firstSponsorRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
     await expect(page.getByRole("dialog")).toBeVisible({ timeout: 5_000 });
 
-    const sponsorCheckbox = page.getByRole("checkbox", { name: /^sponsor$/i });
+    const sponsorSwitch = page.getByRole("switch", { name: /toggle sponsor role/i });
     // If type filter didn't apply (accessible-name mismatch), first row may not be a sponsor
-    if (!(await sponsorCheckbox.isChecked())) {
+    if (!(await sponsorSwitch.isChecked())) {
       test.info().annotations.push({
         type: "skip-reason",
         description: "First contact row does not have Sponsor type — type filter may not have applied. Skipping guard test.",
@@ -221,11 +227,11 @@ test.describe("Sprint 31 — type-removal guard", () => {
       return;
     }
 
-    await sponsorCheckbox.uncheck();
+    await sponsorSwitch.uncheck();
 
-    const donorCheckbox = page.getByRole("checkbox", { name: /^donor$/i });
-    if (!(await donorCheckbox.isChecked())) {
-      await donorCheckbox.check();
+    const donorSwitch2 = page.getByRole("switch", { name: /toggle donor role/i });
+    if (!(await donorSwitch2.isChecked())) {
+      await donorSwitch2.check();
     }
 
     await page.getByRole("button", { name: /save/i }).click();

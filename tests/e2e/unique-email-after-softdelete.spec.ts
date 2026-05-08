@@ -42,7 +42,11 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
       await expect(page.getByText(`UniqueFirst ${ORIG_LAST}`)).toBeVisible();
 
       // ---- Step 2: Soft-delete the first contact ----
-      await page.getByText(`UniqueFirst ${ORIG_LAST}`).click();
+      // D12: row click does NOT open modal — edit via RowActions pencil button.
+      // RowActions cluster is opacity-0 until hover; force:true bypasses visibility constraint.
+      const origRow = page.getByRole("row").filter({ hasText: SHARED_EMAIL });
+      await origRow.hover();
+      await origRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByRole("button", { name: /delete/i }).click();
 
@@ -90,7 +94,10 @@ test.describe("Partial unique index — email reuse after soft-delete", () => {
 
       // ---- Cleanup: delete the replacement contact ----
       await page.goto("/admin/contacts");
-      await page.getByText(`UniqueFirst ${REPL_LAST}`).click();
+      // D12: row click does NOT open modal — edit via RowActions pencil button.
+      const replRow = page.getByRole("row").filter({ hasText: SHARED_EMAIL });
+      await replRow.hover();
+      await replRow.getByRole("button", { name: /^Edit/i }).click({ force: true });
       await expect(page.getByRole("dialog")).toBeVisible();
       await page.getByRole("button", { name: /delete/i }).click();
       await page.getByRole("button", { name: "Delete", exact: true }).click();

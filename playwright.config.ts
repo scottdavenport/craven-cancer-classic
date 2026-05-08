@@ -18,12 +18,7 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: {
-        ...devices["Desktop Chrome"],
-        // Defensive: disable CSS transitions to prevent action-stability races.
-        // No impact on currently-passing chromium tests.
-        contextOptions: { reducedMotion: "reduce" },
-      },
+      use: { ...devices["Desktop Chrome"] },
     },
     {
       name: "webkit",

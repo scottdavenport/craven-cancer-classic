@@ -78,12 +78,13 @@ test.describe("Sprint 32 — Admin team create/edit (centered modal, captain ide
     const tableHeaders = page.locator("th");
     const headerTexts = await tableHeaders.allTextContents();
 
-    // "Team Name" column header must NOT exist (column is dropped)
+    // "Team Name" column header must NOT exist (column is dropped per F-T1, PR #386)
     expect(headerTexts.some((h) => h.match(/^team name$/i))).toBe(false);
 
-    // "Captain" column (or the captain's name as main identity) should exist
-    const hasCaptainColumn = headerTexts.some((h) => h.match(/captain/i));
-    expect(hasCaptainColumn).toBe(true);
+    // "Team" column header must exist — it now carries captain's full name as team identity
+    // (F-T1: Captain column dropped; team identity = captain's full_name via Team column)
+    const hasTeamColumn = headerTexts.some((h) => h.trim() === "Team");
+    expect(hasTeamColumn).toBe(true);
   });
 
   test("Edit team opens a centered modal (not drawer)", async ({ adminPage: page }) => {

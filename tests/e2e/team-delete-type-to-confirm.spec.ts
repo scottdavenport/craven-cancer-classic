@@ -1,23 +1,22 @@
 /**
- * Sprint 35 (#331) — E2E: Team delete with type-to-confirm dialog (structural rewrite)
+ * E2E: Team delete — confirm dialog (Move to Trash) flow
  *
- * Contract (verified against team-list.tsx + team-modal.tsx):
+ * Contract (verified against team-list.tsx + team-modal.tsx, PR #386 + #392):
  * - NO row-level Delete button exists. Row actions = Edit + Mark Paid only.
  * - Delete trigger lives INSIDE the edit modal footer: "Delete team" button.
- * - DeleteTeamDialog gates type-to-confirm behind requiresTypeConfirm = isPaid.
- * - Paid teams: type captain_display_name exactly to enable the Delete button.
- * - Unpaid teams: Delete button is immediately enabled (no type-to-confirm).
+ * - DeleteConfirmDialog (team-modal.tsx) has NO type-to-confirm input.
+ *   Aria Phase 3 §B7 specifies a body-text + "Move to Trash" / "Cancel" dialog only.
+ * - The "Move to Trash" button is disabled while scoreCount === null (async load).
+ * - Once scoreCount resolves, "Move to Trash" is enabled. Click → soft-delete.
  *
  * Flow under test:
  *   1. Create paid-team fixture via service-key REST (no PROD team destruction)
  *   2. Navigate to /admin/teams
  *   3. Click "Edit" on fixture row → edit modal opens
- *   4. Click "Delete team" in modal footer → DeleteTeamDialog opens
- *   5. Verify type-to-confirm input is visible
- *   6. Verify Delete button starts disabled
- *   7. Type caption display name → Delete button becomes enabled
- *   8. Click Delete → team gone from list
- *   9. Navigate to /admin/trash → verify team appears in Teams tab
+ *   4. Click "Delete team" in modal footer → DeleteConfirmDialog opens
+ *   5. Wait for "Move to Trash" to become enabled (scoreCount loaded)
+ *   6. Click "Move to Trash" → team gone from active list
+ *   7. Navigate to /admin/trash → verify team appears in Teams tab
  *
  * Requires: E2E_ADMIN_EMAIL + E2E_ADMIN_PASSWORD in env
  * Fixture cleanup: try/finally ensures fixture is removed if test fails mid-run.
@@ -229,9 +228,9 @@ async function cleanupFixture(
 // Test
 // ---------------------------------------------------------------------------
 
-test.describe("Team delete — type-to-confirm dialog", () => {
+test.describe("Team delete — confirm dialog (Move to Trash)", () => {
   test(
-    "delete button is disabled until captain name is typed exactly (paid-team fixture)",
+    "paid-team fixture: delete confirm dialog opens, Move to Trash button works, team moves to Trash",
     async ({ adminPage: page }) => {
       const serviceKey = getServiceKey();
       let fixture: FixtureTeam | null = null;
@@ -261,8 +260,12 @@ test.describe("Team delete — type-to-confirm dialog", () => {
         await expect(fixtureRow).toBeVisible({ timeout: 10_000 });
 
         // ---- Click Edit on the fixture row ----
+        // Row actions are hover-reveal (opacity-0 + pointer-events-none until hover per design D6).
+        // Hover the row first to expose the action buttons, then click Edit.
+        // Aria Phase 3 §B2b: edit button label is "Edit [Captain Name]'s team"
+        await fixtureRow.hover();
         await fixtureRow
-          .getByRole("button", { name: "Edit", exact: true })
+          .getByRole("button", { name: `Edit ${captainDisplayName}'s team`, exact: true })
           .click();
 
         // ---- Edit modal should open ----
@@ -274,46 +277,26 @@ test.describe("Team delete — type-to-confirm dialog", () => {
           .getByRole("button", { name: "Delete team", exact: true })
           .click();
 
-        // ---- DeleteTeamDialog should open ----
-        // Title: Delete team "<captainDisplayName>"?
-        // Use the type-to-confirm Label text as the anchor — unique to DeleteTeamDialog.
-        const confirmLabel = page.getByText("Type the team name", { exact: false });
-        await expect(confirmLabel).toBeVisible({ timeout: 5_000 });
-
-        // ---- DeleteTeamDialog: wait for score count to load ----
-        await expect(
-          page.getByText("Loading score data", { exact: false })
-        ).not.toBeVisible({ timeout: 15_000 });
-
-        // ---- Type-to-confirm input must be visible (paid team = requiresTypeConfirm) ----
+        // ---- DeleteConfirmDialog should open ----
+        // Anchor on the dialog title per Aria Phase 3 §B7:
+        //   "Delete [Captain Full Name]'s team?"
+        // Use a fragment of the possessive title to avoid exact-match brittleness.
         const deleteDialog = page.getByRole("dialog").filter({
-          has: page.getByText("Type the team name", { exact: false }),
+          has: page.getByText("'s team?", { exact: false }),
         });
+        await expect(deleteDialog).toBeVisible({ timeout: 5_000 });
 
-        const confirmInput = deleteDialog.getByRole("textbox");
-        await expect(confirmInput).toBeVisible({ timeout: 3_000 });
-
-        // ---- Delete button starts DISABLED (confirmText is empty, not matching) ----
-        const deleteBtn = deleteDialog.getByRole("button", {
-          name: "Delete",
+        // ---- Wait for score count to load ----
+        // The "Move to Trash" button is disabled while scoreCount === null (shows "Loading…").
+        // Wait for the button to become enabled, which signals the async getScoreCount resolved.
+        const moveToTrashBtn = deleteDialog.getByRole("button", {
+          name: "Move to Trash",
           exact: true,
         });
-        await expect(deleteBtn).toBeDisabled({ timeout: 3_000 });
+        await expect(moveToTrashBtn).toBeEnabled({ timeout: 15_000 });
 
-        // ---- Type wrong name — button stays disabled ----
-        await confirmInput.click();
-        await confirmInput.fill("wrong-name-that-wont-match");
-        await confirmInput.dispatchEvent("input");
-        await expect(deleteBtn).toBeDisabled();
-
-        // ---- Clear and fill CORRECT captain display name ----
-        // Use triple-click + pressSequentially to ensure React onChange fires reliably.
-        await confirmInput.click({ clickCount: 3 });
-        await confirmInput.pressSequentially(captainDisplayName, { delay: 20 });
-        await expect(deleteBtn).not.toBeDisabled({ timeout: 5_000 });
-
-        // ---- Click Delete — team should be removed from active list ----
-        await deleteBtn.click();
+        // ---- Click "Move to Trash" — Aria Phase 3 §B7 locked destructive button label ----
+        await moveToTrashBtn.click();
 
         // The delete dialog should close
         await expect(deleteDialog).not.toBeVisible({ timeout: 5_000 });

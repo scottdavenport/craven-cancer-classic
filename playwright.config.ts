@@ -18,11 +18,30 @@ export default defineConfig({
   projects: [
     {
       name: "chromium",
-      use: { ...devices["Desktop Chrome"] },
+      use: {
+        ...devices["Desktop Chrome"],
+        // Defensive: disable CSS transitions to prevent action-stability races.
+        // No impact on currently-passing chromium tests.
+        reducedMotion: "reduce",
+      },
     },
     {
       name: "webkit",
-      use: { ...devices["Desktop Safari"] },
+      use: {
+        ...devices["Desktop Safari"],
+        // Disable CSS transitions app-wide (prefers-reduced-motion: reduce).
+        // Eliminates modal/opacity transition races that force:true cannot fix.
+        reducedMotion: "reduce",
+        // Extra headroom for webkit's slower JS engine on click/hover actions.
+        // Default: 0 (unbounded up to test timeout). Was effectively ~5 s in CI.
+        actionTimeout: 15_000,
+      },
+      // webkit is ~50% slower than chromium in CI; give each test 50% more time.
+      // Default: 30_000. Chromium stays at the global default.
+      timeout: 45_000,
+      // Async expect matchers (toBeVisible, toHaveText, etc.) get extra headroom.
+      // Default: 5_000. Chromium stays at the global default.
+      expect: { timeout: 10_000 },
     },
   ],
   webServer: {

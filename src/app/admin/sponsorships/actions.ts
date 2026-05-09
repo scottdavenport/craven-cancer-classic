@@ -107,6 +107,42 @@ export async function getSponsorshipPurchases(
   return data;
 }
 
+// ---------------------------------------------------------------------------
+// exportSponsorshipsCSV
+// ---------------------------------------------------------------------------
+
+const escapeCSV = (value: string | number | boolean | null | undefined): string => {
+  if (value == null) return "";
+  const str = String(value);
+  if (str.includes('"') || str.includes(",") || str.includes("\n")) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+};
+
+export async function exportSponsorshipsCSV(opts?: { year?: number; status?: "active" | "inactive" | "all" }): Promise<string> {
+  await requireAdmin();
+  const items = await getSponsorshipItems({ year: opts?.year, status: opts?.status });
+
+  const header = "id,name,description,price_dollars,year,active,sold_count,active_sponsor_count,max_quantity";
+
+  const rows = items.map((item) =>
+    [
+      escapeCSV(item.id),
+      escapeCSV(item.name),
+      escapeCSV(item.description ?? ""),
+      escapeCSV((item.price_cents / 100).toFixed(2)),
+      escapeCSV(item.year),
+      escapeCSV(item.active ? "true" : "false"),
+      escapeCSV((item as SponsorshipItemWithCount).sold_count ?? 0),
+      escapeCSV((item as SponsorshipItemWithCount).active_sponsor_count ?? 0),
+      escapeCSV(item.max_quantity ?? ""),
+    ].join(",")
+  );
+
+  return [header, ...rows].join("\n");
+}
+
 export async function createSponsorshipItem(formData: FormData) {
   await requireAdmin();
   const supabase = await createClient();

@@ -273,6 +273,57 @@ export type MarkTeamPaidParams = {
   paid_at?: string | null;
 };
 
+// ---------------------------------------------------------------------------
+// exportTeamsCSV
+// ---------------------------------------------------------------------------
+
+const escapeCSV = (value: string | number | boolean | null | undefined): string => {
+  if (value == null) return "";
+  const str = String(value);
+  if (str.includes('"') || str.includes(",") || str.includes("\n")) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+};
+
+export async function exportTeamsCSV(year?: number): Promise<string> {
+  const teams = await getTeams(year);
+
+  const header = "captain,session,player_2,player_3,player_4,payment_status,amount_paid_dollars,payment_method,payment_reference,date_paid";
+
+  const rows = teams.map((team) => {
+    const captain = team.members.find((m) => m.role === "captain");
+    const players = team.members
+      .filter((m) => m.role !== "captain")
+      .sort((a, b) => a.slot - b.slot);
+
+    let datePaid = "";
+    if (team.paid_at) {
+      const d = new Date(team.paid_at);
+      datePaid = isNaN(d.getTime()) ? team.paid_at : d.toLocaleDateString();
+    }
+
+    return [
+      escapeCSV(captain?.full_name ?? ""),
+      escapeCSV(team.session),
+      escapeCSV(players[0]?.full_name ?? ""),
+      escapeCSV(players[1]?.full_name ?? ""),
+      escapeCSV(players[2]?.full_name ?? ""),
+      escapeCSV(team.payment_status),
+      escapeCSV((team.amount_paid_cents / 100).toFixed(2)),
+      escapeCSV(team.payment_method ?? ""),
+      escapeCSV(team.payment_reference ?? ""),
+      escapeCSV(datePaid),
+    ].join(",");
+  });
+
+  return [header, ...rows].join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// markTeamPaid
+// ---------------------------------------------------------------------------
+
 export async function markTeamPaid(
   team_id: string,
   params: MarkTeamPaidParams

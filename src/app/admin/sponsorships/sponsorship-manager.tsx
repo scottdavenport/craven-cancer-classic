@@ -31,11 +31,13 @@ import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { StatusTabs } from "@/components/admin/status-tabs";
 import { FilterBar } from "@/components/admin/filter-bar";
 import { RowActions } from "@/components/admin/row-actions";
+import { DownloadCsvButton } from "@/components/admin/download-csv-button";
 import { SponsorshipModal } from "./sponsorship-modal";
 import {
   getSponsorshipItems,
   getLinkedSponsorNames,
   deleteSponsorshipItem,
+  exportSponsorshipsCSV,
   type SponsorshipItemWithCount,
 } from "./actions";
 import type { SponsorshipPurchase } from "@/types/database";
@@ -303,13 +305,20 @@ export function SponsorshipManager({
           <CardTitle className="font-sans text-base font-semibold">
             Packages ({filteredItems.length})
           </CardTitle>
-          <Button
-            size="sm"
-            onClick={() => setModal({ open: true, mode: "create", sponsorship: null })}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            Add Package
-          </Button>
+          <div className="flex items-center gap-2">
+            <DownloadCsvButton
+              label="Download CSV"
+              fetchCsv={() => exportSponsorshipsCSV({ year: yearFilter, status: statusFilter })}
+              filename={`sponsorships-${yearFilter}-${new Date().toISOString().slice(0, 10)}.csv`}
+            />
+            <Button
+              size="sm"
+              onClick={() => setModal({ open: true, mode: "create", sponsorship: null })}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              Add Package
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">

@@ -19,6 +19,7 @@ import {
   uploadSponsorLogo,
   getSponsorContacts,
   deleteSponsorLogo,
+  getSponsorPurchaseCount,
 } from "./actions";
 import type { Sponsor } from "@/types/database";
 import type { ContactPickResult } from "@/components/admin/contact-typeahead";
@@ -44,6 +45,7 @@ export function SponsorModal({
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [initialContacts, setInitialContacts] = useState<ContactPickResult[]>([]);
   const [contactsLoaded, setContactsLoaded] = useState(false);
+  const [purchaseCount, setPurchaseCount] = useState<number>(0);
 
   useEffect(() => {
     if (!open) {
@@ -126,11 +128,22 @@ export function SponsorModal({
     }
   }
 
-  function handleDeleteClick() {
+  async function handleDeleteClick() {
     if (!sponsor) return;
-    // sponsorship_purchases.sponsor_id FK not yet in schema — use C2 (zero-linked) variant always.
-    // When the FK column ships, wire getSponsorPurchaseCount here and pass count to buildDeleteDescription.
-    setConfirmOpen(true);
+    setLoading(true);
+    try {
+      const count = await getSponsorPurchaseCount(sponsor.id);
+      setPurchaseCount(count);
+    } catch (err) {
+      console.warn(
+        "[SponsorModal] getSponsorPurchaseCount failed; falling back to zero-linked copy:",
+        err
+      );
+      setPurchaseCount(0);
+    } finally {
+      setLoading(false);
+      setConfirmOpen(true);
+    }
   }
 
   async function handleDeleteConfirmed() {

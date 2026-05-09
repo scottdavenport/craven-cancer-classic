@@ -116,6 +116,7 @@ function makePurchase(
     payment_status: "paid",
     amount_paid_cents: 10000,
     stripe_payment_id: "pi_test",
+    sponsor_id: null,
     year: new Date().getFullYear(),
     created_at: new Date().toISOString(),
     tribute_recipient: null,

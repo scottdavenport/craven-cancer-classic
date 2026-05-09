@@ -1,22 +1,25 @@
 /**
- * E2E: Team delete — confirm dialog (Move to Trash) flow
+ * E2E: Team delete — type-to-confirm gate for paid teams (#393 restoration)
  *
- * Contract (verified against team-list.tsx + team-modal.tsx, PR #386 + #392):
- * - NO row-level Delete button exists. Row actions = Edit + Mark Paid only.
+ * Contract (verified against team-modal.tsx after #393 source restore):
+ * - NO row-level Delete button. Row actions = Edit + Mark Paid only.
  * - Delete trigger lives INSIDE the edit modal footer: "Delete team" button.
- * - DeleteConfirmDialog (team-modal.tsx) has NO type-to-confirm input.
- *   Aria Phase 3 §B7 specifies a body-text + "Move to Trash" / "Cancel" dialog only.
- * - The "Move to Trash" button is disabled while scoreCount === null (async load).
- * - Once scoreCount resolves, "Move to Trash" is enabled. Click → soft-delete.
+ * - DeleteConfirmDialog gates on requiresTypeConfirm = isPaid && captain_display_name non-empty.
+ * - Paid teams: input [data-testid="delete-confirm-input"] visible; "Move to Trash" disabled until
+ *   confirmText === team.captain_display_name (strict exact-match).
+ * - Pending teams: no input rendered; "Move to Trash" enabled once scoreCount loads.
  *
- * Flow under test:
+ * Flow under test (paid-team path):
  *   1. Create paid-team fixture via service-key REST (no PROD team destruction)
  *   2. Navigate to /admin/teams
- *   3. Click "Edit" on fixture row → edit modal opens
+ *   3. Click "Edit Captain Name's team" on fixture row → edit modal opens
  *   4. Click "Delete team" in modal footer → DeleteConfirmDialog opens
- *   5. Wait for "Move to Trash" to become enabled (scoreCount loaded)
- *   6. Click "Move to Trash" → team gone from active list
- *   7. Navigate to /admin/trash → verify team appears in Teams tab
+ *   5. Verify type-to-confirm input is visible
+ *   6. Verify "Move to Trash" button starts disabled
+ *   7. Type wrong text → button stays disabled
+ *   8. Clear and type captain_display_name exactly → button enabled
+ *   9. Click "Move to Trash" → team gone from active list
+ *  10. Navigate to /admin/trash → verify team appears in Teams tab
  *
  * Requires: E2E_ADMIN_EMAIL + E2E_ADMIN_PASSWORD in env
  * Fixture cleanup: try/finally ensures fixture is removed if test fails mid-run.
@@ -228,9 +231,9 @@ async function cleanupFixture(
 // Test
 // ---------------------------------------------------------------------------
 
-test.describe("Team delete — confirm dialog (Move to Trash)", () => {
+test.describe("Team delete — type-to-confirm gate (#393)", () => {
   test(
-    "paid-team fixture: delete confirm dialog opens, Move to Trash button works, team moves to Trash",
+    "paid-team fixture: type-to-confirm input gates Move to Trash until captain_display_name typed exactly",
     async ({ adminPage: page }) => {
       const serviceKey = getServiceKey();
       let fixture: FixtureTeam | null = null;
@@ -286,16 +289,38 @@ test.describe("Team delete — confirm dialog (Move to Trash)", () => {
         });
         await expect(deleteDialog).toBeVisible({ timeout: 5_000 });
 
-        // ---- Wait for score count to load ----
-        // The "Move to Trash" button is disabled while scoreCount === null (shows "Loading…").
-        // Wait for the button to become enabled, which signals the async getScoreCount resolved.
+        // ---- Type-to-confirm input must be visible (paid team = requiresTypeConfirm) ----
+        const confirmInput = deleteDialog.getByTestId("delete-confirm-input");
+        await expect(confirmInput).toBeVisible({ timeout: 3_000 });
+
+        // ---- "Move to Trash" button starts DISABLED ----
+        // Two reasons it could be disabled at this point:
+        //   1. scoreCount === null (async load not yet resolved)
+        //   2. confirmText doesn't match captain_display_name yet
+        // Either way, the user-facing assertion is "starts disabled".
         const moveToTrashBtn = deleteDialog.getByRole("button", {
           name: "Move to Trash",
           exact: true,
         });
-        await expect(moveToTrashBtn).toBeEnabled({ timeout: 15_000 });
+        await expect(moveToTrashBtn).toBeDisabled({ timeout: 3_000 });
 
-        // ---- Click "Move to Trash" — Aria Phase 3 §B7 locked destructive button label ----
+        // ---- Wait for score count to load — button still disabled (now only by type-gate) ----
+        // Confirm the type-gate, not the score-load, is the active disabler from here on.
+        // Type a clearly-wrong string and assert button stays disabled even after score load settles.
+        await confirmInput.click();
+        await confirmInput.fill("wrong-name-that-wont-match");
+        await confirmInput.dispatchEvent("input");
+
+        // Give scoreCount up to 15s to resolve. Button must remain disabled because the gate fails.
+        await expect(moveToTrashBtn).toBeDisabled({ timeout: 15_000 });
+
+        // ---- Clear and type the EXACT captain_display_name — gate unlocks ----
+        // Use triple-click to select all, then pressSequentially so React onChange fires reliably.
+        await confirmInput.click({ clickCount: 3 });
+        await confirmInput.pressSequentially(captainDisplayName, { delay: 20 });
+        await expect(moveToTrashBtn).toBeEnabled({ timeout: 5_000 });
+
+        // ---- Click "Move to Trash" — team should be removed from active list ----
         await moveToTrashBtn.click();
 
         // The delete dialog should close

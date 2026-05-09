@@ -515,6 +515,7 @@ export type Database = {
           purchaser_email: string
           purchaser_name: string
           purchaser_phone: string | null
+          sponsor_id: string | null
           stripe_payment_id: string | null
           tribute_recipient: string | null
           year: number
@@ -529,6 +530,7 @@ export type Database = {
           purchaser_email: string
           purchaser_name: string
           purchaser_phone?: string | null
+          sponsor_id?: string | null
           stripe_payment_id?: string | null
           tribute_recipient?: string | null
           year?: number
@@ -543,6 +545,7 @@ export type Database = {
           purchaser_email?: string
           purchaser_name?: string
           purchaser_phone?: string | null
+          sponsor_id?: string | null
           stripe_payment_id?: string | null
           tribute_recipient?: string | null
           year?: number
@@ -560,6 +563,20 @@ export type Database = {
             columns: ["item_id"]
             isOneToOne: false
             referencedRelation: "sponsorship_items_active"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_purchases_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "sponsors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sponsorship_purchases_sponsor_id_fkey"
+            columns: ["sponsor_id"]
+            isOneToOne: false
+            referencedRelation: "sponsors_active"
             referencedColumns: ["id"]
           },
         ]

@@ -301,6 +301,22 @@ export async function deleteSponsor(
 }
 
 // ---------------------------------------------------------------------------
+// getSponsorPurchaseCount — issue #380
+// Count-only fetch for the Sponsors delete-confirm modal. All years.
+// ---------------------------------------------------------------------------
+
+export async function getSponsorPurchaseCount(sponsorId: string): Promise<number> {
+  await requireAdmin();
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("sponsorship_purchases")
+    .select("*", { count: "exact", head: true })
+    .eq("sponsor_id", sponsorId);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+// ---------------------------------------------------------------------------
 // SVG sanitization for logo upload
 // ---------------------------------------------------------------------------
 

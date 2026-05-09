@@ -1,0 +1,33 @@
+# triage-on-issue-create.yml
+#
+# Auto-applies the "status:triage" label to any issue opened without a milestone.
+# Issues that already have a milestone assigned are skipped — they've been
+# intentionally scoped and don't need triage routing.
+#
+# Per-engagement deployment: copy this file verbatim into each engagement
+# repo's .github/workflows/ directory. No per-repo customization is required.
+# The "status:triage" label must exist in the target repo (create it once
+# via gh label create "status:triage" --color "ededed" -R <owner>/<repo>).
+# Deployment is handled in forge's Phase 4.2-4.5.
+
+name: Triage on issue create
+
+on:
+  issues:
+    types: [opened]
+
+permissions:
+  issues: write
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    if: github.event.issue.milestone == null
+    steps:
+      - name: Apply status:triage label
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh issue edit ${{ github.event.issue.number }} \
+            --add-label "status:triage" \
+            --repo ${{ github.repository }}

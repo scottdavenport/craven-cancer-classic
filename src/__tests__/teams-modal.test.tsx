@@ -235,10 +235,14 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
       const user = userEvent.setup();
       render(<TeamList teams={[team]} defaultFeeDollars={200} />);
 
-      // Open the edit modal first (Phase 3: hover-reveal Edit button)
-      await user.click(
-        screen.getByRole("button", { name: /edit captain jane's team/i })
+      // Open the edit modal first (Phase 3: hover-reveal Edit button).
+      // Derive the label from the team so this helper still works if a future
+      // test overrides captain_display_name.
+      const editLabel = new RegExp(
+        `edit ${team.captain_display_name}'s team`,
+        "i"
       );
+      await user.click(screen.getByRole("button", { name: editLabel }));
       await waitFor(() => {
         expect(screen.getByRole("dialog")).toBeInTheDocument();
       });
@@ -317,13 +321,16 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
       const trashBtn = screen.getByRole("button", { name: /move to trash/i });
       const input = screen.getByTestId("delete-confirm-input") as HTMLInputElement;
 
-      await user.type(input, "captain jane"); // wrong case
+      await user.type(input, "captain jane"); // wrong case (matches makeTeam default "Captain Jane")
 
-      // Strict equality — button stays disabled
-      expect(trashBtn).toBeDisabled();
+      // Wait for any pending state (e.g. scoreCount load) to settle, then assert the
+      // button is STILL disabled — only the type-gate should be holding it back at this point.
+      await waitFor(() => {
+        expect(trashBtn).toBeDisabled();
+      });
     });
 
-    it("pending team renders no type-to-confirm input", async () => {
+    it("pending team renders no type-to-confirm input and Move to Trash enables once scoreCount loads", async () => {
       const pendingTeam = makeTeam(); // default payment_status === "pending"
 
       await openDeleteDialog(pendingTeam);
@@ -334,6 +341,13 @@ describe("TeamModal — Sprint 32 (RED phase)", () => {
       expect(
         screen.queryByText(/type the captain's full name/i)
       ).not.toBeInTheDocument();
+
+      // Once getScoreCount resolves (mock returns 0), the button must be enabled
+      // for pending teams — no type-gate to hold it back.
+      const trashBtn = screen.getByRole("button", { name: /move to trash/i });
+      await waitFor(() => {
+        expect(trashBtn).not.toBeDisabled();
+      });
     });
   });
 });

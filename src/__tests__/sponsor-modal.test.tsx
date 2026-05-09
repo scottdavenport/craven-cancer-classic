@@ -196,3 +196,67 @@ describe("SponsorModal — delete-confirm Aria copy branches (#380)", () => {
     });
   });
 });
+
+describe("SponsorModal — delete-confirm fetch error fallback (#380)", () => {
+  it("falls back to C2 copy and logs a warning when getSponsorPurchaseCount throws", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockGetSponsorPurchaseCount.mockRejectedValueOnce(new Error("network down"));
+
+    const user = userEvent.setup();
+    renderModal(makeSponsor({ name: "Carolina East Health" }));
+
+    const trashButton = await screen.findByRole("button", { name: /move to trash/i });
+    await user.click(trashButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /Moving Carolina East Health to Trash removes it from the active list\. You can restore it from Admin → Trash\./
+        )
+      ).toBeInTheDocument();
+    });
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      expect.stringContaining("getSponsorPurchaseCount failed"),
+      expect.any(Error)
+    );
+
+    consoleWarnSpy.mockRestore();
+  });
+
+  it("opens the confirm dialog even when the count fetch fails", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockGetSponsorPurchaseCount.mockRejectedValueOnce(new Error("network down"));
+
+    const user = userEvent.setup();
+    renderModal(makeSponsor({ name: "Carolina East Health" }));
+
+    const trashButton = await screen.findByRole("button", { name: /move to trash/i });
+    await user.click(trashButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Delete Carolina East Health\?/i)).toBeInTheDocument();
+    });
+
+    consoleWarnSpy.mockRestore();
+  });
+
+  it("does not call deleteSponsor automatically after a failed count fetch", async () => {
+    const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    mockGetSponsorPurchaseCount.mockRejectedValueOnce(new Error("network down"));
+
+    const user = userEvent.setup();
+    renderModal(makeSponsor());
+
+    const trashButton = await screen.findByRole("button", { name: /move to trash/i });
+    await user.click(trashButton);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Delete .*\?/i)).toBeInTheDocument();
+    });
+
+    expect(mockDeleteSponsor).not.toHaveBeenCalled();
+
+    consoleWarnSpy.mockRestore();
+  });
+});

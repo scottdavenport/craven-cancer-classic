@@ -92,12 +92,15 @@ function DeleteConfirmDialog({ team, open, onOpenChange, onDeleted }: DeleteConf
   const deleteEnabled = !requiresTypeConfirm || matches;
 
   // Defense-in-depth: surface bad data without locking the admin out.
-  if (isPaid && !hasUsableConfirm) {
-    console.warn(
-      "[DeleteConfirmDialog] paid team has empty captain_display_name; gate skipped",
-      { teamId: team.id }
-    );
-  }
+  // Live in an effect (not render body) to avoid Strict Mode double-fires.
+  useEffect(() => {
+    if (isPaid && !hasUsableConfirm) {
+      console.warn(
+        "[DeleteConfirmDialog] paid team has empty captain_display_name; gate skipped",
+        { teamId: team.id }
+      );
+    }
+  }, [isPaid, hasUsableConfirm, team.id]);
 
   // All non-captain member names
   const memberNames = team.members
@@ -123,6 +126,13 @@ function DeleteConfirmDialog({ team, open, onOpenChange, onDeleted }: DeleteConf
       setConfirmText("");
     }
   }, [open, team.id, scoreCount]);
+
+  // Reset gate input when the team prop changes (defensive — prevents prior
+  // entry from bleeding into a new team's gate if the parent swaps `team` while
+  // the dialog stays open).
+  useEffect(() => {
+    setConfirmText("");
+  }, [team.id]);
 
   async function handleDelete() {
     setError(null);

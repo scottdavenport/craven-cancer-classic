@@ -10,6 +10,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TeamForm } from "./team-form";
 import { deleteTeam, getScoreCount } from "./actions";
 import type { TeamWithMembers } from "./actions";
@@ -76,9 +77,27 @@ function DeleteConfirmDialog({ team, open, onOpenChange, onDeleted }: DeleteConf
   const [scoreCount, setScoreCount] = useState<number | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmText, setConfirmText] = useState("");
 
   const captainMember = team.members.find((m) => m.role === "captain");
   const captainName = captainMember?.full_name?.trim() ? captainMember.full_name : null;
+
+  // #393: type-to-confirm gate for paid teams.
+  // Source of truth: captain_display_name (always non-null on team row, matches dialog title).
+  const isPaid = team.payment_status === "paid" && team.amount_paid_cents > 0;
+  const expectedConfirm = team.captain_display_name;
+  const hasUsableConfirm = expectedConfirm.trim().length > 0;
+  const requiresTypeConfirm = isPaid && hasUsableConfirm;
+  const matches = confirmText === expectedConfirm; // strict exact-match (case + whitespace)
+  const deleteEnabled = !requiresTypeConfirm || matches;
+
+  // Defense-in-depth: surface bad data without locking the admin out.
+  if (isPaid && !hasUsableConfirm) {
+    console.warn(
+      "[DeleteConfirmDialog] paid team has empty captain_display_name; gate skipped",
+      { teamId: team.id }
+    );
+  }
 
   // All non-captain member names
   const memberNames = team.members
@@ -93,7 +112,7 @@ function DeleteConfirmDialog({ team, open, onOpenChange, onDeleted }: DeleteConf
     ? `Delete ${captainName}'s team?`
     : "Delete this team?";
 
-  // Fetch score count when dialog opens
+  // Fetch score count when dialog opens; reset transient state on close.
   useEffect(() => {
     if (open && scoreCount === null) {
       getScoreCount(team.id).then(setScoreCount);
@@ -101,6 +120,7 @@ function DeleteConfirmDialog({ team, open, onOpenChange, onDeleted }: DeleteConf
     if (!open) {
       setError(null);
       setScoreCount(null);
+      setConfirmText("");
     }
   }, [open, team.id, scoreCount]);
 
@@ -135,6 +155,22 @@ function DeleteConfirmDialog({ team, open, onOpenChange, onDeleted }: DeleteConf
           <DialogTitle className="text-destructive">{dialogTitle}</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">{bodyText}</p>
+        {requiresTypeConfirm && (
+          <div className="space-y-2">
+            <label htmlFor="delete-confirm-input" className="text-sm">
+              Type the captain's full name to confirm:{" "}
+              <span className="font-medium">{expectedConfirm}</span>
+            </label>
+            <Input
+              id="delete-confirm-input"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              placeholder={expectedConfirm}
+              autoComplete="off"
+              data-testid="delete-confirm-input"
+            />
+          </div>
+        )}
         {error && <p className="text-xs text-destructive">{error}</p>}
         <DialogFooter className="gap-2">
           <Button
@@ -149,7 +185,7 @@ function DeleteConfirmDialog({ team, open, onOpenChange, onDeleted }: DeleteConf
             variant="destructive"
             size="sm"
             onClick={handleDelete}
-            disabled={pending || scoreCount === null}
+            disabled={pending || scoreCount === null || !deleteEnabled}
           >
             {pending ? "Moving…" : "Move to Trash"}
           </Button>

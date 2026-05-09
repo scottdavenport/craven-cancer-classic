@@ -22,6 +22,19 @@ export type ContactRow = {
 };
 
 // ---------------------------------------------------------------------------
+// CSV escape helper
+// ---------------------------------------------------------------------------
+
+const escapeCSV = (value: string | number | boolean | null | undefined): string => {
+  if (value == null) return "";
+  const str = String(value);
+  if (str.includes('"') || str.includes(",") || str.includes("\n")) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+};
+
+// ---------------------------------------------------------------------------
 // getSponsors
 // ---------------------------------------------------------------------------
 
@@ -47,6 +60,34 @@ export async function getSponsors(opts?: { year?: number; is_active?: boolean })
 
   if (error) throw new Error(error.message);
   return (data ?? []) as unknown as Sponsor[];
+}
+
+// ---------------------------------------------------------------------------
+// CSV export
+// ---------------------------------------------------------------------------
+
+export async function exportSponsorsCSV(opts?: { year?: number; is_active?: boolean }): Promise<string> {
+  await requireAdmin();
+  const sponsors = await getSponsors(opts);
+
+  const header = "id,name,tier_id,website,payment_status,amount_paid_cents,year,is_active,logo_url,created_at";
+
+  const rows = sponsors.map((s) =>
+    [
+      escapeCSV(s.id),
+      escapeCSV(s.name),
+      escapeCSV(s.tier_id ?? ""),
+      escapeCSV(s.website ?? ""),
+      escapeCSV(s.payment_status),
+      escapeCSV(s.amount_paid_cents),
+      escapeCSV(s.year),
+      escapeCSV((s as Sponsor & { is_active?: boolean }).is_active !== false ? "true" : "false"),
+      escapeCSV(s.logo_url ?? ""),
+      escapeCSV(s.created_at ?? ""),
+    ].join(",")
+  );
+
+  return [header, ...rows].join("\n");
 }
 
 // ---------------------------------------------------------------------------

@@ -35,7 +35,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Plus } from "lucide-react";
-import { getSponsors } from "./actions";
+import { DownloadCsvButton } from "@/components/admin/download-csv-button";
+import { getSponsors, exportSponsorsCSV } from "./actions";
 import { SponsorModal } from "./sponsor-modal";
 import type { SponsorshipItemOption } from "./sponsor-form";
 import type { Sponsor } from "@/types/database";
@@ -345,13 +346,23 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
           <CardTitle className="font-sans text-base font-semibold">
             Sponsors ({displayedSponsors.length})
           </CardTitle>
-          <Button
-            size="sm"
-            onClick={() => setModal({ open: true, mode: "create", sponsor: null })}
-          >
-            <Plus className="mr-1 h-4 w-4" />
-            New Sponsor
-          </Button>
+          <div className="flex items-center gap-2">
+            <DownloadCsvButton
+              label="Download CSV"
+              fetchCsv={() => {
+                const isActiveArg = statusFilter === "active" ? true : statusFilter === "inactive" ? false : undefined;
+                return exportSponsorsCSV({ year: yearFilter, is_active: isActiveArg });
+              }}
+              filename={`sponsors-${yearFilter}-${new Date().toISOString().slice(0, 10)}.csv`}
+            />
+            <Button
+              size="sm"
+              onClick={() => setModal({ open: true, mode: "create", sponsor: null })}
+            >
+              <Plus className="mr-1 h-4 w-4" />
+              New Sponsor
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-hidden rounded-lg border border-border/60 shadow-sm">

@@ -28,12 +28,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Plus, Download } from "lucide-react";
+import { Plus } from "lucide-react";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
 import { FilterBar } from "@/components/admin/filter-bar";
 import { StatusTabs } from "@/components/admin/status-tabs";
 import { RowActions } from "@/components/admin/row-actions";
-import { markTeamPaid } from "./actions";
+import { DownloadCsvButton } from "@/components/admin/download-csv-button";
+import { markTeamPaid, exportTeamsCSV } from "./actions";
 import { TeamModal } from "./team-modal";
 import type { TeamWithMembers } from "./actions";
 
@@ -264,71 +265,6 @@ function MarkPaidModal({ team, defaultFeeDollars, open, onOpenChange, onDone }: 
 }
 
 // ---------------------------------------------------------------------------
-// DownloadCsvButton — local teams CSV export (Phase 4 universal helper pending)
-// Aria Phase 3 §B9: "Download CSV"
-// ---------------------------------------------------------------------------
-
-function DownloadCsvButton({ teams }: { teams: TeamWithMembers[] }) {
-  function handleDownload() {
-    const headers = [
-      "Captain",
-      "Session",
-      "Player 2",
-      "Player 3",
-      "Player 4",
-      "Payment Status",
-      "Amount Paid ($)",
-      "Payment Method",
-      "Reference Number",
-      "Date Paid",
-    ];
-
-    const rows = teams.map((team) => {
-      const captain = team.members.find((m) => m.role === "captain");
-      const players = team.members
-        .filter((m) => m.role !== "captain")
-        .sort((a, b) => a.slot - b.slot);
-
-      return [
-        captain?.full_name ?? "",
-        team.session,
-        players[0]?.full_name ?? "",
-        players[1]?.full_name ?? "",
-        players[2]?.full_name ?? "",
-        team.payment_status,
-        (team.amount_paid_cents / 100).toFixed(2),
-        team.payment_method ?? "",
-        team.payment_reference ?? "",
-        team.paid_at
-          ? (() => {
-              const d = new Date(team.paid_at!);
-              return isNaN(d.getTime()) ? team.paid_at ?? "" : d.toLocaleDateString();
-            })()
-          : "",
-      ]
-        .map((v) => `"${String(v).replace(/"/g, '""')}"`)
-        .join(",");
-    });
-
-    const csv = [headers.join(","), ...rows].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `teams-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  return (
-    <Button size="sm" variant="outline" onClick={handleDownload}>
-      <Download className="size-4 mr-1" />
-      Download CSV
-    </Button>
-  );
-}
-
-// ---------------------------------------------------------------------------
 // TeamList
 // ---------------------------------------------------------------------------
 
@@ -429,7 +365,11 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
           {displayedTeams.length} team{displayedTeams.length !== 1 ? "s" : ""}
         </p>
         <div className="flex items-center gap-2">
-          <DownloadCsvButton teams={displayedTeams} />
+          <DownloadCsvButton
+            label="Download CSV"
+            fetchCsv={() => exportTeamsCSV()}
+            filename={`teams-${new Date().toISOString().slice(0, 10)}.csv`}
+          />
           <Button size="sm" onClick={() => setModal({ open: true, mode: "create", team: null })}>
             <Plus className="size-4" />
             New Team

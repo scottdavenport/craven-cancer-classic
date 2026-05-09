@@ -15,6 +15,7 @@ import {
 import { Check, X, Trash2 } from "lucide-react";
 import { updatePhotoStatus, deletePhoto, exportPhotosCSV } from "./actions";
 import { AdminEmptyState } from "@/components/admin/admin-empty-state";
+import { DownloadCsvButton } from "@/components/admin/download-csv-button";
 import type { Photo } from "@/types/database";
 import { Tabs, TabsList, TabsTrigger, TabsPanel } from "@/components/ui/tabs";
 
@@ -55,7 +56,6 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Photo | null>(null);
   const [yearFilter, setYearFilter] = useState<string>("all");
-  const [exporting, setExporting] = useState(false);
 
   // Derive available years from the full photos set, descending
   const availableYears = useMemo(() => {
@@ -91,28 +91,6 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
     setLoading(deleteTarget.id);
     await deletePhoto(deleteTarget.id);
     setLoading(null);
-  }
-
-  async function handleExportCSV() {
-    setExporting(true);
-    try {
-      const yearParam = yearFilter !== "all" ? Number(yearFilter) : undefined;
-      const csv = await exportPhotosCSV(yearParam);
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const today = new Date().toISOString().slice(0, 10);
-      const suffix = yearFilter !== "all" ? `-${yearFilter}` : "";
-      const filename = `photos${suffix}-${today}.csv`;
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("[PhotoModeration] exportPhotosCSV failed:", err);
-    } finally {
-      setExporting(false);
-    }
   }
 
   function clearFilters() {
@@ -252,14 +230,18 @@ export function PhotoModeration({ photos }: PhotoModerationProps) {
           </Select>
         </div>
 
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleExportCSV}
-          disabled={exporting}
-        >
-          {exporting ? "Exporting..." : "Download CSV"}
-        </Button>
+        <DownloadCsvButton
+          label="Download CSV"
+          fetchCsv={() => {
+            const yearParam = yearFilter !== "all" ? Number(yearFilter) : undefined;
+            return exportPhotosCSV(yearParam);
+          }}
+          filename={(() => {
+            const today = new Date().toISOString().slice(0, 10);
+            const suffix = yearFilter !== "all" ? `-${yearFilter}` : "";
+            return `photos${suffix}-${today}.csv`;
+          })()}
+        />
       </div>
 
       <Tabs defaultValue="pending">

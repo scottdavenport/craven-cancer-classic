@@ -126,3 +126,73 @@ describe("SponsorModal — delete-confirm count fetch (#380)", () => {
     });
   });
 });
+
+describe("SponsorModal — delete-confirm Aria copy branches (#380)", () => {
+  it("renders the C2 zero-linked copy when count is 0", async () => {
+    mockGetSponsorPurchaseCount.mockResolvedValueOnce(0);
+    const user = userEvent.setup();
+    renderModal(makeSponsor({ name: "Carolina East Health" }));
+
+    const trashButton = await screen.findByRole("button", { name: /move to trash/i });
+    await user.click(trashButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /Moving Carolina East Health to Trash removes it from the active list\. You can restore it from Admin → Trash\./
+        )
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("renders the C1 singular copy when count is 1", async () => {
+    mockGetSponsorPurchaseCount.mockResolvedValueOnce(1);
+    const user = userEvent.setup();
+    renderModal(makeSponsor({ name: "Carolina East Health" }));
+
+    const trashButton = await screen.findByRole("button", { name: /move to trash/i });
+    await user.click(trashButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /1 sponsorship purchase references this sponsor\. Moving Carolina East Health to Trash keeps that record intact — it'll display "Deleted sponsor" where the name appeared\./
+        )
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("renders the C1 plural copy when count is 2", async () => {
+    mockGetSponsorPurchaseCount.mockResolvedValueOnce(2);
+    const user = userEvent.setup();
+    renderModal(makeSponsor({ name: "Carolina East Health" }));
+
+    const trashButton = await screen.findByRole("button", { name: /move to trash/i });
+    await user.click(trashButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /2 sponsorship purchases reference this sponsor\. Moving Carolina East Health to Trash keeps those records intact — they'll display "Deleted sponsor" where the name appeared\./
+        )
+      ).toBeInTheDocument();
+    });
+  });
+
+  it("renders the C1 plural copy with the actual count when count is 7", async () => {
+    mockGetSponsorPurchaseCount.mockResolvedValueOnce(7);
+    const user = userEvent.setup();
+    renderModal(makeSponsor({ name: "Carolina East Health" }));
+
+    const trashButton = await screen.findByRole("button", { name: /move to trash/i });
+    await user.click(trashButton);
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(
+          /7 sponsorship purchases reference this sponsor\. Moving Carolina East Health to Trash keeps those records intact — they'll display "Deleted sponsor" where the name appeared\./
+        )
+      ).toBeInTheDocument();
+    });
+  });
+});

@@ -166,8 +166,16 @@ export function SponsorModal({
 
   function buildDeleteDescription(): string {
     const name = sponsor?.name ?? "this sponsor";
-    // C2 variant (Aria-approved): zero linked records — used until sponsorship_purchases.sponsor_id FK ships
-    return `Moving ${name} to Trash removes it from the active list. You can restore it from Admin → Trash.`;
+    if (purchaseCount === 0) {
+      // Aria §C2 — zero linked records
+      return `Moving ${name} to Trash removes it from the active list. You can restore it from Admin → Trash.`;
+    }
+    if (purchaseCount === 1) {
+      // Aria §C1 singular
+      return `1 sponsorship purchase references this sponsor. Moving ${name} to Trash keeps that record intact — it'll display "Deleted sponsor" where the name appeared.`;
+    }
+    // Aria §C1 plural (count >= 2)
+    return `${purchaseCount} sponsorship purchases reference this sponsor. Moving ${name} to Trash keeps those records intact — they'll display "Deleted sponsor" where the name appeared.`;
   }
 
   return (

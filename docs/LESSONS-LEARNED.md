@@ -119,3 +119,37 @@ When Craven copy references what donations or sponsorships fund, the canonical p
 - Acceptable phrasing: "transportation, lodging, and medical equipment", "transportation to treatment, lodging during extended care, medical equipment", or sub-selections of those three.
 - "for cancer patients in active treatment" is the right qualifier when context allows — it specifies who, without claiming Craven funds the medical care.
 - Copy review: flag if any copy implies Craven funds treatment itself.
+
+---
+
+## Rule: `{ force: true }` is not a click-race silver bullet (Playwright)
+
+When a Playwright test's `.click()` times out in webkit but passes in chromium, `{ force: true }` only fixes a subset of the underlying causes. Reach for the right tool based on the actual failure mode:
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| `locator.click: Timeout exceeded`, "waiting for element to be visible/enabled/stable" | Hover-reveal opacity transition + actionability check | `{ force: true }` — bypasses Playwright's actionability check |
+| `<div>…</div> intercepts pointer events` in the call log | A sibling/parent element is on top of the target at hit-test time | Wait for the obscuring element to settle, OR target a more specific selector inside the cluster |
+| Click fires (no error) but next assertion `expect(dialog).toBeVisible()` fails with `element(s) not found` | React state update from the click hasn't committed before the assertion runs (often because the modal/list waits for a `transitionend` event that webkit doesn't fire reliably) | `playwright.config.ts` → `use: { contextOptions: { reducedMotion: "reduce" } }` on the **webkit project only** |
+
+**Why:** Sprint 38 (e2e refresh #394) burned 4 PRs on whack-a-mole `{ force: true }` patches before realizing the third class of failure was unfixable at the test-side. `reducedMotion: "reduce"` disables CSS transitions at the browser level, which removes the `transitionend`-listener race entirely. Set it on the webkit project, NOT chromium — chromium app code (Base-UI Dialog/Sheet via `data-open:animate-in`) relies on the transition firing for state commit; suppressing it on chromium breaks tests that pass without it. PR #401 is the rollback evidence.
+
+**How to apply:**
+- New flaky test in webkit only? Read the failure call log carefully. Don't blanket-add `{ force: true }`.
+- "Intercepts pointer events" → fix the selector or wait, not `force: true`.
+- "Element(s) not found" after a click that succeeded → look at `playwright.config.ts` first; if `reducedMotion` is already set on webkit, the issue is elsewhere (e.g. a missing `await waitFor`).
+- Per-project Playwright config edits should always be scoped to the failing browser, not blanketed.
+
+---
+
+## Rule: Verification claims must be backed by exit codes (HARD-BLOCK)
+
+When a builder/specialist (Spec, Bolt, Flux) claims `npx tsc --noEmit passes` or `vitest passes` in a PR body or summary, that claim must be backed by an actual run with exit code 0 captured. Watchdog enforces this as a Stage 1 HARD-BLOCK on review.
+
+**Why:** Sprint 38 PR #400 (e2e config) shipped from Spec with the claim "✅ npx tsc --noEmit passes." The claim was false — actual tsc run was exit 1 with TS2769 errors at `playwright.config.ts:25` (wrong placement of `reducedMotion`). The Vercel build was also failing because Vercel's Next.js build runs tsc post-compile. Watchdog caught both on review and blocked. The fix was a 2-line move that took 5 minutes, but the false claim cost a review cycle and could have shipped a broken main if Watchdog hadn't been thorough.
+
+**How to apply:**
+- **Builders:** before writing "tsc passes" in a PR body, capture the exit code: `npx tsc --noEmit; echo "exit=$?"`. Paste the actual evidence.
+- **If your worktree doesn't have `node_modules`** (common in worktrees Spec creates), copy your edited file into the main repo, run tsc from there, then revert. Don't claim verification with no node_modules to verify against.
+- **Watchdog Stage 1:** when a PR body claims a verification check passed, re-run that check against the PR HEAD before approving. If the claim is false, post the actual exit code + error output verbatim and request changes. Don't soft-pedal it.
+- This rule applies symmetrically to vitest, lint, and any other "passes" claim.

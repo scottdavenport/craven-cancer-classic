@@ -5,7 +5,7 @@
  * They fail against current main (copy unchanged).
  *
  * Areas covered:
- * 1. SponsorDrawer — confirm dialog description + toast on delete
+ * 1. SponsorModal — confirm dialog description + toast on delete
  * 2. ScoreManager — confirm dialog title + description (with year interpolation)
  * 3. SponsorshipManager — cascade warning copy ("(no package)", no "Continue?")
  * 4. SponsorshipManager — single-delete dialog description (no linked sponsors path)
@@ -264,11 +264,11 @@ beforeEach(() => {
 });
 
 // ===========================================================================
-// Area 1 — SponsorDrawer
+// Area 1 — SponsorModal
 // ===========================================================================
 
 describe("Area 1 — SponsorModal delete copy", () => {
-  function renderDrawer(sponsor: Sponsor) {
+  function renderSponsorModal(sponsor: Sponsor) {
     return render(
       <SponsorModal
         open={true}
@@ -285,7 +285,7 @@ describe("Area 1 — SponsorModal delete copy", () => {
     it("says 'moved to Trash' and mentions restore path (Bolt ships C2 variant)", async () => {
       const user = userEvent.setup();
       const sponsor = makeSponsor();
-      renderDrawer(sponsor);
+      renderSponsorModal(sponsor);
 
       // Wait for contacts to load (getSponsorContacts mock resolves).
       // Bolt renamed the trigger button from "Delete sponsor" to "Move to Trash"
@@ -309,7 +309,7 @@ describe("Area 1 — SponsorModal delete copy", () => {
     it("does NOT say 'This action cannot be undone' (OLD copy must be gone)", async () => {
       const user = userEvent.setup();
       const sponsor = makeSponsor();
-      renderDrawer(sponsor);
+      renderSponsorModal(sponsor);
 
       await waitFor(() =>
         expect(screen.queryByRole("button", { name: /move to trash/i })).toBeInTheDocument()
@@ -330,7 +330,7 @@ describe("Area 1 — SponsorModal delete copy", () => {
       const user = userEvent.setup();
       mockDeleteSponsor.mockResolvedValue({});
       const sponsor = makeSponsor();
-      renderDrawer(sponsor);
+      renderSponsorModal(sponsor);
 
       await waitFor(() =>
         expect(screen.queryByRole("button", { name: /move to trash/i })).toBeInTheDocument()
@@ -366,7 +366,7 @@ describe("Area 1 — SponsorModal delete copy", () => {
       const user = userEvent.setup();
       mockDeleteSponsor.mockResolvedValue({});
       const sponsor = makeSponsor();
-      renderDrawer(sponsor);
+      renderSponsorModal(sponsor);
 
       await waitFor(() =>
         expect(screen.queryByRole("button", { name: /move to trash/i })).toBeInTheDocument()

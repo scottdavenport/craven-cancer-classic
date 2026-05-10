@@ -208,7 +208,11 @@ test.describe("Sprint 31 — bulk Remove type with blocked rows Alert", () => {
     }
     // Cap at 3 rows — team-filtered lists re-render after each selection
     // (startTransition), so the visible row count may shrink during the loop.
-    const selectCount = Math.min(count, 3);
+    // #410-B: team-filtered list re-renders via startTransition after each checkbox
+    // selection; nth(i) indexes a different element after re-render, causing the
+    // click to timeout. Limit to a single click on nth(0) — sufficient to trigger
+    // the bulk-action bar and the blocked-rows Alert path (1 contact on a team is enough).
+    const selectCount = Math.min(count, 1);
     for (let i = 0; i < selectCount; i++) {
       // Re-evaluate current row count before each iteration — DOM may re-render.
       const currentCount = await page.locator("tbody [data-slot='checkbox']").count();

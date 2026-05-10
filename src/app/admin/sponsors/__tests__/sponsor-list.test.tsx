@@ -45,7 +45,7 @@ vi.mock("../sponsor-modal", () => ({
     onSuccess: () => void;
   }) =>
     open ? (
-      <div data-testid="sponsor-drawer" data-mode={mode} />
+      <div data-testid="sponsor-modal" data-mode={mode} />
     ) : null,
 }));
 
@@ -320,7 +320,7 @@ describe("SponsorList — PR B changes", () => {
 
       await user.click(screen.getByTestId("logo-thumbnail-trigger"));
 
-      expect(screen.queryByTestId("sponsor-drawer")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("sponsor-modal")).not.toBeInTheDocument();
     });
   });
 });

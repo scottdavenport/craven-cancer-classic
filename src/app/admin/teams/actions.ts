@@ -287,6 +287,7 @@ const escapeCSV = (value: string | number | boolean | null | undefined): string 
 };
 
 export async function exportTeamsCSV(year?: number): Promise<string> {
+  await requireAdmin();
   const teams = await getTeams(year);
 
   const header = "captain,session,player_2,player_3,player_4,payment_status,amount_paid_dollars,payment_method,payment_reference,date_paid";

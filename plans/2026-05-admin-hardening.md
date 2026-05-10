@@ -1,5 +1,5 @@
-# S38 — Admin Hardening
-**Milestone:** S38 — Admin Hardening (GitHub milestone #2)
+# admin-hardening
+**Milestone:** admin-hardening (GitHub milestone #2; renamed from `S38 — Admin Hardening` on 2026-05-10 when forge locked theme-kebab as canonical)
 **Target date:** 2026-05-16
 **Plan written:** 2026-05-10
 **Specialist:** Compass

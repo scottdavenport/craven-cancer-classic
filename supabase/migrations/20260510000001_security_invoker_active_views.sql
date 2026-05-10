@@ -7,8 +7,12 @@
 -- using the calling user's identity — honoring the same policies that would apply if
 -- the caller queried the base table directly. This is the Supabase-recommended
 -- defense-in-depth posture for views built atop RLS-protected tables (issue #389).
--- Current callers use the service role (RLS bypass) so behavior is unchanged today;
--- the fix closes the gap for future anon/authenticated callers.
+-- Admin server actions use the anon-key client with a cookie session
+-- (src/lib/supabase/server.ts) — NOT the service role. They reach admin routes via
+-- the requireAdmin() gate (src/lib/supabase/admin.ts) which satisfies the is_admin()
+-- RLS policy on the underlying tables. This migration is doing real work TODAY:
+-- security_invoker=true gates all callers via their own RLS identity, including the
+-- existing admin cookie-session callers. Not just future-proofing.
 --
 -- APPROACH: CREATE OR REPLACE VIEW public.<name> WITH (security_invoker option) AS <body>.
 -- SELECT bodies taken verbatim from pg_get_viewdef() on prod (queried 2026-05-10).

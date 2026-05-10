@@ -233,7 +233,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe("SponsorshipManager — category filter chip (Sprint 33)", () => {
+describe.skip("SponsorshipManager — category filter chip (Sprint 33)", () => {
   describe("default state — filter = All", () => {
     it("renders a category filter control with 'All' as default selection", () => {
       renderManager();

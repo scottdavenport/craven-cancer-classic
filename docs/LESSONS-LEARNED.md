@@ -153,3 +153,44 @@ When a builder/specialist (Spec, Bolt, Flux) claims `npx tsc --noEmit passes` or
 - **If your worktree doesn't have `node_modules`** (common in worktrees Spec creates), copy your edited file into the main repo, run tsc from there, then revert. Don't claim verification with no node_modules to verify against.
 - **Watchdog Stage 1:** when a PR body claims a verification check passed, re-run that check against the PR HEAD before approving. If the claim is false, post the actual exit code + error output verbatim and request changes. Don't soft-pedal it.
 - This rule applies symmetrically to vitest, lint, and any other "passes" claim.
+
+---
+
+## Rule: Module-level `Date.now()` seeds break Playwright `--repeat-each` isolation
+
+Never assign a seed, timestamp, or unique-per-run identifier at module scope in a Playwright spec when it's used to namespace test data (e.g. `SEED_TAG = Date.now()` used as a contact-name suffix to keep runs from colliding). Move it inside the test, into closure scope.
+
+**Why:** Module-level bindings evaluate ONCE per Playwright worker process. With `--repeat-each=N` in a single worker, all N invocations of the test share the same seed value. Any test data created with that seed will collide across runs — earlier-run rows are still present when the next run starts, so unique-key constraints fire, "first contact" selectors land on a stale row, and the spec passes 1/10 or 4/10 with non-deterministic failure modes. Discovered in PR #427 (sprint e2e-stability, #410 chromium characterization): `tests/e2e/contact-bulk-delete.spec.ts` and `tests/e2e/contact-soft-delete-restore.spec.ts` both had module-level `SEED_TAG = Date.now()` and both failed under `--repeat-each=10`. Moving the assignment inside the test (closure-local) gave each invocation a fresh value and got both specs to 10/10 at workers=1.
+
+**How to apply:**
+- Grep new specs for module-scope `Date.now()`, `crypto.randomUUID()`, or `Math.random()` usage. Any match that gets used inside the test body is a per-worker shared-state hazard.
+- The fix is mechanical: move the assignment into the `test(...)` callback so each invocation gets a fresh closure value. Pattern:
+  ```ts
+  // BAD — module-level, shared across --repeat-each invocations:
+  const SEED_TAG = Date.now();
+  test("...", async ({ page }) => { /* uses SEED_TAG */ });
+
+  // GOOD — closure-local, fresh per invocation:
+  test("...", async ({ page }) => {
+    const SEED_TAG = Date.now();
+    /* uses SEED_TAG */
+  });
+  ```
+- This rule applies even when a spec "passes in CI" — CI runs at workers=1 with no `--repeat-each`, so the bug is invisible until someone runs the spec locally with `--repeat-each=N` for characterization. Land the fix preemptively whenever the pattern is spotted, not when a flake reproduces.
+
+---
+
+## Rule: Test-side fixes that stall at "improved but not 100%" need source-side investigation
+
+When a Playwright spec's pass rate climbs from baseline-flaky to roughly 3/5 with actionability guards (`waitFor`, `force: true`, hover-deactivation, selector tightening) but won't get to 5/5, the remaining failures are almost always source-side — DOM hit-test interception, a React state race, or a CSS transition the test can't synchronize against. Pile no more test-side workarounds; spawn a source-side investigation.
+
+**Why:** Sprint e2e-stability (PR #422) shipped five layered test-side guards to fix `contact-bulk-delete.spec.ts` webkit flakes — `waitFor({ state: 'visible' })` on the checkbox, `page.mouse.move(0, 0)` to deactivate prior hover state, exact-match `getByRole("button", { name: "Delete" })` for the bulk-action bar, dialog scoping via `filter({ hasText: /soft-delete/i })`, 200ms settle gaps. Local `--repeat-each=5` webkit topped out at ~3/5 green. Diagnosis: webkit's hit-test was letting the RowActions wrapper `<div class="flex items-center justify-end gap-2">` at `contact-list.tsx:1021` intercept clicks meant for the per-row checkbox. `force: true` bypasses Playwright actionability but NOT browser-level pointer-event interception. PR #424 added a single class — `pointer-events-none` — to the wrapper div. CI E2E on PR #424 alone (without #422's test-side guards merged) hit chromium 45/45 + webkit 46/46. The source fix was the whole answer; the test-side guards became defense-in-depth.
+
+**How to apply:**
+- **Decision rule:** if four or more test-side mitigations are stacked on a single spec and pass rate is still < 90%, stop layering. Spawn Bolt/Flux to investigate the source.
+- **Look for these source-side patterns first:**
+  - Wrapper `<div>` around interactive children that does not carry `pointer-events-none` (intercepts clicks, especially in webkit's strict hit-test)
+  - Components using `startTransition` around state updates that the test then asserts on (transition not committed before the next tick — see issue #428)
+  - CSS transitions that webkit's `transitionend` listener doesn't fire reliably for (see "force: true is not a silver bullet" Rule above — `reducedMotion: "reduce"` on the webkit project is the right knob)
+- **Spec's boundary holds:** when the diagnosis lands in `src/`, Spec files a follow-up issue + ships whatever test-side improvement was possible. Spec does not touch source. This is what kept the e2e-stability sprint from sprawling: clear handoff (Spec → file issue → Bolt picks it up next wave).
+- **Don't defer the source fix to "next sprint" reflexively** — the default-bundling rule in `DELEGATION-POLICY.md` applies: same-class bug, mechanical fix, ≤30 min total → bundle into the current sprint. The e2e-stability sprint did this for #423 (1 CSS class on contacts) and #425 (same fix on 3 sibling admin lists).

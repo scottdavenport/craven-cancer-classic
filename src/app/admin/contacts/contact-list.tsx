@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useTransition } from "react";
+import { useState, useMemo, useTransition, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -133,6 +133,22 @@ function relativeTime(dateStr: string): string {
   const months = Math.floor(days / 30);
   if (months < 12) return rtf.format(-months, "month");
   return rtf.format(-Math.floor(months / 12), "year");
+}
+
+// RelativeTime: initializes with a stable locale date string on the server,
+// then updates to Intl.RelativeTimeFormat output after client mount to avoid
+// React hydration mismatch (server/client time divergence).
+function RelativeTime({ dateStr }: { dateStr: string }) {
+  const [display, setDisplay] = useState(() => {
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString();
+  });
+
+  useEffect(() => {
+    setDisplay(relativeTime(dateStr));
+  }, [dateStr]);
+
+  return <span>{display}</span>;
 }
 
 const DATA_HEADERS = ["Name", "Email", "Type", "Company", "Consent", "Added"];
@@ -997,7 +1013,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
 
                     {/* Added */}
                     <td className="px-4 py-3 text-[0.75rem] text-muted-foreground">
-                      {relativeTime(contact.created_at)}
+                      <RelativeTime dateStr={contact.created_at} />
                     </td>
 
                     {/* Row actions */}

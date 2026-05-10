@@ -51,3 +51,6 @@ node_modules/
 
 # Superpowers brainstorming scratch (visual companion mockups)
 .superpowers/
+
+# Claude Code local state (per-project session data, not for commit)
+.claude/

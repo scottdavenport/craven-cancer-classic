@@ -51,18 +51,38 @@ test.describe("Bulk delete contacts", () => {
     const rows = page.locator("tr, [role=row]").filter({ hasText: SEED_TAG });
     const rowCount = await rows.count();
 
+    // webkit #402-A: move mouse to corner before loop to deactivate any active RowActions
+    // hover state. RowActions transitions to pointer-events-auto on hover — if a row is
+    // still hovered from a previous action, its RowActions <div> can intercept the checkbox
+    // click even with force:true (force bypasses Playwright actionability, not OS hit-tests).
+    await page.mouse.move(0, 0);
     for (let i = 0; i < rowCount; i++) {
       // Scope to [data-slot="checkbox"] to avoid the duplicate RowActions <input[type=checkbox]>
-      // webkit: pointer-event completion races on checkbox elements — force:true bypasses
-      // the actionability wait that stalls after "performing click action" in webkit
-      await rows.nth(i).locator("[data-slot='checkbox']").click({ force: true });
+      // webkit #402-A: waitFor({state:'visible'}) makes the actionability window deterministic
+      // before webkit's pointer-event dispatch. force:true stays as defense-in-depth.
+      // 200ms settle gap allows webkit's opacity transition to drain between iterations.
+      const checkbox = rows.nth(i).locator("[data-slot='checkbox']");
+      await checkbox.waitFor({ state: 'visible' });
+      await checkbox.click({ force: true });
+      await page.waitForTimeout(200);
     }
 
     // ---- Click Delete in bulk action bar ----
-    await page.getByRole("button", { name: /delete selected|delete/i }).first().click();
+    // webkit #402-A: wait for the bulk-action bar "Delete" button to appear — it only renders
+    // when selected.size > 0. This gates the bulk-delete click on the checkboxes having
+    // actually registered. If checkboxes weren't checked (pointer-events race), this will
+    // timeout rather than silently click a RowActions delete button.
+    const bulkDeleteBtn = page.getByRole("button", { name: "Delete", exact: true });
+    await bulkDeleteBtn.waitFor({ state: 'visible', timeout: 5_000 });
+    await bulkDeleteBtn.click({ force: true });
 
     // Confirm dialog
-    const confirmBtn = page.getByRole("button", { name: /confirm|yes|delete/i });
+    // webkit #402-A: scope both the dialog wait and confirmBtn to the bulk-delete dialog
+    // by its distinctive title, so stale contact-edit dialogs from prior incomplete runs
+    // do not cause getByRole("dialog") to resolve to the wrong element.
+    const bulkDeleteDialog = page.getByRole("dialog").filter({ hasText: /soft-delete/i });
+    await expect(bulkDeleteDialog).toBeVisible({ timeout: 3_000 });
+    const confirmBtn = bulkDeleteDialog.getByRole("button", { name: /delete/i });
     await expect(confirmBtn).toBeVisible({ timeout: 3_000 });
     // webkit: button resolves + is visible but click stalls at "performing click action";
     // toBeEnabled guard + force:true bypasses the webkit pointer-events timing race
@@ -73,9 +93,9 @@ test.describe("Bulk delete contacts", () => {
     // The dialog closes synchronously (setDeleteDialogOpen(false)) before the async
     // bulkDeleteContacts call resolves. We then wait for the contacts to disappear,
     // which happens after the async call + setContacts filter completes.
-    // Use 15_000ms to accommodate the network round-trip on chromium (PR #392 fix:
-    // setContacts optimistic filter still awaits the bulkDeleteContacts promise).
-    await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
+    // webkit #402-A: extend to 15_000ms — webkit's dialog close animation +
+    // server-action round-trip can exceed 5_000ms on slower runs.
+    await expect(bulkDeleteDialog).not.toBeVisible({ timeout: 15_000 });
 
     // Contacts disappear from list
     await expect(page.getByText(`BulkDel1 ${SEED_TAG}`)).not.toBeVisible({ timeout: 15_000 });

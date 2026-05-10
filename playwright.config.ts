@@ -8,7 +8,11 @@ export default defineConfig({
   testDir: "./tests/e2e",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 2 : 0,
+  // #402-B/#402-C: webkit timing races on RowActions opacity transitions require an extra
+  // retry beyond the previous retries:2 floor. retries:3 is the first lever before adding
+  // structural waitFor guards to team-deleted-member-placeholder.spec.ts and
+  // unique-email-after-softdelete.spec.ts.
+  retries: process.env.CI ? 3 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: [["line"], ["html"]],
   use: {

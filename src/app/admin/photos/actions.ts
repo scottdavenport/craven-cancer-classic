@@ -45,6 +45,7 @@ const escapeCSV = (
 };
 
 export async function exportPhotosCSV(year?: number): Promise<string> {
+  await requireAdmin();
   const photos = await getPhotos(undefined, year);
 
   const header = "id,status,year,caption,uploaded_by_name,uploaded_by_email,image_url,created_at";

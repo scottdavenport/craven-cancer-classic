@@ -383,7 +383,7 @@ export function SponsorshipManager({
                         </span>
                       </TableCell>
                       <TableCell onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="pointer-events-none flex items-center justify-end gap-2">
                           <RowActions
                             editLabel={`Edit ${item.name || "sponsorship package"}`}
                             deleteLabel={`Delete ${item.name || "sponsorship package"}`}

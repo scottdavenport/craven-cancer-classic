@@ -449,7 +449,7 @@ export function SponsorList({ sponsors: initialSponsors, sponsorshipItems }: Spo
                           ${(sponsor.amount_paid_cents / 100).toLocaleString()}
                         </TableCell>
                         <TableCell className="w-24">
-                          <div className="flex items-center justify-end gap-2">
+                          <div className="pointer-events-none flex items-center justify-end gap-2">
                             <RowActions
                               editLabel={`Edit ${sponsor.name || "sponsor"}`}
                               deleteLabel={`Delete ${sponsor.name || "sponsor"}`}

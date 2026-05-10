@@ -493,7 +493,7 @@ export function TeamList({ teams: initialTeams, defaultFeeDollars }: TeamListPro
 
                     {/* Row actions — hover-reveal per design D6 */}
                     <TableCell className="px-4 py-3 w-32">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="pointer-events-none flex items-center justify-end gap-2">
                         <RowActions
                           editLabel={editLabel}
                           deleteLabel={deleteLabel}

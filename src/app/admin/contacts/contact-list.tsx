@@ -1018,7 +1018,7 @@ export function ContactList({ contacts: initialContacts, teams }: ContactListPro
 
                     {/* Row actions */}
                     <td className="px-4 py-3 w-24">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="pointer-events-none flex items-center justify-end gap-2">
                         <RowActions
                           editLabel={editLabel}
                           deleteLabel={deleteLabel}

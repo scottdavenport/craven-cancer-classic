@@ -81,10 +81,10 @@ describe("Checkbox — checked visual state", () => {
     expect(el!.className).toMatch(/\bbg-primary\b/);
   });
 
-  it("checked checkbox has border-brand class", () => {
+  it("checked checkbox has border-brand class (not hover:border-brand-dark)", () => {
     const { container } = render(<Checkbox aria-label="test" checked onCheckedChange={() => {}} />);
     const el = container.querySelector("[data-slot='checkbox']");
-    expect(el!.className).toContain("border-brand");
+    expect(el!.classList.contains("border-brand")).toBe(true);
   });
 
   it("checked checkbox renders a Check icon (lucide lucide-check class)", () => {

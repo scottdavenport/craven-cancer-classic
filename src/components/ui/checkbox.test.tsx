@@ -75,10 +75,10 @@ describe("Checkbox — unchecked visual state", () => {
 // ---------------------------------------------------------------------------
 
 describe("Checkbox — checked visual state", () => {
-  it("checked checkbox has bg-brand class", () => {
+  it("checked checkbox has bg-primary class", () => {
     const { container } = render(<Checkbox aria-label="test" checked onCheckedChange={() => {}} />);
     const el = container.querySelector("[data-slot='checkbox']");
-    expect(el!.className).toContain("bg-brand");
+    expect(el!.className).toMatch(/\bbg-primary\b/);
   });
 
   it("checked checkbox has border-brand class", () => {
@@ -105,10 +105,10 @@ describe("Checkbox — checked visual state", () => {
 // ---------------------------------------------------------------------------
 
 describe("Checkbox — indeterminate visual state", () => {
-  it("indeterminate checkbox has bg-brand class", () => {
+  it("indeterminate checkbox has bg-primary class", () => {
     const { container } = render(<Checkbox aria-label="test" indeterminate onCheckedChange={() => {}} />);
     const el = container.querySelector("[data-slot='checkbox']");
-    expect(el!.className).toContain("bg-brand");
+    expect(el!.className).toMatch(/\bbg-primary\b/);
   });
 
   it("indeterminate checkbox renders a Minus icon (lucide lucide-minus class)", () => {

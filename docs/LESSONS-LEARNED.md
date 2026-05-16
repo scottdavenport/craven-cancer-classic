@@ -194,3 +194,29 @@ When a Playwright spec's pass rate climbs from baseline-flaky to roughly 3/5 wit
   - CSS transitions that webkit's `transitionend` listener doesn't fire reliably for (see "force: true is not a silver bullet" Rule above — `reducedMotion: "reduce"` on the webkit project is the right knob)
 - **Spec's boundary holds:** when the diagnosis lands in `src/`, Spec files a follow-up issue + ships whatever test-side improvement was possible. Spec does not touch source. This is what kept the e2e-stability sprint from sprawling: clear handoff (Spec → file issue → Bolt picks it up next wave).
 - **Don't defer the source fix to "next sprint" reflexively** — the default-bundling rule in `DELEGATION-POLICY.md` applies: same-class bug, mechanical fix, ≤30 min total → bundle into the current sprint. The e2e-stability sprint did this for #423 (1 CSS class on contacts) and #425 (same fix on 3 sibling admin lists).
+
+## e2e-cleanup (2026-05-16)
+
+### Shipped
+- **PR #437** (Wave 1) — `tests/e2e/fixtures/cleanup-helper.ts` with `serviceRoleClient` + `cleanupTestData(seedTag?)` + `registerOrphan` (Flux)
+- **PR #438** (Wave 1) — `scripts/e2e-scrub.ts` + `scripts/e2e-verify-clean.ts` + package.json wiring; discovered Supabase's PostgREST 1000-row pagination limit live against prod (Flux)
+- **PR #440** (Wave 2) — `e2e:scrub:ci` + `e2e:verify-clean` as `if: always()` CI post-steps (Flux)
+- **PR #441** (Wave 2) — migrated all 15 e2e specs to `cleanupTestData(SEED_TAG)`; included Forge-direct fix for Watchdog-caught Rule 159 regression (SEED_TAG → RUN_ID split for retry isolation)
+- **PR #443** (mid-sprint #442) — `withRetry` helper + chunk-size 500→100 fix after Watchdog CI run revealed PostgREST URL-length limit was deterministic, not transient (Flux + Forge-direct chunk fix)
+- **PR #446** (Wave 3) — `_lint-marker-convention.spec.ts` + violation fixture (Spec); ran one-time prod scrub; verify-clean exits 0 end-to-end
+- **PR #447** (post-Wave-3 hardening) — broadened scrub + lint to `%@example.com` after live SQL surfaced 1,624 `bulk-del-*@example.com` rows that escaped the e2e-* convention (Flux)
+- **PR #448** (chore) — restored sprint spec + plan that were lost when local commits weren't pushed before `git reset --hard origin/main`
+
+### Slipped
+- **#439** (no-seedTag pagination tightening, p2) — deferred to next milestone; latent bug in dead-code path
+- **#444** (contact-bulk-delete dialog timeout regression, p1) — pollution-load hypothesis disproved by CI run on PR #446 (clean DB, still flaky); structural fix needed
+- **#445** (race-residual: late-test contact written between snapshot and `.ilike` sweep, 0.03% miss rate, p2) — filed by Watchdog during #443 review
+
+### Lessons
+- **Mocked unit tests miss request-shape bugs.** PR #437's `vi.mock` cleanup-helper tests passed cleanly. PR #438's local-prod testing surfaced the 1000-row PostgREST pagination limit. PR #443's CI run surfaced the 500-UUID `.in()` URL-length deterministic failure. Pattern: when a helper's primary risk surface is "interacts with external system X under real-payload sizes," mocked tests have a known coverage gap; live exercise against the real system is load-bearing.
+- **Module-level SEED_TAG breaks under Playwright retries (Rule 159 reaffirmed).** Spec's first migration moved `SEED_TAG` to module scope; under retries the same emails recur and prior-attempt rows collide with current-attempt assertions. Resolution: module-level SEED_TAG for `afterAll(cleanupTestData(SEED_TAG))` matching (broad wildcard) + per-test RUN_ID generated inside `test()` callback for fixture identity (regenerated on retry).
+- **Marker-by-name convention only catches NEW pollution.** The `e2e-%@example.com` scrub pattern shipped clean but missed 1,624 historical rows with `bulk-del-<idx>-<Date.now()>@example.com` emails predating the convention. Post-hoc broadening to `%@example.com` (with rationale: this project's prod has zero real `@example.com` users) was needed. Lesson: marker convention is necessary but not sufficient — a one-time legacy sweep + broader catch-all in the scrub is the load-bearing complement.
+- **Chunk size for `.in()` is request-shape, not transient.** Initial diagnosis of "fetch failed" assumed undici network blip. Watchdog's CI verification proved the failure was deterministic: 500-UUID `.in()` produces a ~18KB URL that PostgREST rejects. The retry helper helped but didn't fix the underlying shape. 100-UUID chunks (~4KB) leave 3× margin on the URL limit observed locally (300-400 ID ceiling).
+- **CI safety-net effectiveness is itself testable.** PR #440's `if: always()` post-steps were the load-bearing assertion of the sprint. Watchdog verified they fire in BOTH success and failure paths during its review CI runs. Sprint goal verification was therefore on the script + CI integration, not just on test ACs.
+- **`git reset --hard origin/main` after unpushed local commits is a load-bearing footgun.** Forge committed the sprint spec doc + Compass's plan file directly to local main, then did `git reset --hard origin/main` to sync; the local commits were dropped silently. Reflog rescued them, but the discovery point was Gate 6 of `/close-sprint` (the plan file was missing). Process: never commit substantive artifacts directly to local main without pushing first OR opening a PR; use a branch.
+- **Override path for Watchdog REQUEST_CHANGES.** PR #441's bulk-delete spec migration was provably correct, but CI red on a separate pre-existing regression (#444). Watchdog's review body explicitly recommended override. A third-pass review with explicit override justification cleared the merge gate. Pattern: Watchdog can issue an override approval when blocking failure is provably unrelated to the diff under review.

@@ -91,6 +91,53 @@ const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
 });
 
 // ---------------------------------------------------------------------------
+// Retry helper — wraps Supabase query lambdas with exponential backoff.
+// Retries ONLY on transient network errors (fetch failed, ECONNRESET, etc.)
+// and 5xx. Hard errors (4xx, auth, schema) are surfaced immediately.
+//
+// NOTE: op returns `any` (not Promise<...>) because Supabase's
+// PostgrestFilterBuilder is a thenable but not a true Promise — the TS
+// generic cannot match its structural type. We cast at the call site.
+// ---------------------------------------------------------------------------
+const TRANSIENT_PATTERN = /fetch failed|ECONNRESET|ETIMEDOUT|ENOTFOUND/i;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function withRetry(
+  op: () => any,
+  label: string,
+  maxAttempts = 3
+): Promise<{ data: any; error: any }> {
+  let lastError: any;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const result = await op();
+      if (result.error) {
+        const isTransient = TRANSIENT_PATTERN.test(
+          result.error.message ?? ""
+        );
+        if (!isTransient || attempt === maxAttempts) return result;
+        lastError = result.error;
+      } else {
+        return result;
+      }
+    } catch (err: any) {
+      const isTransient = TRANSIENT_PATTERN.test(err?.message ?? "");
+      if (!isTransient || attempt === maxAttempts) throw err;
+      lastError = err;
+    }
+    const delayMs = 500 * Math.pow(2, attempt - 1); // 500ms, 1s, 2s
+    console.warn(
+      `[retry] ${label} attempt ${attempt}/${maxAttempts} failed: ${
+        lastError?.message ?? "fetch failed"
+      }. Retrying in ${delayMs}ms...`
+    );
+    await new Promise((r) => setTimeout(r, delayMs));
+  }
+  // unreachable — loop always returns or throws before exhausting, but TS needs it
+  throw lastError ?? new Error("withRetry: exhausted");
+}
+
+// ---------------------------------------------------------------------------
 // Marker pattern
 // ---------------------------------------------------------------------------
 const CONTACT_EMAIL_PATTERN = "e2e-%@example.com";
@@ -107,64 +154,95 @@ interface TableCounts {
 
 async function countE2eRows(): Promise<TableCounts> {
   // contacts — direct email match
-  const { count: contactCount, error: contactErr } = await supabase
-    .from("contacts")
-    .select("*", { count: "exact", head: true })
-    .ilike("email", CONTACT_EMAIL_PATTERN);
-
-  if (contactErr) {
-    throw new Error(`Failed to count contacts: ${contactErr.message}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const contactResult: any = await withRetry(
+    () =>
+      supabase
+        .from("contacts")
+        .select("*", { count: "exact", head: true })
+        .ilike("email", CONTACT_EMAIL_PATTERN),
+    "count contacts"
+  );
+  if (contactResult.error) {
+    throw new Error(
+      `e2e-scrub: count contacts permanently failed. ` +
+        `host=${new URL(SUPABASE_URL!).host}. ` +
+        `Last error: ${contactResult.error.name ?? "Error"}: ${contactResult.error.message}`
+    );
   }
-
-  const contacts = contactCount ?? 0;
+  const contacts: number = contactResult.count ?? 0;
   if (contacts === 0) {
     return { contacts: 0, teams: 0, team_members: 0, scores: 0 };
   }
 
   // teams — captain email join
-  const { count: teamCount, error: teamErr } = await supabase
-    .from("teams")
-    .select("id, contacts!captain_contact_id!inner(email)", {
-      count: "exact",
-      head: true,
-    })
-    .ilike("contacts.email", CONTACT_EMAIL_PATTERN);
-
-  if (teamErr) {
-    throw new Error(`Failed to count teams: ${teamErr.message}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const teamResult: any = await withRetry(
+    () =>
+      supabase
+        .from("teams")
+        .select("id, contacts!captain_contact_id!inner(email)", {
+          count: "exact",
+          head: true,
+        })
+        .ilike("contacts.email", CONTACT_EMAIL_PATTERN),
+    "count teams"
+  );
+  if (teamResult.error) {
+    throw new Error(
+      `e2e-scrub: count teams permanently failed. ` +
+        `host=${new URL(SUPABASE_URL!).host}. ` +
+        `Last error: ${teamResult.error.name ?? "Error"}: ${teamResult.error.message}`
+    );
   }
 
   // team_members — contact email join
-  const { count: memberCount, error: memberErr } = await supabase
-    .from("team_members")
-    .select("id, contacts!contact_id!inner(email)", {
-      count: "exact",
-      head: true,
-    })
-    .ilike("contacts.email", CONTACT_EMAIL_PATTERN);
-
-  if (memberErr) {
-    throw new Error(`Failed to count team_members: ${memberErr.message}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const memberResult: any = await withRetry(
+    () =>
+      supabase
+        .from("team_members")
+        .select("id, contacts!contact_id!inner(email)", {
+          count: "exact",
+          head: true,
+        })
+        .ilike("contacts.email", CONTACT_EMAIL_PATTERN),
+    "count team_members"
+  );
+  if (memberResult.error) {
+    throw new Error(
+      `e2e-scrub: count team_members permanently failed. ` +
+        `host=${new URL(SUPABASE_URL!).host}. ` +
+        `Last error: ${memberResult.error.name ?? "Error"}: ${memberResult.error.message}`
+    );
   }
 
   // scores — team → captain contact join
-  const { count: scoreCount, error: scoreErr } = await supabase
-    .from("scores")
-    .select(
-      "id, teams!team_id!inner(contacts!captain_contact_id!inner(email))",
-      { count: "exact", head: true }
-    )
-    .ilike("teams.contacts.email", CONTACT_EMAIL_PATTERN);
-
-  if (scoreErr) {
-    throw new Error(`Failed to count scores: ${scoreErr.message}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scoreResult: any = await withRetry(
+    () =>
+      supabase
+        .from("scores")
+        .select(
+          "id, teams!team_id!inner(contacts!captain_contact_id!inner(email))",
+          { count: "exact", head: true }
+        )
+        .ilike("teams.contacts.email", CONTACT_EMAIL_PATTERN),
+    "count scores"
+  );
+  if (scoreResult.error) {
+    throw new Error(
+      `e2e-scrub: count scores permanently failed. ` +
+        `host=${new URL(SUPABASE_URL!).host}. ` +
+        `Last error: ${scoreResult.error.name ?? "Error"}: ${scoreResult.error.message}`
+    );
   }
 
   return {
     contacts,
-    teams: teamCount ?? 0,
-    team_members: memberCount ?? 0,
-    scores: scoreCount ?? 0,
+    teams: teamResult.count ?? 0,
+    team_members: memberResult.count ?? 0,
+    scores: scoreResult.count ?? 0,
   };
 }
 
@@ -208,17 +286,25 @@ async function fetchAllContactIds(): Promise<string[]> {
   let from = 0;
   const PAGE = 500;
   while (true) {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id")
-      .ilike("email", CONTACT_EMAIL_PATTERN)
-      .range(from, from + PAGE - 1);
+    const { data, error } = await withRetry(
+      () =>
+        supabase
+          .from("contacts")
+          .select("id")
+          .ilike("email", CONTACT_EMAIL_PATTERN)
+          .range(from, from + PAGE - 1),
+      `fetch contact IDs page ${from}`
+    );
 
     if (error) {
-      throw new Error(`Failed to fetch contact IDs (page ${from}): ${error.message}`);
+      throw new Error(
+        `e2e-scrub: fetch contact IDs page ${from} permanently failed after 3 attempts. ` +
+          `host=${new URL(SUPABASE_URL!).host}, page_start=${from}, page_size=${PAGE}. ` +
+          `Last error: ${error.name ?? "Error"}: ${error.message}`
+      );
     }
 
-    ids.push(...(data ?? []).map((r) => r.id));
+    ids.push(...(data ?? []).map((r: { id: string }) => r.id));
     if (!data || data.length < PAGE) break;
     from += PAGE;
   }
@@ -227,18 +313,30 @@ async function fetchAllContactIds(): Promise<string[]> {
 
 async function fetchAllTeamIds(contactIds: string[]): Promise<string[]> {
   const ids: string[] = [];
-  const CHUNK = 500;
+  // CHUNK = 100 keeps `.in()` URL length under ~4KB (100 UUIDs × ~37 chars each).
+  // Was 500; PR #443 review surfaced a deterministic CI failure on chunk 0 due to
+  // URL/payload limit on Supabase PostgREST. Local repro failed at ~300-400 IDs;
+  // 100 leaves ~3x margin. The retry helper stays as transient-error defense.
+  const CHUNK = 100;
   for (let i = 0; i < contactIds.length; i += CHUNK) {
     const chunk = contactIds.slice(i, i + CHUNK);
-    const { data, error } = await supabase
-      .from("teams")
-      .select("id")
-      .in("captain_contact_id", chunk);
+    const { data, error } = await withRetry(
+      () =>
+        supabase
+          .from("teams")
+          .select("id")
+          .in("captain_contact_id", chunk),
+      `fetch team IDs chunk ${i}`
+    );
 
     if (error) {
-      throw new Error(`Failed to fetch team IDs (chunk ${i}): ${error.message}`);
+      throw new Error(
+        `e2e-scrub: fetch team IDs chunk ${i} permanently failed after 3 attempts. ` +
+          `host=${new URL(SUPABASE_URL!).host}, chunk_index=${i}, chunk_size=${chunk.length}. ` +
+          `Last error: ${error.name ?? "Error"}: ${error.message}`
+      );
     }
-    ids.push(...(data ?? []).map((r) => r.id));
+    ids.push(...(data ?? []).map((r: { id: string }) => r.id));
   }
   return ids;
 }
@@ -258,15 +356,20 @@ async function deleteE2eRows(): Promise<void> {
   console.log("\nDeleting rows...");
 
   // 1. scores (FK → teams.id) — delete in chunks
-  const CHUNK = 500;
+  // See fetchAllTeamIds() for the rationale on 100.
+  const CHUNK = 100;
   for (let i = 0; i < teamIds.length; i += CHUNK) {
     const chunk = teamIds.slice(i, i + CHUNK);
-    const { error } = await supabase
-      .from("scores")
-      .delete()
-      .in("team_id", chunk);
+    const { error } = await withRetry(
+      () => supabase.from("scores").delete().in("team_id", chunk),
+      `delete scores chunk ${i}`
+    );
     if (error) {
-      throw new Error(`Failed to delete scores (chunk ${i}): ${error.message}`);
+      throw new Error(
+        `e2e-scrub: delete scores chunk ${i} permanently failed after 3 attempts. ` +
+          `host=${new URL(SUPABASE_URL!).host}, chunk_index=${i}, chunk_size=${chunk.length}. ` +
+          `Last error: ${error.name ?? "Error"}: ${error.message}`
+      );
     }
   }
   console.log("  scores deleted");
@@ -274,13 +377,15 @@ async function deleteE2eRows(): Promise<void> {
   // 2. team_members (FK → contacts.id) — delete in chunks
   for (let i = 0; i < contactIds.length; i += CHUNK) {
     const chunk = contactIds.slice(i, i + CHUNK);
-    const { error } = await supabase
-      .from("team_members")
-      .delete()
-      .in("contact_id", chunk);
+    const { error } = await withRetry(
+      () => supabase.from("team_members").delete().in("contact_id", chunk),
+      `delete team_members chunk ${i}`
+    );
     if (error) {
       throw new Error(
-        `Failed to delete team_members (chunk ${i}): ${error.message}`
+        `e2e-scrub: delete team_members chunk ${i} permanently failed after 3 attempts. ` +
+          `host=${new URL(SUPABASE_URL!).host}, chunk_index=${i}, chunk_size=${chunk.length}. ` +
+          `Last error: ${error.name ?? "Error"}: ${error.message}`
       );
     }
   }
@@ -289,24 +394,37 @@ async function deleteE2eRows(): Promise<void> {
   // 3. teams (FK → contacts.id as captain_contact_id) — delete in chunks
   for (let i = 0; i < contactIds.length; i += CHUNK) {
     const chunk = contactIds.slice(i, i + CHUNK);
-    const { error } = await supabase
-      .from("teams")
-      .delete()
-      .in("captain_contact_id", chunk);
+    const { error } = await withRetry(
+      () =>
+        supabase.from("teams").delete().in("captain_contact_id", chunk),
+      `delete teams chunk ${i}`
+    );
     if (error) {
-      throw new Error(`Failed to delete teams (chunk ${i}): ${error.message}`);
+      throw new Error(
+        `e2e-scrub: delete teams chunk ${i} permanently failed after 3 attempts. ` +
+          `host=${new URL(SUPABASE_URL!).host}, chunk_index=${i}, chunk_size=${chunk.length}. ` +
+          `Last error: ${error.name ?? "Error"}: ${error.message}`
+      );
     }
   }
   console.log("  teams deleted");
 
   // 4. contacts (marker anchor — hard-delete ignores deleted_at)
   // ilike delete operates on the whole table; Supabase handles it server-side
-  const { error: contactErr } = await supabase
-    .from("contacts")
-    .delete()
-    .ilike("email", CONTACT_EMAIL_PATTERN);
+  const { error: contactErr } = await withRetry(
+    () =>
+      supabase
+        .from("contacts")
+        .delete()
+        .ilike("email", CONTACT_EMAIL_PATTERN),
+    "delete contacts"
+  );
   if (contactErr) {
-    throw new Error(`Failed to delete contacts: ${contactErr.message}`);
+    throw new Error(
+      `e2e-scrub: delete contacts permanently failed after 3 attempts. ` +
+        `host=${new URL(SUPABASE_URL!).host}. ` +
+        `Last error: ${contactErr.name ?? "Error"}: ${contactErr.message}`
+    );
   }
   console.log("  contacts deleted");
 }

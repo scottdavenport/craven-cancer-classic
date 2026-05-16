@@ -40,13 +40,13 @@ curl -s "$NEXT_PUBLIC_SUPABASE_URL/rest/v1/contacts?limit=1" \
 
 ---
 
-## e2e test data accumulates in prod (e2e-* rows not cleaned up)
+## e2e test data accumulates in prod (rows not cleaned up)
 
-**Symptom:** `npm run e2e:verify-clean` exits non-zero; e2e-* rows found in prod tables.
+**Symptom:** `npm run e2e:verify-clean` exits non-zero; test pollution rows found in prod tables.
 
 **Diagnostic command:**
 ```bash
-# Count e2e rows in each tracked table (run from project root with service-role key)
+# Count rows for both scrub paths (run from project root with service-role key)
 npx tsx scripts/e2e-verify-clean.ts
 ```
 
@@ -54,5 +54,26 @@ npx tsx scripts/e2e-verify-clean.ts
 1. Run one-time manual scrub: `npm run e2e:scrub`.
 2. If scrub fails, check the partial-failure runbook entry above.
 3. Verify all 15 e2e specs have `afterAll(() => cleanupTestData(SEED_TAG))` wired.
+4. Verify the lint guard passes: `npx playwright test tests/e2e/_lint-marker-convention.spec.ts --project=chromium`
 
-**Escalation:** If scrub deletes 0 rows but verify-clean still fails, the marker pattern may have drifted — check that test emails match `e2e-%@example.com`.
+**Escalation:** If scrub deletes 0 rows but verify-clean still fails, check both scrub paths:
+- Path A (`%@example.com` email pattern) — any contact with an @example.com email
+- Path B (NULL-email BulkDel-name pattern) — contacts with NULL email + `BulkDel%` first_name + `bulk-del-%` last_name
+
+---
+
+## Non-`e2e-${SEED_TAG}`-prefixed fixture email leaks into a spec
+
+**Symptom:** `npx playwright test tests/e2e/_lint-marker-convention.spec.ts` fails with "does not start with e2e-${...} interpolation".
+
+**Diagnostic command:**
+```bash
+grep -n "@example.com" tests/e2e/<failing-spec>.spec.ts
+```
+
+**Remediation:**
+1. Find the offending fixture string (e.g., `` `bulk-del-${idx}@example.com` ``).
+2. Rename it to follow the convention: `` `e2e-${SEED_TAG}-${runId}-bulk-del-${idx}@example.com` ``.
+3. Re-run the lint spec to confirm it passes.
+
+**Escalation:** If the spec is intentionally using a non-standard domain (e.g., for a third-party integration test), file a priority:p2 issue to discuss an exception path.

@@ -427,5 +427,53 @@ describe.skipIf(!RUN_INTEGRATION)(
         .delete()
         .in("email", testEmails);
     });
+
+    /**
+     * Scenario (c): broader scrub pattern catches both e2e-* AND bulk-del-* rows.
+     *
+     * Seeds:
+     *   - 1 standard e2e-foo@example.com row (path A, e2e- prefix)
+     *   - 1 bulk-del-1-12345@example.com row (path A, non-e2e prefix — legacy pattern)
+     *   - 1 NULL-email BulkDel-name row (path B)
+     *
+     * Asserts all 3 are deleted by scrub:ci, and verify-clean exits 0 afterward.
+     */
+    it("scenario (c): scrub catches both @example.com and NULL-email BulkDel rows", async () => {
+      const { createClient } = await import("@supabase/supabase-js");
+      const supabase = createClient(LOCAL_URL, LOCAL_SERVICE_KEY, {
+        auth: { persistSession: false },
+      });
+
+      // Seed path A — e2e-style email
+      const { error: e2eInsertErr } = await supabase
+        .from("contacts")
+        .insert([{ email: "e2e-smoke-c-foo@example.com", first_name: "Smoke", last_name: "C-E2E" }]);
+      expect(e2eInsertErr).toBeNull();
+
+      // Seed path A — legacy bulk-del-style email (no e2e- prefix)
+      const { error: bulkDelEmailInsertErr } = await supabase
+        .from("contacts")
+        .insert([{ email: "bulk-del-1-12345@example.com", first_name: "Smoke", last_name: "C-BulkDelEmail" }]);
+      expect(bulkDelEmailInsertErr).toBeNull();
+
+      // Seed path B — NULL email with BulkDel-style names
+      const { error: nullEmailInsertErr } = await supabase
+        .from("contacts")
+        .insert([{ email: null, first_name: "BulkDel1", last_name: "bulk-del-12345" }]);
+      expect(nullEmailInsertErr).toBeNull();
+
+      // Run scrub in CI mode (--yes) — must delete all 3
+      const scrubResult = runScript("e2e-scrub.ts", ["--yes"], sharedEnv);
+      expect(scrubResult.status).toBe(0);
+      const scrubOutput = scrubResult.stdout + scrubResult.stderr;
+      // Both paths should appear in the pre-scrub summary
+      expect(scrubOutput).toContain("path A");
+      expect(scrubOutput).toContain("path B");
+
+      // Run verify-clean — must exit 0 (all rows gone)
+      const verifyResult = runScript("e2e-verify-clean.ts", [], sharedEnv);
+      expect(verifyResult.status).toBe(0);
+      expect(verifyResult.stdout).toContain("DB is clean");
+    });
   }
 );

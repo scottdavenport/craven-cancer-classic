@@ -24,8 +24,13 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
 
-const TIMESTAMP = Date.now();
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 // ---------------------------------------------------------------------------
 // Helpers — use Page type from Playwright directly
@@ -74,7 +79,7 @@ async function softDeleteContact(page: Page, fullName: string) {
 
 test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   test("checks Player + Sponsor, saves, list shows both type chips", async ({ adminPage: page }) => {
-    const multiTypeEmail = `e2e-multi-type-${TIMESTAMP}@example.com`;
+    const multiTypeEmail = `e2e-${SEED_TAG}-multi-type@example.com`;
     await openAddContactModal(page);
     await fillBasicFields(page, {
       firstName: "Multi",
@@ -106,7 +111,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   // ---------------------------------------------------------------------------
 
   test("checks Volunteer only — Shirt Size section visible, Handicap section NOT visible", async ({ adminPage: page }) => {
-    const volunteerEmail = `e2e-volunteer-${TIMESTAMP}@example.com`;
+    const volunteerEmail = `e2e-${SEED_TAG}-volunteer@example.com`;
     await openAddContactModal(page);
     await fillBasicFields(page, {
       firstName: "Val",
@@ -135,7 +140,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   // ---------------------------------------------------------------------------
 
   test("Player + Volunteer checked — only one Shirt Size field is rendered", async ({ adminPage: page }) => {
-    const playerVolEmail = `e2e-player-vol-${TIMESTAMP}@example.com`;
+    const playerVolEmail = `e2e-${SEED_TAG}-player-vol@example.com`;
     await openAddContactModal(page);
     await fillBasicFields(page, {
       firstName: "PVol",
@@ -169,7 +174,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await fillBasicFields(page, {
       firstName: "Don",
       lastName: "DonorWall",
-      email: `e2e-donor-${TIMESTAMP}@example.com`,
+      email: `e2e-${SEED_TAG}-donor@example.com`,
     });
 
     await page.getByRole("switch", { name: /toggle donor role/i }).check();
@@ -204,7 +209,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   // ---------------------------------------------------------------------------
 
   test("recognition_name blank, show_on_wall true — saves with empty recognition_name", async ({ adminPage: page }) => {
-    const blankRecogEmail = `e2e-blank-recog-${TIMESTAMP}@example.com`;
+    const blankRecogEmail = `e2e-${SEED_TAG}-blank-recog@example.com`;
     await openAddContactModal(page);
     await fillBasicFields(page, {
       firstName: "Blank",
@@ -252,7 +257,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await fillBasicFields(page, {
       firstName: "Savegate",
       lastName: "Test",
-      email: `e2e-savegate-${TIMESTAMP}@example.com`,
+      email: `e2e-${SEED_TAG}-savegate@example.com`,
     });
 
     // No type selected yet — Create must be disabled
@@ -278,6 +283,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   // ---------------------------------------------------------------------------
 
   test("uncheck Player, re-check Player — Handicap and Shirt Size restore from DB", async ({ adminPage: page }) => {
+    const preserveEmail = `e2e-${SEED_TAG}-preserve@example.com`;
     const PRESERVE_FULL = "Preserve Player";
 
     // Create contact with Player type, handicap=12, shirt_size=L
@@ -285,7 +291,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await fillBasicFields(page, {
       firstName: "Preserve",
       lastName: "Player",
-      email: `e2e-preserve-${TIMESTAMP}@example.com`,
+      email: preserveEmail,
     });
 
     await page.getByRole("switch", { name: /toggle player role/i }).check();
@@ -304,9 +310,8 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await page.getByRole("button", { name: "Create", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible({ timeout: 5_000 });
 
-    // Scope re-opens to the timestamped email row to avoid strict-mode collisions
+    // Scope re-opens to the SEED_TAG email row to avoid strict-mode collisions
     // from prior runs leaving "Preserve Player" contacts in the list.
-    const preserveEmail = `e2e-preserve-${TIMESTAMP}@example.com`;
     const preserveRow = page.getByRole("row").filter({ hasText: preserveEmail });
 
     // Re-open and uncheck Player
@@ -357,7 +362,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   // ---------------------------------------------------------------------------
 
   test("save with types: ['volunteer'] — round-trips through the modal", async ({ adminPage: page }) => {
-    const volEmail = `e2e-vol-rt-${TIMESTAMP}@example.com`;
+    const volEmail = `e2e-${SEED_TAG}-vol-rt@example.com`;
 
     await openAddContactModal(page);
     await fillBasicFields(page, {
@@ -402,7 +407,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   // ---------------------------------------------------------------------------
 
   test("save with types: ['player', 'sponsor'] — round-trips through the modal", async ({ adminPage: page }) => {
-    const psEmail = `e2e-ps-rt-${TIMESTAMP}@example.com`;
+    const psEmail = `e2e-${SEED_TAG}-ps-rt@example.com`;
 
     await openAddContactModal(page);
     await fillBasicFields(page, {
@@ -445,7 +450,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
     await fillBasicFields(page, {
       firstName: "ShirtVocab",
       lastName: "Test",
-      email: `e2e-shirt-vocab-${TIMESTAMP}@example.com`,
+      email: `e2e-${SEED_TAG}-shirt-vocab@example.com`,
     });
 
     await page.getByRole("switch", { name: /toggle player role/i }).check();
@@ -475,7 +480,7 @@ test.describe("Sprint 31 — multi-type form (Contact create/edit)", () => {
   // ---------------------------------------------------------------------------
 
   test("Handicap accepts 0, 54, blank — rejects 55 and -1", async ({ adminPage: page }) => {
-    const hcEmail = `e2e-handicap-${TIMESTAMP}@example.com`;
+    const hcEmail = `e2e-${SEED_TAG}-handicap@example.com`;
     // Use dialog-scoped spinbutton to avoid collision with row checkboxes labeled
     // "Select Handicap Boundary" from prior-run orphan contacts in the list.
     const dialogHandicapInput = page.getByRole("dialog").getByRole("spinbutton", { name: /handicap/i });

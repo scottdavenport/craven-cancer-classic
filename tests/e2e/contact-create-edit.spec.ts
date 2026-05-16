@@ -14,8 +14,14 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
 
-const TEST_EMAIL = `e2e-contact-create-${Date.now()}@example.com`;
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+const TEST_EMAIL = `e2e-${SEED_TAG}-contact-create@example.com`;
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Contact create/edit via modal", () => {
   test("creates a new contact, edits it, then soft-deletes it", async ({ adminPage: page }) => {

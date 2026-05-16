@@ -15,6 +15,13 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 async function createTestContact(
   page: import("@playwright/test").Page,
@@ -25,7 +32,7 @@ async function createTestContact(
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByLabel(/first name/i).fill(`BulkDel${idx}`);
   await page.getByLabel(/last name/i).fill(seedTag);
-  await page.getByRole("textbox", { name: "Email" }).fill(`bulk-del-${idx}-${Date.now()}@example.com`);
+  await page.getByRole("textbox", { name: "Email" }).fill(`e2e-${seedTag}-bulk-del-${idx}@example.com`);
   // Pattern F: D12 role-cards — at least one type toggled on before Save is enabled
   await page.getByRole("switch", { name: /toggle player role/i }).check();
   await page.getByRole("button", { name: /create|save/i }).click();
@@ -36,11 +43,6 @@ async function createTestContact(
 
 test.describe("Bulk delete contacts", () => {
   test("creates 3 contacts, bulk-deletes them, verifies in Trash", async ({ adminPage: page }) => {
-    // #410-A: generate SEED_TAG inside the test to ensure each repeat-each run gets a
-    // unique seed — module-level Math.random() is called once per worker, so repeat-each
-    // runs within the same worker share the same seed and contaminate each other's rows.
-    const SEED_TAG = `bulk-del-${Math.random().toString(36).slice(2, 10)}`;
-
     await page.goto("/admin/contacts");
     await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
 

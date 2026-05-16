@@ -1,15 +1,24 @@
 /**
- * e2e-verify-clean.ts — assert that no e2e test rows remain in the DB.
+ * e2e-verify-clean.ts — assert that no test pollution rows remain in the DB.
  *
  * BEHAVIOR
- *   Queries all tracked tables for rows matching the e2e marker pattern.
+ *   Queries all tracked tables for rows matching either test pollution pattern.
  *   Exits 0 if the DB is clean.
- *   Exits 1 with a per-table breakdown if any rows remain.
+ *   Exits 1 with a per-path breakdown if any rows remain.
  *
  * SCOPE
  *   Same 4 tracked tables as e2e-scrub.ts:
  *     contacts, teams, team_members, scores
- *   Marker anchor: contacts.email ILIKE 'e2e-%@example.com'
+ *
+ *   Path A — email pattern: contacts.email ILIKE '%@example.com'
+ *     Matches ALL @example.com addresses regardless of prefix. Production has 0
+ *     real @example.com contacts (verified 2026-05-16 by direct DB query — the
+ *     domain is RFC 2606 reserved and used exclusively as a test fixture domain).
+ *
+ *   Path B — NULL-email + BulkDel-name pattern:
+ *     email IS NULL AND first_name LIKE 'BulkDel%' AND last_name LIKE 'bulk-del-%'
+ *     Catches contacts that escaped path A (NULL email, BulkDel-style names from
+ *     the contact-bulk-delete.spec.ts blocked-alert fixture).
  *
  * IMPLEMENTATION NOTE
  *   Count queries use PostgREST join filters (no client-side ID collection) to
@@ -128,9 +137,11 @@ async function withRetry(
 }
 
 // ---------------------------------------------------------------------------
-// Marker pattern
+// Marker patterns (must mirror e2e-scrub.ts)
 // ---------------------------------------------------------------------------
-const CONTACT_EMAIL_PATTERN = "e2e-%@example.com";
+const CONTACT_EMAIL_PATTERN = "%@example.com";
+const BULKDEL_FIRST_NAME_PATTERN = "BulkDel%";
+const BULKDEL_LAST_NAME_PATTERN = "bulk-del-%";
 
 // ---------------------------------------------------------------------------
 // Count rows using PostgREST join filters (avoids 1000-row page limit)
@@ -142,7 +153,12 @@ interface TableCounts {
   scores: number;
 }
 
-async function countE2eRows(): Promise<TableCounts> {
+interface CombinedCounts {
+  pathA: TableCounts;
+  pathB: number;
+}
+
+async function countEmailPatternRows(): Promise<TableCounts> {
   // contacts — direct email match
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const contactResult: any = await withRetry(
@@ -151,11 +167,11 @@ async function countE2eRows(): Promise<TableCounts> {
         .from("contacts")
         .select("*", { count: "exact", head: true })
         .ilike("email", CONTACT_EMAIL_PATTERN),
-    "count contacts"
+    "count contacts (path A)"
   );
   if (contactResult.error) {
     throw new Error(
-      `e2e-verify-clean: count contacts permanently failed. ` +
+      `e2e-verify-clean: count contacts (path A) permanently failed. ` +
         `host=${new URL(SUPABASE_URL!).host}. ` +
         `Last error: ${contactResult.error.name ?? "Error"}: ${contactResult.error.message}`
     );
@@ -177,11 +193,11 @@ async function countE2eRows(): Promise<TableCounts> {
           head: true,
         })
         .ilike("contacts.email", CONTACT_EMAIL_PATTERN),
-    "count teams"
+    "count teams (path A)"
   );
   if (teamResult.error) {
     throw new Error(
-      `e2e-verify-clean: count teams permanently failed. ` +
+      `e2e-verify-clean: count teams (path A) permanently failed. ` +
         `host=${new URL(SUPABASE_URL!).host}. ` +
         `Last error: ${teamResult.error.name ?? "Error"}: ${teamResult.error.message}`
     );
@@ -198,11 +214,11 @@ async function countE2eRows(): Promise<TableCounts> {
           head: true,
         })
         .ilike("contacts.email", CONTACT_EMAIL_PATTERN),
-    "count team_members"
+    "count team_members (path A)"
   );
   if (memberResult.error) {
     throw new Error(
-      `e2e-verify-clean: count team_members permanently failed. ` +
+      `e2e-verify-clean: count team_members (path A) permanently failed. ` +
         `host=${new URL(SUPABASE_URL!).host}. ` +
         `Last error: ${memberResult.error.name ?? "Error"}: ${memberResult.error.message}`
     );
@@ -219,11 +235,11 @@ async function countE2eRows(): Promise<TableCounts> {
           { count: "exact", head: true }
         )
         .ilike("teams.contacts.email", CONTACT_EMAIL_PATTERN),
-    "count scores"
+    "count scores (path A)"
   );
   if (scoreResult.error) {
     throw new Error(
-      `e2e-verify-clean: count scores permanently failed. ` +
+      `e2e-verify-clean: count scores (path A) permanently failed. ` +
         `host=${new URL(SUPABASE_URL!).host}. ` +
         `Last error: ${scoreResult.error.name ?? "Error"}: ${scoreResult.error.message}`
     );
@@ -237,31 +253,65 @@ async function countE2eRows(): Promise<TableCounts> {
   };
 }
 
+async function countBulkDelRows(): Promise<number> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result: any = await withRetry(
+    () =>
+      supabase
+        .from("contacts")
+        .select("*", { count: "exact", head: true })
+        .is("email", null)
+        .like("first_name", BULKDEL_FIRST_NAME_PATTERN)
+        .like("last_name", BULKDEL_LAST_NAME_PATTERN),
+    "count contacts (path B)"
+  );
+  if (result.error) {
+    throw new Error(
+      `e2e-verify-clean: count contacts (path B) permanently failed. ` +
+        `host=${new URL(SUPABASE_URL!).host}. ` +
+        `Last error: ${result.error.name ?? "Error"}: ${result.error.message}`
+    );
+  }
+  return result.count ?? 0;
+}
+
 // ---------------------------------------------------------------------------
 // Entry point
 // ---------------------------------------------------------------------------
 async function main() {
-  console.log("e2e-verify-clean: checking for e2e test rows...");
+  console.log("e2e-verify-clean: checking for test pollution rows...");
+  console.log(`  path A pattern: contacts.email ILIKE '${CONTACT_EMAIL_PATTERN}'`);
+  console.log(`  path B pattern: email IS NULL AND first_name LIKE '${BULKDEL_FIRST_NAME_PATTERN}' AND last_name LIKE '${BULKDEL_LAST_NAME_PATTERN}'`);
 
-  const counts = await countE2eRows();
+  const pathA = await countEmailPatternRows();
+  const pathB = await countBulkDelRows();
+  const counts: CombinedCounts = { pathA, pathB };
+
   const total =
-    counts.contacts + counts.teams + counts.team_members + counts.scores;
+    counts.pathA.contacts +
+    counts.pathA.teams +
+    counts.pathA.team_members +
+    counts.pathA.scores +
+    counts.pathB;
 
   if (total === 0) {
-    console.log("DB is clean — no e2e rows found.");
+    console.log("DB is clean — no test pollution rows found.");
     process.exit(0);
   }
 
   // Rows remain — print breakdown and exit non-zero
-  console.error("FAIL: e2e rows remain in the database.");
+  console.error("FAIL: test pollution rows remain in the database.");
   console.error("");
-  console.error("Per-table breakdown:");
-  console.error(`  contacts     → ${counts.contacts}`);
-  console.error(`  teams        → ${counts.teams} (via captain_contact_id)`);
-  console.error(`  team_members → ${counts.team_members} (via contact_id)`);
-  console.error(`  scores       → ${counts.scores} (via team_id)`);
+  console.error("Per-path breakdown:");
+  console.error(`  Path A — @example.com email pattern:`);
+  console.error(`    contacts     → ${counts.pathA.contacts}`);
+  console.error(`    teams        → ${counts.pathA.teams} (via captain_contact_id)`);
+  console.error(`    team_members → ${counts.pathA.team_members} (via contact_id)`);
+  console.error(`    scores       → ${counts.pathA.scores} (via team_id)`);
+  console.error(`  Path B — NULL-email BulkDel-name pattern:`);
+  console.error(`    contacts     → ${counts.pathB}`);
   console.error(`  ─────────────────────────────`);
-  console.error(`  total        → ${total}`);
+  console.error(`  total          → ${total}`);
   console.error("");
   console.error("Run 'npm run e2e:scrub' to clean up.");
   process.exit(1);

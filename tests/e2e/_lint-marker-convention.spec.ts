@@ -7,8 +7,10 @@
  * Three conventions every spec must follow:
  *   1. Declare `const SEED_TAG = ` at module scope (column 0).
  *   2. Call both `test.afterAll(` and `cleanupTestData(` somewhere in the file.
- *   3. Every e2e-*@example.com string must interpolate ${SEED_TAG}, ${RUN_ID},
- *      ${seedTag}, or ${runId} — no hardcoded addresses.
+ *   3. Every @example.com string literal must start with `e2e-${...}` interpolation.
+ *      This is stricter than the original check (which only matched strings already
+ *      starting with e2e-). It catches accidental non-prefixed fixture emails like
+ *      `bulk-del-${idx}-${Date.now()}@example.com` that slip the naming convention.
  *
  * A 4th meta-test loads `fixtures/_lint-violation.fixture.ts` and asserts that
  * ALL THREE checks correctly detect its intentional violations.
@@ -75,42 +77,45 @@ function checkAfterAllCleanup(src: string, label: string): string[] {
 }
 
 /**
- * Check 3: every string literal that contains `e2e-` and `@example.com` must
- * include a template interpolation of SEED_TAG, RUN_ID, seedTag, or runId.
+ * Check 3: every string literal that contains `@example.com` must start with
+ * `e2e-${...}` template interpolation (i.e., `e2e-${someVar}...`).
+ *
+ * This catches both:
+ *   - Strings that had no e2e- prefix at all (e.g. `bulk-del-${idx}-${Date.now()}@example.com`)
+ *   - Strings with a hardcoded e2e- prefix but no interpolation (e.g. `e2e-bad@example.com`)
+ *   - Any quoted (non-template) string containing @example.com
+ *
+ * Only strings that open with `e2e-${` (immediately after the backtick) pass.
  *
  * Strategy: find all backtick template literals and single/double-quoted strings
- * that contain both markers; reject any that lack the interpolation pattern.
+ * that contain @example.com; reject any that don't match the required prefix pattern.
  */
-function checkEmailInterpolation(src: string, label: string): string[] {
+function checkEmailConvention(src: string, label: string): string[] {
   const violations: string[] = [];
 
-  // Match backtick template literals that contain e2e- and @example.com.
+  // Match backtick template literals that contain @example.com.
   // Use [^\n`] to prevent crossing line or template boundaries.
-  // These are the correct form — they may or may not have the required interpolation.
-  const templateRe = /`[^\n`]*e2e-[^\n`]*@example\.com[^\n`]*`/g;
+  const templateRe = /`[^\n`]*@example\.com[^\n`]*`/g;
   let m: RegExpExecArray | null;
 
   while ((m = templateRe.exec(src)) !== null) {
     const literal = m[0];
-    const hasInterp =
-      /\$\{SEED_TAG\}/.test(literal) ||
-      /\$\{RUN_ID\}/.test(literal) ||
-      /\$\{seedTag\}/.test(literal) ||
-      /\$\{runId\}/.test(literal);
-    if (!hasInterp) {
+    // Must start with `e2e-${...} — the interpolation must appear as the first
+    // thing after the backtick (no literal characters before the e2e- prefix).
+    const startsWithE2eInterp = /^`e2e-\$\{[^}]+\}/.test(literal);
+    if (!startsWithE2eInterp) {
       violations.push(
-        `${label}: template literal missing SEED_TAG/RUN_ID interpolation: ${literal.slice(0, 80)}`
+        `${label}: @example.com literal does not start with e2e-\${...} interpolation: ${literal.slice(0, 80)}`
       );
     }
   }
 
-  // Match single or double-quoted string literals that contain e2e- and @example.com.
-  // Use [^\n'"'] to prevent crossing line boundaries (quoted strings never span lines).
-  // These are ALWAYS violations because quoted strings cannot have interpolation.
-  const quotedRe = /['"][^\n'"]*e2e-[^\n'"]*@example\.com[^\n'"]*['"]/g;
+  // Match single or double-quoted string literals that contain @example.com.
+  // These are ALWAYS violations — quoted strings cannot have the required interpolation.
+  const quotedRe = /['"][^\n'"]*@example\.com[^\n'"]*['"]/g;
   while ((m = quotedRe.exec(src)) !== null) {
     violations.push(
-      `${label}: hardcoded (non-template) e2e email literal: ${m[0].slice(0, 80)}`
+      `${label}: hardcoded (non-template) @example.com email literal: ${m[0].slice(0, 80)}`
     );
   }
 
@@ -149,7 +154,7 @@ test("every e2e spec calls cleanupTestData in afterAll", () => {
   expect(violations).toEqual([]);
 });
 
-test("every fixture email matching e2e-*@example.com uses a SEED_TAG or RUN_ID interpolation", () => {
+test("every fixture @example.com email must start with e2e-${...} interpolation", () => {
   const files = getRealSpecFiles();
   expect(files.length).toBeGreaterThan(0);
 
@@ -157,7 +162,7 @@ test("every fixture email matching e2e-*@example.com uses a SEED_TAG or RUN_ID i
   for (const filePath of files) {
     const src = fs.readFileSync(filePath, "utf8");
     const label = path.basename(filePath);
-    violations.push(...checkEmailInterpolation(src, label));
+    violations.push(...checkEmailConvention(src, label));
   }
 
   expect(violations).toEqual([]);
@@ -179,7 +184,7 @@ test("meta-test: lint catches known violations in _lint-violation.fixture.ts", (
   const afterAllViolations = checkAfterAllCleanup(src, label);
   expect(afterAllViolations.length).toBeGreaterThan(0);
 
-  // Check 3 should fail: hardcoded e2e email.
-  const emailViolations = checkEmailInterpolation(src, label);
+  // Check 3 should fail: hardcoded e2e email AND a bulk-del-style email without e2e- prefix.
+  const emailViolations = checkEmailConvention(src, label);
   expect(emailViolations.length).toBeGreaterThan(0);
 });

@@ -313,7 +313,11 @@ async function fetchAllContactIds(): Promise<string[]> {
 
 async function fetchAllTeamIds(contactIds: string[]): Promise<string[]> {
   const ids: string[] = [];
-  const CHUNK = 500;
+  // CHUNK = 100 keeps `.in()` URL length under ~4KB (100 UUIDs × ~37 chars each).
+  // Was 500; PR #443 review surfaced a deterministic CI failure on chunk 0 due to
+  // URL/payload limit on Supabase PostgREST. Local repro failed at ~300-400 IDs;
+  // 100 leaves ~3x margin. The retry helper stays as transient-error defense.
+  const CHUNK = 100;
   for (let i = 0; i < contactIds.length; i += CHUNK) {
     const chunk = contactIds.slice(i, i + CHUNK);
     const { data, error } = await withRetry(
@@ -352,7 +356,8 @@ async function deleteE2eRows(): Promise<void> {
   console.log("\nDeleting rows...");
 
   // 1. scores (FK → teams.id) — delete in chunks
-  const CHUNK = 500;
+  // See fetchAllTeamIds() for the rationale on 100.
+  const CHUNK = 100;
   for (let i = 0; i < teamIds.length; i += CHUNK) {
     const chunk = teamIds.slice(i, i + CHUNK);
     const { error } = await withRetry(

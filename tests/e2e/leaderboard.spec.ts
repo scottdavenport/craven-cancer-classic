@@ -11,6 +11,13 @@
  */
 
 import { test, expect } from "@playwright/test";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Sprint 32 — Public leaderboard (captain names as team identity)", () => {
   test.beforeEach(async ({ page }) => {

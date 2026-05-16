@@ -1,4 +1,11 @@
 import { test, expect } from "@playwright/test";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test("homepage loads with correct title", async ({ page }) => {
   await page.goto("/");

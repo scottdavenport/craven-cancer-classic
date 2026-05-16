@@ -11,7 +11,10 @@
     "test:run": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:ui": "playwright test --ui",
-    "seed:photos": "npx tsx scripts/seed-photos.ts"
+    "seed:photos": "npx tsx scripts/seed-photos.ts",
+    "e2e:scrub": "npx tsx scripts/e2e-scrub.ts",
+    "e2e:scrub:ci": "npx tsx scripts/e2e-scrub.ts --yes",
+    "e2e:verify-clean": "npx tsx scripts/e2e-verify-clean.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.0",
@@ -48,6 +51,7 @@
     "eslint-config-next": "16.2.3",
     "jsdom": "^29.0.2",
     "tailwindcss": "^4",
+    "tsx": "^4.22.0",
     "typescript": "^5",
     "vitest": "^4.1.4"
   }

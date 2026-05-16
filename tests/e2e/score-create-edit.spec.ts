@@ -21,6 +21,13 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Sprint 32 — Admin score create/edit (centered modal, team dropdown)", () => {
   test("Add Score opens a centered modal, not a side drawer", async ({ adminPage: page }) => {

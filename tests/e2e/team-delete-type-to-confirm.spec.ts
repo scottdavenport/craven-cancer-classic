@@ -23,7 +23,6 @@
  *
  * Requires: E2E_ADMIN_EMAIL + E2E_ADMIN_PASSWORD in env
  * Fixture cleanup: try/finally ensures fixture is removed if test fails mid-run.
- * Captain emails match e2e-*@example.com pattern for Forge orphan cleanup.
  */
 
 import { test as baseTest, expect } from "@playwright/test";
@@ -36,6 +35,13 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData, registerOrphan } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 // ---------------------------------------------------------------------------
 // Supabase service-key REST helpers
@@ -130,9 +136,9 @@ interface FixtureTeam {
   captainEmail: string;
 }
 
-async function createPaidTeamFixture(serviceKey: string): Promise<FixtureTeam> {
+async function createPaidTeamFixture(serviceKey: string, seedTag: string): Promise<FixtureTeam> {
   const timestamp = Date.now();
-  const captainEmail = `e2e-delete-captain-${timestamp}@example.com`;
+  const captainEmail = `e2e-${seedTag}-delete-captain@example.com`;
   const captainName = `E2E Delete ${timestamp}`;
 
   // 1. Create a contact for the captain
@@ -147,6 +153,9 @@ async function createPaidTeamFixture(serviceKey: string): Promise<FixtureTeam> {
   }
   const contactData = await contactRes.json();
   const contactId: string = Array.isArray(contactData) ? contactData[0].id : contactData.id;
+
+  // Register contact as orphan so cleanupTestData can find it via seedTag
+  registerOrphan("contacts", contactId, seedTag);
 
   // 2. Create a team via register_team RPC (uses vestigial captain params)
   const rpcRes = await supabaseRpc(
@@ -171,6 +180,9 @@ async function createPaidTeamFixture(serviceKey: string): Promise<FixtureTeam> {
     await supabaseDelete(`contacts?id=eq.${contactId}`, serviceKey);
     throw new Error(`register_team RPC returned no team_id: ${JSON.stringify(rpcData)}`);
   }
+
+  // Register team as orphan so cleanupTestData can find it via seedTag
+  registerOrphan("teams", teamId, seedTag);
 
   // 3. Set captain_contact_id and mark as paid
   const patchRes = await supabasePatch(
@@ -240,7 +252,7 @@ test.describe("Team delete — type-to-confirm gate (#393)", () => {
 
       try {
         // ---- Fixture setup ----
-        fixture = await createPaidTeamFixture(serviceKey);
+        fixture = await createPaidTeamFixture(serviceKey, SEED_TAG);
         const captainDisplayName = fixture.captainDisplayName;
 
         // ---- Navigate to teams list ----

@@ -17,8 +17,14 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
 
-const TEST_EMAIL = `e2e-placeholder-${Date.now()}@example.com`;
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+const TEST_EMAIL = `e2e-${SEED_TAG}-placeholder@example.com`;
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Team roster shows deleted-contact placeholder", () => {
   test(

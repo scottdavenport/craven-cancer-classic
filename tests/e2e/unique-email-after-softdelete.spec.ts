@@ -18,11 +18,17 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
 
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
 const TS = Date.now();
-const SHARED_EMAIL = `e2e-unique-${TS}@example.com`;
+const SHARED_EMAIL = `e2e-${SEED_TAG}-unique@example.com`;
 const ORIG_LAST = `Orig${TS}`;
 const REPL_LAST = `Repl${TS}`;
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Partial unique index — email reuse after soft-delete", () => {
   test(

@@ -15,17 +15,27 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+// SEED_TAG is module-scoped so afterAll cleanup matches every row this spec creates,
+// across attempts. RUN_ID below is per-test-invocation so Playwright retries don't
+// collide with prior-attempt rows still in the DB (LESSONS-LEARNED Rule 159, #410-A).
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 async function createTestContact(
   page: import("@playwright/test").Page,
   idx: number,
-  seedTag: string
+  runId: string
 ) {
   await page.getByRole("button", { name: /new contact/i }).click();
   await expect(page.getByRole("dialog")).toBeVisible();
   await page.getByLabel(/first name/i).fill(`BulkDel${idx}`);
-  await page.getByLabel(/last name/i).fill(seedTag);
-  await page.getByRole("textbox", { name: "Email" }).fill(`bulk-del-${idx}-${Date.now()}@example.com`);
+  await page.getByLabel(/last name/i).fill(runId);
+  await page.getByRole("textbox", { name: "Email" }).fill(`e2e-${SEED_TAG}-${runId}-bulk-del-${idx}@example.com`);
   // Pattern F: D12 role-cards — at least one type toggled on before Save is enabled
   await page.getByRole("switch", { name: /toggle player role/i }).check();
   await page.getByRole("button", { name: /create|save/i }).click();
@@ -36,25 +46,25 @@ async function createTestContact(
 
 test.describe("Bulk delete contacts", () => {
   test("creates 3 contacts, bulk-deletes them, verifies in Trash", async ({ adminPage: page }) => {
-    // #410-A: generate SEED_TAG inside the test to ensure each repeat-each run gets a
-    // unique seed — module-level Math.random() is called once per worker, so repeat-each
-    // runs within the same worker share the same seed and contaminate each other's rows.
-    const SEED_TAG = `bulk-del-${Math.random().toString(36).slice(2, 10)}`;
+    // RUN_ID is regenerated on every test invocation including Playwright retries —
+    // ensures fixture last-name + email are unique per attempt so prior-attempt rows
+    // don't collide with current-attempt assertions (LESSONS-LEARNED Rule 159, #410-A).
+    const RUN_ID = crypto.randomUUID().slice(0, 8);
 
     await page.goto("/admin/contacts");
     await expect(page.getByRole("heading", { name: /contacts/i })).toBeVisible();
 
     // ---- Create 3 test contacts ----
     for (let i = 1; i <= 3; i++) {
-      await createTestContact(page, i, SEED_TAG);
+      await createTestContact(page, i, RUN_ID);
     }
 
-    // Verify they appear in the list (filter by last name = SEED_TAG)
-    await expect(page.getByText(`BulkDel1 ${SEED_TAG}`)).toBeVisible({ timeout: 5_000 });
+    // Verify they appear in the list (filter by last name = RUN_ID)
+    await expect(page.getByText(`BulkDel1 ${RUN_ID}`)).toBeVisible({ timeout: 5_000 });
 
     // ---- Select all 3 ----
-    // Select checkboxes for rows containing the SEED_TAG last name
-    const rows = page.locator("tr, [role=row]").filter({ hasText: SEED_TAG });
+    // Select checkboxes for rows containing the RUN_ID last name
+    const rows = page.locator("tr, [role=row]").filter({ hasText: RUN_ID });
     const rowCount = await rows.count();
 
     // webkit #402-A: move mouse to corner before loop to deactivate any active RowActions
@@ -114,9 +124,9 @@ test.describe("Bulk delete contacts", () => {
     await expect(bulkDeleteDialog).not.toBeVisible({ timeout: 15_000 });
 
     // Contacts disappear from list
-    await expect(page.getByText(`BulkDel1 ${SEED_TAG}`)).not.toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(`BulkDel2 ${SEED_TAG}`)).not.toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(`BulkDel3 ${SEED_TAG}`)).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(`BulkDel1 ${RUN_ID}`)).not.toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(`BulkDel2 ${RUN_ID}`)).not.toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(`BulkDel3 ${RUN_ID}`)).not.toBeVisible({ timeout: 5_000 });
 
     // ---- Navigate to Trash → Contacts tab ----
     await page.goto("/admin/trash");
@@ -126,8 +136,8 @@ test.describe("Bulk delete contacts", () => {
     }
 
     // All 3 contacts present in Trash
-    await expect(page.getByText(`BulkDel1 ${SEED_TAG}`)).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(`BulkDel2 ${SEED_TAG}`)).toBeVisible({ timeout: 5_000 });
-    await expect(page.getByText(`BulkDel3 ${SEED_TAG}`)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(`BulkDel1 ${RUN_ID}`)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(`BulkDel2 ${RUN_ID}`)).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByText(`BulkDel3 ${RUN_ID}`)).toBeVisible({ timeout: 5_000 });
   });
 });

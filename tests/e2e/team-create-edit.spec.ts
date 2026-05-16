@@ -21,6 +21,13 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Sprint 32 — Admin team create/edit (centered modal, captain identity)", () => {
   test("Add Team opens a centered modal, not a side drawer", async ({ adminPage: page }) => {

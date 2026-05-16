@@ -23,6 +23,13 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Sprint 31 — type-removal guard", () => {
   test("removing Player type blocked when contact is in team_members — inline error names the team", async ({ adminPage: page }) => {

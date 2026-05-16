@@ -13,6 +13,13 @@ baseTest.skip(
 );
 
 import { test } from "./fixtures/admin-auth";
+import { cleanupTestData } from "./fixtures/cleanup-helper";
+
+const SEED_TAG = crypto.randomUUID().slice(0, 8);
+
+test.afterAll(async () => {
+  await cleanupTestData(SEED_TAG);
+});
 
 test.describe("Contact soft-delete and restore", () => {
   test("soft-deletes a contact, finds it in Trash, restores it", async ({ adminPage: page }) => {
@@ -20,7 +27,7 @@ test.describe("Contact soft-delete and restore", () => {
     // is computed once per worker, so repeat-each runs within the same worker share the same
     // email and collide (duplicate email on create, or pick up a prior run's contact in Trash).
     const TS = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    const TEST_EMAIL = `e2e-restore-${TS}@example.com`;
+    const TEST_EMAIL = `e2e-${SEED_TAG}-restore-${TS}@example.com`;
     const TEST_LAST = `Restore${TS}`;
     const TEST_FULL_NAME = `E2ERestore ${TEST_LAST}`;
 

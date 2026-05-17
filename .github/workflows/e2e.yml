@@ -4,6 +4,18 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+  pull_request:
+    # Run e2e on PRs touching test/prod code per #451.
+    paths:
+      - 'tests/e2e/**'
+      - 'playwright.config.ts'
+      - 'src/app/**'
+      - 'src/components/**'
+      - 'src/lib/**'
+      - 'src/types/database.ts'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/e2e.yml'
 
 jobs:
   playwright:

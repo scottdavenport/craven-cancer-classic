@@ -5,17 +5,8 @@ on:
   push:
     branches: [main]
   pull_request:
-    # Run e2e on PRs touching test/prod code per #451.
-    paths:
-      - 'tests/e2e/**'
-      - 'playwright.config.ts'
-      - 'src/app/**'
-      - 'src/components/**'
-      - 'src/lib/**'
-      - 'src/types/database.ts'
-      - 'package.json'
-      - 'package-lock.json'
-      - '.github/workflows/e2e.yml'
+    # Fires on every PR; per-job path filter inside the playwright job decides
+    # whether to run the heavy suite or auto-pass. See #455 for the rationale.
 
 jobs:
   playwright:
@@ -27,17 +18,44 @@ jobs:
         browser: [chromium, webkit]
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Detect e2e-relevant changes
+        id: changes
+        shell: bash
+        run: |
+          # Push and manual dispatch always run the full suite.
+          if [ "${{ github.event_name }}" != "pull_request" ]; then
+            echo "should-run=true" >> "$GITHUB_OUTPUT"
+            echo "trigger=${{ github.event_name }} — running full suite"
+            exit 0
+          fi
+          # PR: diff against base to see if any e2e-relevant file changed.
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          CHANGED=$(git diff --name-only "$BASE_SHA"...HEAD)
+          if printf '%s\n' "$CHANGED" | grep -qE '^(tests/e2e/|playwright\.config\.ts$|src/app/|src/components/|src/lib/|src/types/database\.ts$|package(-lock)?\.json$|\.github/workflows/e2e\.yml$)'; then
+            echo "should-run=true" >> "$GITHUB_OUTPUT"
+            echo "paths filter: relevant changes detected — running playwright"
+          else
+            echo "should-run=false" >> "$GITHUB_OUTPUT"
+            echo "paths filter: no relevant changes — playwright skipped (job exits success)"
+          fi
       - uses: actions/setup-node@v4
+        if: steps.changes.outputs.should-run == 'true'
         with:
           node-version: 20
           cache: npm
       - run: npm ci
+        if: steps.changes.outputs.should-run == 'true'
       - run: npx playwright install --with-deps ${{ matrix.browser }}
+        if: steps.changes.outputs.should-run == 'true'
       - run: npm run build
+        if: steps.changes.outputs.should-run == 'true'
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
       - run: npm run test:e2e -- --project=${{ matrix.browser }}
+        if: steps.changes.outputs.should-run == 'true'
         env:
           CI: true
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
@@ -45,20 +63,20 @@ jobs:
           E2E_ADMIN_EMAIL: ${{ secrets.E2E_ADMIN_EMAIL }}
           E2E_ADMIN_PASSWORD: ${{ secrets.E2E_ADMIN_PASSWORD }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      - if: always()
+      - if: always() && steps.changes.outputs.should-run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: playwright-report-${{ matrix.browser }}
           path: playwright-report/
           retention-days: 7
       - name: e2e scrub (safety net)
-        if: always()
+        if: always() && steps.changes.outputs.should-run == 'true'
         run: npm run e2e:scrub:ci
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       - name: e2e verify clean (gate)
-        if: always()
+        if: always() && steps.changes.outputs.should-run == 'true'
         run: npm run e2e:verify-clean
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}

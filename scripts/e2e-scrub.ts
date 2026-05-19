@@ -19,11 +19,13 @@
  *     is reserved by RFC 2606 and used exclusively as a test fixture domain in
  *     this project). Any @example.com row is definitionally test pollution.
  *
- *   Path B — NULL-email + BulkDel-name pattern:
- *     email IS NULL AND first_name LIKE 'BulkDel%' AND last_name LIKE 'bulk-del-%'
- *     Targets the 4 rows that escaped path A (NULL email, names from the
- *     contact-bulk-delete.spec.ts blocked-alert fixture). Narrow enough to
- *     avoid false positives on real users.
+ *   Path B — NULL-email name patterns:
+ *     email IS NULL AND first_name LIKE <pattern> [AND last_name LIKE <pattern>]
+ *     Iterates the NULL_EMAIL_NAME_PATTERNS list from scripts/lib/e2e-markers.ts
+ *     (BulkDel, E2E, Preserve, UniqueFirst as of #457). Adding a newly-discovered
+ *     leak pattern is a one-line append to that constant — both this scrub and
+ *     e2e-verify-clean.ts pick it up automatically. Per-pattern counts in the
+ *     summary make leaks diagnosable by originating spec.
  *
  *   Both paths cascade through dependent tables in FK-safe order (child → parent):
  *     1. scores       (FK → teams.id)

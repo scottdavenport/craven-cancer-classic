@@ -15,10 +15,11 @@
  *     real @example.com contacts (verified 2026-05-16 by direct DB query — the
  *     domain is RFC 2606 reserved and used exclusively as a test fixture domain).
  *
- *   Path B — NULL-email + BulkDel-name pattern:
- *     email IS NULL AND first_name LIKE 'BulkDel%' AND last_name LIKE 'bulk-del-%'
- *     Catches contacts that escaped path A (NULL email, BulkDel-style names from
- *     the contact-bulk-delete.spec.ts blocked-alert fixture).
+ *   Path B — NULL-email name patterns:
+ *     email IS NULL AND first_name LIKE <pattern> [AND last_name LIKE <pattern>]
+ *     Iterates the NULL_EMAIL_NAME_PATTERNS list from scripts/lib/e2e-markers.ts
+ *     (shared with e2e-scrub.ts). Per-pattern breakdown in the fail-path output
+ *     makes leaks diagnosable by originating spec.
  *
  * IMPLEMENTATION NOTE
  *   Count queries use PostgREST join filters (no client-side ID collection) to

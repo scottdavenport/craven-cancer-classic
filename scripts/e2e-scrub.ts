@@ -19,11 +19,13 @@
  *     is reserved by RFC 2606 and used exclusively as a test fixture domain in
  *     this project). Any @example.com row is definitionally test pollution.
  *
- *   Path B — NULL-email + BulkDel-name pattern:
- *     email IS NULL AND first_name LIKE 'BulkDel%' AND last_name LIKE 'bulk-del-%'
- *     Targets the 4 rows that escaped path A (NULL email, names from the
- *     contact-bulk-delete.spec.ts blocked-alert fixture). Narrow enough to
- *     avoid false positives on real users.
+ *   Path B — NULL-email name patterns:
+ *     email IS NULL AND first_name LIKE <pattern> [AND last_name LIKE <pattern>]
+ *     Iterates the NULL_EMAIL_NAME_PATTERNS list from scripts/lib/e2e-markers.ts
+ *     (BulkDel, E2E, Preserve, UniqueFirst as of #457). Adding a newly-discovered
+ *     leak pattern is a one-line append to that constant — both this scrub and
+ *     e2e-verify-clean.ts pick it up automatically. Per-pattern counts in the
+ *     summary make leaks diagnosable by originating spec.
  *
  *   Both paths cascade through dependent tables in FK-safe order (child → parent):
  *     1. scores       (FK → teams.id)
@@ -53,6 +55,7 @@ import { createClient } from "@supabase/supabase-js";
 import fs from "fs";
 import path from "path";
 import readline from "readline";
+import { CONTACT_EMAIL_PATTERN, NULL_EMAIL_NAME_PATTERNS } from "./lib/e2e-markers";
 
 // ---------------------------------------------------------------------------
 // Env loading — mirrors seed-photos.ts pattern
@@ -153,19 +156,10 @@ async function withRetry(
 }
 
 // ---------------------------------------------------------------------------
-// Marker patterns
-//
-// Path A: any @example.com address. Production has 0 real @example.com contacts
-// (verified 2026-05-16 by direct DB query). The domain is RFC 2606 reserved
-// and used exclusively as a test fixture domain in this project.
-//
-// Path B: contacts with NULL email + BulkDel-style names. These escaped path A
-// because the blocked-alert fixture in contact-bulk-delete.spec.ts omits the
-// email field (name was generated as first_name='BulkDel{N}', last_name='bulk-del-{ts}').
+// Marker patterns — imported from scripts/lib/e2e-markers.ts (single source of truth).
+// CONTACT_EMAIL_PATTERN: Path A — any @example.com address.
+// NULL_EMAIL_NAME_PATTERNS: Path B — NULL-email rows matched by name patterns.
 // ---------------------------------------------------------------------------
-const CONTACT_EMAIL_PATTERN = "%@example.com";
-const BULKDEL_FIRST_NAME_PATTERN = "BulkDel%";
-const BULKDEL_LAST_NAME_PATTERN = "bulk-del-%";
 
 // ---------------------------------------------------------------------------
 // Step 1: Count rows using PostgREST join filters (avoids 1000-row page limit)
@@ -179,7 +173,7 @@ interface TableCounts {
 
 interface CombinedCounts {
   pathA: TableCounts;
-  pathB: number; // contacts only (NULL-email BulkDel rows have no team/score data)
+  pathB: Record<string, number>; // label → count
 }
 
 async function countEmailPatternRows(): Promise<TableCounts> {
@@ -276,31 +270,35 @@ async function countEmailPatternRows(): Promise<TableCounts> {
   };
 }
 
-async function countBulkDelRows(): Promise<number> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const result: any = await withRetry(
-    () =>
-      supabase
-        .from("contacts")
-        .select("*", { count: "exact", head: true })
-        .is("email", null)
-        .like("first_name", BULKDEL_FIRST_NAME_PATTERN)
-        .like("last_name", BULKDEL_LAST_NAME_PATTERN),
-    "count contacts (path B)"
-  );
-  if (result.error) {
-    throw new Error(
-      `e2e-scrub: count contacts (path B) permanently failed. ` +
-        `host=${new URL(SUPABASE_URL!).host}. ` +
-        `Last error: ${result.error.name ?? "Error"}: ${result.error.message}`
+async function countNullEmailPatternRows(): Promise<Record<string, number>> {
+  const counts: Record<string, number> = {};
+  for (const pattern of NULL_EMAIL_NAME_PATTERNS) {
+    let q = supabase
+      .from("contacts")
+      .select("*", { count: "exact", head: true })
+      .is("email", null)
+      .like("first_name", pattern.first_name);
+    if (pattern.last_name) q = q.like("last_name", pattern.last_name);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result: any = await withRetry(
+      () => q,
+      `count contacts (path B / ${pattern.label})`
     );
+    if (result.error) {
+      throw new Error(
+        `e2e-scrub: count contacts (path B / ${pattern.label}) permanently failed. ` +
+          `host=${new URL(SUPABASE_URL!).host}. ` +
+          `Last error: ${result.error.name ?? "Error"}: ${result.error.message}`
+      );
+    }
+    counts[pattern.label] = result.count ?? 0;
   }
-  return result.count ?? 0;
+  return counts;
 }
 
 async function countAllRows(): Promise<CombinedCounts> {
   const pathA = await countEmailPatternRows();
-  const pathB = await countBulkDelRows();
+  const pathB = await countNullEmailPatternRows();
   return { pathA, pathB };
 }
 
@@ -313,7 +311,8 @@ function printSummary(counts: CombinedCounts, label: string): number {
     counts.pathA.teams +
     counts.pathA.team_members +
     counts.pathA.scores;
-  const total = pathATotal + counts.pathB;
+  const pathBTotal = Object.values(counts.pathB).reduce((a, b) => a + b, 0);
+  const total = pathATotal + pathBTotal;
 
   console.log(`\n${label}`);
   console.log(`  Path A — @example.com email pattern:`);
@@ -321,8 +320,10 @@ function printSummary(counts: CombinedCounts, label: string): number {
   console.log(`    teams        → ${counts.pathA.teams} (via captain_contact_id)`);
   console.log(`    team_members → ${counts.pathA.team_members} (via contact_id)`);
   console.log(`    scores       → ${counts.pathA.scores} (via team_id)`);
-  console.log(`  Path B — NULL-email BulkDel-name pattern:`);
-  console.log(`    contacts     → ${counts.pathB}`);
+  console.log(`  Path B — NULL-email name patterns:`);
+  for (const pattern of NULL_EMAIL_NAME_PATTERNS) {
+    console.log(`    ${pattern.label.padEnd(12)} → ${counts.pathB[pattern.label] ?? 0}`);
+  }
   console.log(`  ─────────────────────────────`);
   console.log(`  total          → ${total}`);
   return total;
@@ -377,36 +378,36 @@ async function fetchAllContactIdsByEmail(): Promise<string[]> {
   return ids;
 }
 
-async function fetchAllBulkDelContactIds(): Promise<string[]> {
-  const ids: string[] = [];
-  let from = 0;
-  const PAGE = 500;
-  while (true) {
-    const { data, error } = await withRetry(
-      () =>
-        supabase
-          .from("contacts")
-          .select("id")
-          .is("email", null)
-          .like("first_name", BULKDEL_FIRST_NAME_PATTERN)
-          .like("last_name", BULKDEL_LAST_NAME_PATTERN)
-          .range(from, from + PAGE - 1),
-      `fetch contact IDs (path B) page ${from}`
-    );
-
-    if (error) {
-      throw new Error(
-        `e2e-scrub: fetch contact IDs (path B) page ${from} permanently failed after 3 attempts. ` +
-          `host=${new URL(SUPABASE_URL!).host}, page_start=${from}, page_size=${PAGE}. ` +
-          `Last error: ${error.name ?? "Error"}: ${error.message}`
+async function fetchAllNullEmailPatternIds(): Promise<string[]> {
+  const merged = new Set<string>();
+  for (const pattern of NULL_EMAIL_NAME_PATTERNS) {
+    let from = 0;
+    const PAGE = 500;
+    while (true) {
+      let q = supabase
+        .from("contacts")
+        .select("id")
+        .is("email", null)
+        .like("first_name", pattern.first_name);
+      if (pattern.last_name) q = q.like("last_name", pattern.last_name);
+      const { data, error } = await withRetry(
+        () => q.range(from, from + PAGE - 1),
+        `fetch contact IDs (path B / ${pattern.label}) page ${from}`
       );
+      if (error) {
+        throw new Error(
+          `e2e-scrub: fetch contact IDs (path B / ${pattern.label}) page ${from} ` +
+            `permanently failed after 3 attempts. ` +
+            `host=${new URL(SUPABASE_URL!).host}, page_start=${from}, page_size=${PAGE}. ` +
+            `Last error: ${error.name ?? "Error"}: ${error.message}`
+        );
+      }
+      for (const r of (data ?? []) as Array<{ id: string }>) merged.add(r.id);
+      if (!data || data.length < PAGE) break;
+      from += PAGE;
     }
-
-    ids.push(...(data ?? []).map((r: { id: string }) => r.id));
-    if (!data || data.length < PAGE) break;
-    from += PAGE;
   }
-  return ids;
+  return Array.from(merged);
 }
 
 async function fetchAllTeamIds(contactIds: string[]): Promise<string[]> {
@@ -527,10 +528,10 @@ async function deleteAllTestRows(): Promise<void> {
     console.log("  path A: no rows to delete");
   }
 
-  // Path B: NULL-email BulkDel-name rows
-  const bulkDelContactIds = await fetchAllBulkDelContactIds();
-  if (bulkDelContactIds.length > 0) {
-    await deleteContactsAndDependents(bulkDelContactIds, "path B");
+  // Path B: NULL-email name-pattern rows
+  const nullEmailContactIds = await fetchAllNullEmailPatternIds();
+  if (nullEmailContactIds.length > 0) {
+    await deleteContactsAndDependents(nullEmailContactIds, "path B");
   } else {
     console.log("  path B: no rows to delete");
   }
@@ -545,7 +546,7 @@ async function main() {
 
   console.log("e2e-scrub: scanning for test pollution rows...");
   console.log(`  path A pattern: contacts.email ILIKE '${CONTACT_EMAIL_PATTERN}'`);
-  console.log(`  path B pattern: email IS NULL AND first_name LIKE '${BULKDEL_FIRST_NAME_PATTERN}' AND last_name LIKE '${BULKDEL_LAST_NAME_PATTERN}'`);
+  console.log(`  path B patterns: ${NULL_EMAIL_NAME_PATTERNS.length} NULL-email name patterns (see scripts/lib/e2e-markers.ts)`);
   console.log(`  mode: ${isCI ? "CI (non-interactive)" : "interactive"}`);
 
   // Pre-scrub count
@@ -578,7 +579,7 @@ async function main() {
     after.pathA.teams +
     after.pathA.team_members +
     after.pathA.scores +
-    after.pathB;
+    Object.values(after.pathB).reduce((a, b) => a + b, 0);
   if (remaining > 0) {
     console.error(
       `\nERROR: ${remaining} rows remain after scrub — check logs above.`
